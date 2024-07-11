@@ -1,11 +1,16 @@
 Package: spStackdev
 Type: Package
-Title: What the Package Does (Title Case)
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Bayesian Geostatistics Using Predictive Stacking
+Authors@R: c(person("Soumyakanti", "Pan", role=c("aut", "cre"), email="span18@ucla.edu"), person("Sudipto", "Banerjee", role="aut", email="sudipto@ucla.edu"))
+Maintainer: Soumyakanti Pan <span18@ucla.edu>
+Author: Soumyakanti Pan [aut, cre],
+  Sudipto Banerjee [aut]
+Description: Fits univariate spatial-temporal random effects models for point-referenced data using Bayesian predictive stacking. Details are given in Pan, Zhang, Bradley, and Banerjee (2024) <https://doi.org/10.48550/arXiv.2406.04655>.
+License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
+Suggests: 
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.1

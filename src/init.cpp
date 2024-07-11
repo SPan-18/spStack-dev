@@ -1,0 +1,19 @@
+#include <R.h>
+#include <Rinternals.h>
+#include <stdlib.h> // for NULL
+#include <R_ext/Rdynload.h>
+#include "spStack.h"
+
+static const R_CallMethodDef CallEntries[] = {
+  {"mysolveC", (DL_FUNC) &mysolveC, 3}
+};
+
+void
+#ifdef HAVE_VISIBILITY_ATTRIBUTE
+__attribute__ ((visibility ("default")))
+#endif
+  R_init_sp(DllInfo *dll)
+  {
+    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+    R_useDynamicSymbols(dll, FALSE);
+  }
