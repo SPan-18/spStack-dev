@@ -7,6 +7,7 @@ Maintainer: Soumyakanti Pan <span18@ucla.edu>
 Author: Soumyakanti Pan [aut, cre],
   Sudipto Banerjee [aut]
 Description: Fits univariate spatial-temporal random effects models for point-referenced data using Bayesian predictive stacking. Details are given in Pan, Zhang, Bradley, and Banerjee (2024) <https://doi.org/10.48550/arXiv.2406.04655>.
+Imports: MBA, ggplot2
 License: GPL (>= 2)
 Encoding: UTF-8
 LazyData: true
