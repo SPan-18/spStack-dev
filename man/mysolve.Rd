@@ -2,12 +2,12 @@
 % Please edit documentation in R/mysolve.R
 \name{mysolve}
 \alias{mysolve}
-\title{Solves the linear system Ax = b where A is positive definite}
+\title{Solve a positive-definite linear system}
 \usage{
 mysolve(A, b)
 }
 \arguments{
-\item{A}{an \eqn{n\times n}{nxn} positive definite matrix}
+\item{A}{an \eqn{n\times n}{nxn} positive-definite matrix}
 
 \item{b}{an \eqn{n\times 1}{nx1} matrix/vector}
 }
@@ -15,6 +15,14 @@ mysolve(A, b)
 The \eqn{n\times 1}{nx1} solution to the system
 }
 \description{
-Solves the linear system Ax = b where A is positive definite
+Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a positive-definite matrix and \eqn{b}{b} is a vector.
+}
+\examples{
+A <- rbind(c(1, 2, 3),
+           c(2, 5, 7),
+           c(3, 7, 14))
+b <- c(1, 0, 1)
+(x <- mysolve(A, b)) # 5 -2 0
+
 }
 \keyword{utilities}
