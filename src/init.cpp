@@ -5,6 +5,7 @@
 #include "spStack.h"
 
 static const R_CallMethodDef CallEntries[] = {
+  {"idist",    (DL_FUNC) &idist,    6},
   {"mysolveC", (DL_FUNC) &mysolveC, 3}
 };
 

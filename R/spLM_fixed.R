@@ -6,12 +6,13 @@
 #' @param cor.fn a quoted keyword that specifies the correlation function used to model the spatial dependence structure among the observations. Supported covariance model key words are: \code{"exponential"} and \code{"matern"}. See below for details.
 #' @param priors a list with each tag corresponding to a parameter name and containing prior details.
 #' @param spParams fixed value of spatial process parameters.
+#' @param noise_sp_ratio noise-to-spatial variance ratio
 #' @param n.samples number of posterior samples to be generated
 #' @param verbose logical.
 #' @param ... currently no additional arguments.
 #' @export
 spLM_fixed <- function(formula, data = parent.frame(), coords, cor.fn,
-                       priors, spParams, n.samples, verbose = TRUE, ...){
+                       priors, spParams, noise_sp_ratio, n.samples, verbose = TRUE, ...){
 
   ####################################################
   ## check for unused args
@@ -55,34 +56,94 @@ spLM_fixed <- function(formula, data = parent.frame(), coords, cor.fn,
     number of rows is different than data used in the model formula")
   }
 
+  coords.D <- 0
+  coords.D <- iDist(coords)
+
   ####################################################
   ## correlation function
   ####################################################
   if(missing(cor.fn)){stop("error: cor.fn must be specified")}
-  if(!cor.fn %in% c("exponential", "matern")){stop("error: specified cor.fn '", cor.fn, "' is not a valid option;\n
-        choose from c('exponential', 'matern').")}
+  if(!cor.fn %in% c("exponential", "matern")){stop("cor.fn = '", cor.fn, "' is not a valid option; choose from c('exponential', 'matern').")}
 
   ####################################################
   ## priors
   ####################################################
-  beta.norm <- 0
   beta.prior <- "flat"
+  beta.Norm <- 0
   sigma.sq.IG <- 0
-  tau.sq.IG <- 0
-  nu.Unif <- 0
-  phi.Unif <- 0
-  nugget <- FALSE
 
+  if(missing(priors)){
 
+    warning("prior list not supplied, using defaults.")
 
+  }else{
 
+    names(priors) <- tolower(names(priors))
 
+    ## Setup prior for beta
+    if("beta.norm" %in% names(priors)){
+      beta.Norm <- priors[["beta.norm"]]
+      if(!is.list(beta.Norm) || length(beta.Norm) != 2){stop("error: beta.Norm must be a list of length 2")}
+      if(length(beta.Norm[[1]]) != p ){stop(paste("error: beta.Norm[[1]] must be a vector of length, ", p, ".", sep=""))}
+      if(length(beta.Norm[[2]]) != p^2 ){stop(paste("error: beta.Norm[[2]] must be a ", p,"x", p," correlation matrix.", sep=""))}
+      beta.prior <- "normal"
+    }
 
+    ## Setup prior for sigma.sq
+    if(!"sigma.sq.ig" %in% names(priors)){stop("error: sigma.sq.IG must be specified")}
+    sigma.sq.IG <- priors[["sigma.sq.ig"]]
+
+    if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){stop("error: sigma.sq.IG must be a vector of length 2")}
+    if(any(sigma.sq.IG <= 0)){stop("error: sigma.sq.IG must be a positive vector of length 2")}
+
+  }
+
+  ## storage mode
+  storage.mode(sigma.sq.IG) <- "double"
 
   ####################################################
   ## spatial process parameters
   ####################################################
-  if(missing(spParams)){stop("error: spatial process parameters must be specified")}
+  phi <- 0
+  nu <- 0
+
+  if(missing(spParams)){stop("spParams (spatial process parameters) must be supplied.")}
+
+  names(spParams) <- tolower(names(spParams))
+
+  if(!"phi" %in% names(spParams)){stop("phi must be supplied.")}
+  phi <- spParams[["phi"]]
+
+  if(!is.numeric(phi) || length(phi) != 1){stop("phi must be a numeric scalar.")}
+  if(phi <= 0){stop("phi (decay parameter) must be a positive real number.")}
+
+  if(cor.fn == "matern"){
+
+    if(!"nu" %in% names(spParams)){stop("nu (smoothness parameter) must be supplied.")}
+    nu <- spParams[["nu"]]
+
+    if(!is.numeric(nu) || length(nu) != 1){stop("nu must be a numeric scalar.")}
+    if(nu <= 0){stop("nu (smoothness parameter) must be a positive real number.")}
+
+  }
+
+  ## storage mode
+  storage.mode(nu.Unif) <- "double"
+  storage.mode(phi.Unif) <- "double"
+
+  ####################################################
+  ## noise-to-spatial variance ratio
+  ####################################################
+  deltasq <- 0
+
+  if(missing(noise_sp_ratio)){
+    warning("noise_sp_ratio not supplied. Using noise_sp_ratio = 1.")
+    deltasq = 1
+  }else{
+    deltasq <- noise_sp_ratio
+    if(!is.numeric(deltasq) || length(deltasq) != 1){stop("noise_sp_ratio must be a numeric scalar.")}
+    if(deltasq <= 0){stop("noise_sp_ratio must be a positive real number.")}
+  }
 
   return(list(y, X, X.names))
 

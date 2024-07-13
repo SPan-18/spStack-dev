@@ -11,6 +11,7 @@ spLM_fixed(
   cor.fn,
   priors,
   spParams,
+  noise_sp_ratio,
   n.samples,
   verbose = TRUE,
   ...
@@ -28,6 +29,8 @@ spLM_fixed(
 \item{priors}{a list with each tag corresponding to a parameter name and containing prior details.}
 
 \item{spParams}{fixed value of spatial process parameters.}
+
+\item{noise_sp_ratio}{noise-to-spatial variance ratio}
 
 \item{n.samples}{number of posterior samples to be generated}
 
