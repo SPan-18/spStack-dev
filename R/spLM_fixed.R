@@ -11,8 +11,9 @@
 #' @param verbose logical.
 #' @param ... currently no additional arguments.
 #' @export
-spLM_fixed <- function(formula, data = parent.frame(), coords, cor.fn,
-                       priors, spParams, noise_sp_ratio, n.samples, verbose = TRUE, ...){
+spLM_fixed <- function(formula, data = parent.frame(), coords,
+                       cor.fn, priors, spParams, noise_sp_ratio,
+                       n.samples, verbose = TRUE, ...){
 
   ####################################################
   ## check for unused args
@@ -128,8 +129,8 @@ spLM_fixed <- function(formula, data = parent.frame(), coords, cor.fn,
   }
 
   ## storage mode
-  storage.mode(nu.Unif) <- "double"
-  storage.mode(phi.Unif) <- "double"
+  storage.mode(phi) <- "double"
+  storage.mode(nu) <- "double"
 
   ####################################################
   ## noise-to-spatial variance ratio
@@ -145,6 +146,27 @@ spLM_fixed <- function(formula, data = parent.frame(), coords, cor.fn,
     if(deltasq <= 0){stop("noise_sp_ratio must be a positive real number.")}
   }
 
-  return(list(y, X, X.names))
+  ## storage mode
+  storage.mode(deltasq) <- "double"
+
+  ####################################################
+  ## sampling and setup
+  ####################################################
+
+  if(missing(n.samples)){stop("n.samples must be specified.")}
+
+  storage.mode(n.samples) <- "integer"
+  storage.mode(verbose) <- "integer"
+
+  ####################################################
+  ## main function call
+  ####################################################
+
+  out <- .Call("spLM_fixed", y, X, p, n, coords.D,
+               beta.prior, beta.Norm, sigma.sq.IG,
+               phi, nu, deltasq, cor.fn, n.samples, verbose)
+
+
+  return(out)
 
 }

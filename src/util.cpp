@@ -26,3 +26,34 @@ void mysolve(double *A, double *b, int n){
   F77_NAME(dtrsv)(upper, ntrans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
 
 }
+
+void printMtrx(double *m, int nRow, int nCol){
+
+  int i, j;
+
+  for(i = 0; i < nRow; i++){
+    Rprintf("\t");
+    for(j = 0; j < nCol; j++){
+      Rprintf("%.3f\t", m[j*nRow+i]);
+    }
+    Rprintf("\n");
+  }
+}
+
+void printVec(double *m, int n){
+
+  Rprintf("\t");
+  for(int j = 0; j < n; j++){
+    Rprintf("%.3f\t", m[j]);
+  }
+  Rprintf("\n");
+}
+
+void printVec(int *m, int n){
+
+  Rprintf(" ");
+  for(int j = 0; j < n; j++){
+    Rprintf("%i ", m[j]);
+  }
+  Rprintf("\n");
+}
