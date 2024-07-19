@@ -5,3 +5,9 @@
 .httr-oauth
 .DS_Store
 .quarto
+*.o
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
