@@ -22,7 +22,7 @@ extern "C" {
 
     SEXP result = PROTECT(allocVector(REALSXP, n));
 
-    mysolve(A, b, n);
+    mysolveLT(A, b, n);
 
     std::copy(b, b + n, REAL(result));
 
