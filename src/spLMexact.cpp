@@ -14,10 +14,10 @@
 
 extern "C" {
 
-  SEXP spLM_fixed(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
-                  SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
-                  SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
-                  SEXP nSamples_r, SEXP verbose_r){
+  SEXP spLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
+                 SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
+                 SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
+                 SEXP nSamples_r, SEXP verbose_r){
 
     /*****************************************
      Common variables
@@ -118,7 +118,7 @@ extern "C" {
     double sigmaSqIGaPost = 0, sigmaSqIGbPost = 0;
     double sse = 0;
 
-    double *V = (double *) R_alloc(nn, sizeof(double)); zeros(V, nn);
+    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
     double *Vy = (double *) R_alloc(nn, sizeof(double)); zeros(Vy, nn);
     double *thetasp = (double *) R_alloc(2, sizeof(double));
 
@@ -134,12 +134,13 @@ extern "C" {
     //construct covariance matrix
     thetasp[0] = phi;
     thetasp[1] = nu;
-    spCorLT(coordsD, n, thetasp, corfn, V);
-    F77_NAME(dcopy)(&nn, V, &incOne, Vy, &incOne);
+    spCorLT(coordsD, n, thetasp, corfn, Vz);
+    F77_NAME(dcopy)(&nn, Vz, &incOne, Vy, &incOne);
     for(i = 0; i < n; i++){
-      Vy[i*n + i] = V[i*n + i] + deltasq;
+      Vy[i*n + i] += deltasq;
     }
 
+    // find sse
     F77_NAME(dcopy)(&nn, Vy, &incOne, tmp_nn, &incOne);
     F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
 
@@ -162,17 +163,11 @@ extern "C" {
 
     F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp2, &p FCONE FCONE);
-
-    for(i = 0; i < p; i++){
-      for(j = 0; j < p; j++){
-        tmp_pp[i*p + j] += tmp_pp2[i*p + j];
-      }
-    }
+    F77_NAME(daxpy)(&pp, &one, tmp_pp2, &incOne, tmp_pp, &incOne);
 
     F77_NAME(dcopy)(&p, tmp_p1, &incOne, tmp_p2, &incOne);
     F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p2, &incOne FCONE FCONE FCONE);
-    // mysolveLT(tmp_pp, tmp_p2, p);
 
     sse -= pow(F77_NAME(dnrm2)(&p, tmp_p2, &incOne), 2);
 
@@ -183,27 +178,62 @@ extern "C" {
     sigmaSqIGbPost += sigmaSqIGb;
     sigmaSqIGbPost += 0.5 * sse;
 
-    // posterior samples of sigma-sq
-    double *sigmaSq = (double *) R_alloc(nSamples, sizeof(double));
+    // posterior samples of sigma-sq and beta
+    SEXP samples_sigmaSq_r = PROTECT(allocVector(REALSXP, nSamples)); nProtect++;
+    SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
+
+    double sigmaSq = 0;
+    double *beta = (double *) R_alloc(p, sizeof(double)); zeros(beta, p);
+
+    GetRNGstate();
+
     for(i = 0; i < nSamples; i++){
-      sigmaSq[i] = rgamma(sigmaSqIGaPost, 1.0 / sigmaSqIGbPost);
-      sigmaSq[i] = 1.0 / sigmaSq[i];
+      sigmaSq = 1.0 / rgamma(sigmaSqIGaPost, 1.0 / sigmaSqIGbPost);
+      REAL(samples_sigmaSq_r)[i] = sigmaSq;
+
+      for(j = 0; j < p; j++){
+        beta[j] = rnorm(0.0, sqrt(sigmaSq));
+      }
+      F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, beta, &incOne);
+      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta, &incOne FCONE FCONE FCONE);
+
+      for(j = 0; j < p; j++){
+        REAL(samples_beta_r)[i*p + j] = beta[j];
+      }
     }
 
-    //return posterior samples of sigma-sq
-    SEXP samples_sigmaSq_r = PROTECT(allocVector(REALSXP, nSamples)); nProtect++;
-    // SEXP result_r = PROTECT(allocVector(REALSXP, 2)); nProtect++;
-    // SEXP result_r = PROTECT(allocMatrix(REALSXP, p, p));
+    PutRNGstate();
+
+    // make return object for posterior samples of sigma-sq and beta
+    SEXP result_r, resultName_r;
+    int nResultListObjs = 2;
+
+    result_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
+    resultName_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+    // samples of beta
+    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta"));
+
+    // samples of sigma-sq
+    SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
+    SET_VECTOR_ELT(resultName_r, 1, mkChar("sigmaSq"));
+
+    namesgets(result_r, resultName_r);
+
+    // SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, nSamples, p)); nProtect++;
+    // SEXP beta_mean_r = PROTECT(allocVector(REALSXP, p)); nProtect++;
+    // SEXP betaV_r = PROTECT(allocMatrix(REALSXP, p, p)); nProtect++;
 
     // for (i = 0; i < p; i++) {
     //   for (j = 0; j < p; j++) {
-    //     REAL(result_r)[i*p + j] = tmp_pp[i*p + j];
+    //     REAL(betaV_r)[i*p + j] = tmp_pp[i*p + j];
     //   }
     // }
 
-    for(i = 0; i < nSamples; i++){
-      REAL(samples_sigmaSq_r)[i] = sigmaSq[i];
-    }
+    // for(i = 0; i < p; i++){
+    //   REAL(beta_mean_r)[i] = tmp_p2[i];
+    // }
 
     // REAL(result_r)[0] = sigmaSqIGaPost;
     // REAL(result_r)[1] = sigmaSqIGbPost;
@@ -212,7 +242,7 @@ extern "C" {
 
     UNPROTECT(nProtect);
 
-    return samples_sigmaSq_r;
+    return result_r;
 
   }
 

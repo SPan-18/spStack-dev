@@ -7,6 +7,6 @@
 # * https://testthat.r-lib.org/articles/special-files.html
 
 library(testthat)
-library(spStackdev)
+library(spStack)
 
-test_check("spStackdev")
+test_check("spStack")

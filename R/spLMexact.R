@@ -11,9 +11,9 @@
 #' @param verbose logical.
 #' @param ... currently no additional arguments.
 #' @export
-spLM_fixed <- function(formula, data = parent.frame(), coords,
-                       cor.fn, priors, spParams, noise_sp_ratio,
-                       n.samples, verbose = TRUE, ...){
+spLMexact <- function(formula, data = parent.frame(), coords,
+                      cor.fn, priors, spParams, noise_sp_ratio,
+                      n.samples, verbose = TRUE, ...){
 
   ####################################################
   ## check for unused args
@@ -162,7 +162,7 @@ spLM_fixed <- function(formula, data = parent.frame(), coords,
   ## main function call
   ####################################################
 
-  out <- .Call("spLM_fixed", y, X, p, n, coords.D,
+  out <- .Call("spLMexact", y, X, p, n, coords.D,
                beta.prior, beta.Norm, sigma.sq.IG,
                phi, nu, deltasq, cor.fn, n.samples, verbose)
 

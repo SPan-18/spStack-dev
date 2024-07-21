@@ -2,7 +2,7 @@
 #'
 #' Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a positive-definite matrix and \eqn{b}{b} is a vector.
 #'
-#' @useDynLib spStackdev
+#' @useDynLib spStack
 #' @param A an \eqn{n\times n}{nxn} positive-definite matrix
 #' @param b an \eqn{n\times 1}{nx1} matrix/vector
 #' @returns The \eqn{n\times 1}{nx1} solution to the system

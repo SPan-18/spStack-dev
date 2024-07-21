@@ -7,7 +7,7 @@
 static const R_CallMethodDef CallEntries[] = {
   {"idist",      (DL_FUNC) &idist,       6},
   {"mysolveC",   (DL_FUNC) &mysolveC,    3},
-  {"spLM_fixed", (DL_FUNC) &spLM_fixed, 14}
+  {"spLMexact",  (DL_FUNC) &spLMexact,  14}
 };
 
 void

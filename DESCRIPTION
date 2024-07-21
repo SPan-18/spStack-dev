@@ -1,4 +1,4 @@
-Package: spStackdev
+Package: spStack
 Type: Package
 Version: 0.1.0
 Title: Bayesian Geostatistics Using Predictive Stacking
