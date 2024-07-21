@@ -12,6 +12,15 @@
 # define FCONE
 #endif
 
+// Function to convert a matrix to lower triangular
+void mkLT(double *A, int n){
+  for (int i = 0; i < n; ++i){
+    for (int j = 0; j < i; ++j){
+      A[i * n + j] = 0.0;
+    }
+  }
+}
+
 void mysolveUT(double *A, double *b, int n){
 
   int info = 0;
@@ -93,6 +102,39 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
       for(j = i; j < n; j++){
         if(D[i*n + j] * theta[0] > 0.0){
           C[i*n + j] = pow(D[i*n + j] * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(D[i*n + j] * theta[0], theta[1], 1.0);
+        }else{
+          C[i*n + j] = 1.0;
+        }
+      }
+    }
+
+  }else{
+    error("c++ error: corfn is not correctly specified");
+  }
+}
+
+void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
+  int i,j;
+
+  if(corfn == "exponential"){
+
+    for(i = 0; i < n; i++){
+      for(j = i; j < n; j++){
+        C[i*n + j] = theta[0] * exp(-1.0 * theta[1] * D[i*n + j]);
+        C[j*n + i] = C[i*n + j];
+      }
+    }
+
+  }else if(corfn == "matern"){
+
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*pi/2*(besselI(d*phi,-nu)-besselI(d*phi, nu))/sin(nu*pi), or
+    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*besselK(x=d*phi, nu=nu)
+
+    for(i = 0; i < n; i++){
+      for(j = i; j < n; j++){
+        if(D[i*n + j] * theta[0] > 0.0){
+          C[i*n + j] = pow(D[i*n + j] * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(D[i*n + j] * theta[0], theta[1], 1.0);
+          C[j*n + i] = C[i*n + j];
         }else{
           C[i*n + j] = 1.0;
         }
