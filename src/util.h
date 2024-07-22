@@ -1,6 +1,10 @@
 #include <string>
 #include <Rinternals.h>
 
+void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP);
+
+void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
+
 void mkLT(double *A, int n);
 
 void mysolveLT(double *A, double *b, int n);

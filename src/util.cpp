@@ -12,6 +12,30 @@
 # define FCONE
 #endif
 
+// Function to copy matrix from C to SEXP
+void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP){
+
+  int i, j;
+
+  for(i = 0; i < dim2; i++){
+    for(j = 0; j < dim1; j++){
+      pointerSEXP[i*dim1 + j] = matrixC[i*dim1 + j];
+    }
+  }
+
+}
+
+// Function to copy vector from C to SEXP
+void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP){
+
+  int i;
+
+  for(i = 0; i < dim; i++){
+    pointerSEXP[i] = vectorC[i];
+  }
+
+}
+
 // Function to convert a matrix to lower triangular
 void mkLT(double *A, int n){
   for (int i = 0; i < n; ++i){
