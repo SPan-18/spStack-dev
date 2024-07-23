@@ -46,7 +46,7 @@ extern "C" {
     int n = INTEGER(n_r)[0];
     int nn = n * n;
     int np = n * p;
-    int nPp = n + p;
+    // int nPp = n + p;
 
     double *coordsD = REAL(coordsD_r);
 
@@ -69,6 +69,10 @@ extern "C" {
     double sigmaSqIGb = REAL(sigmaSqIG_r)[1];
 
     double deltasq = REAL(deltasq_r)[0];
+    const double delta = sqrt(deltasq);
+    const double deltaInv = 1.0 / delta;
+    // const double deltasqInv = 1.0 / deltasq;
+
     double phi = REAL(phi_r)[0];
 
     double nu = 0;
@@ -119,10 +123,12 @@ extern "C" {
      *****************************************/
     double sigmaSqIGaPost = 0, sigmaSqIGbPost = 0;
     double sse = 0;
-    double dtemp = 0; // dtemp2 = 0;
+    double dtemp = 0, dtemp2 = 0;
 
     double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
+    double *Lz = (double *) R_alloc(nn, sizeof(double)); zeros(Lz, nn);
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);
+    double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);
     double *cholVy = (double *) R_alloc(nn, sizeof(double)); zeros(cholVy, nn);
     double *thetasp = (double *) R_alloc(2, sizeof(double));
 
@@ -130,30 +136,27 @@ extern "C" {
     double *tmp_n2 = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n2, n);
 
     double *tmp_np1 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np1, np);
-    double *tmp_np2 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np1, np);
-
-    double *tmp_nn = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn, nn);
-    double *tmp_nn2 = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn2, nn);
+    double *tmp_np2 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np2, np);
 
     double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);
     double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);
-    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);
-    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);
+    double *mu_vbeta = (double *) R_alloc(p, sizeof(double)); zeros(mu_vbeta, p);
 
-    double *out_p = (double *) R_alloc(p, sizeof(double)); zeros(out_p, p);
-    double *out_n = (double *) R_alloc(n, sizeof(double)); zeros(out_n, n);
+    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);
 
     //construct covariance matrix
     thetasp[0] = phi;
     thetasp[1] = nu;
     spCorFull(coordsD, n, thetasp, corfn, Vz);
+    F77_NAME(dcopy)(&nn, Vz, &incOne, Lz, &incOne);
+    F77_NAME(dpotrf)(lower, &n, Lz, &n, &info FCONE); if(info != 0){error("c++ error: Vz dpotrf failed\n");}
     F77_NAME(dcopy)(&nn, Vz, &incOne, cholVy, &incOne);
     for(i = 0; i < n; i++){
       cholVy[i*n + i] += deltasq;
     }
 
     // find Cholesky of (Vz + deltasq*I)
-    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){error("c++ error: Vy dpotrf failed\n");}
 
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n1, &incOne);
     F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVy, &n, tmp_n1, &incOne FCONE FCONE FCONE);  // LyInv*y
@@ -167,6 +170,7 @@ extern "C" {
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);   // Lbeta
     F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}  // VbetaInv
     F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);  // VbetaInv*muBeta
 
@@ -191,14 +195,20 @@ extern "C" {
     sigmaSqIGbPost += sigmaSqIGb;
     sigmaSqIGbPost += 0.5 * sse;
 
+    // set-up for sampling gamma = [beta, z]
+    F77_NAME(dcopy)(&p, betaMu, &incOne, mu_vbeta, &incOne);                                   // mu_vbeta = muBeta
+    F77_NAME(dtrsv)(lower, ntran, nUnit, &p, Lbeta, &p, mu_vbeta, &incOne FCONE FCONE FCONE);  // mu_vbeta = LbetaInv*muBeta
+
     // posterior samples of sigma-sq and beta
     SEXP samples_sigmaSq_r = PROTECT(allocVector(REALSXP, nSamples)); nProtect++;
-    // SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
-    // SEXP samples_z_r = PROTECT(allocMatrix(REALSXP, n, nSamples)); nProtect++;
+    SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
+    SEXP samples_z_r = PROTECT(allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
     double sigmaSq = 0;
-    // double *beta = (double *) R_alloc(p, sizeof(double)); zeros(beta, p);
-    // double *z = (double *) R_alloc(n, sizeof(double)); zeros(z, n);
+    double *v1 = (double *) R_alloc(p, sizeof(double)); zeros(v1, p);
+    double *v2 = (double *) R_alloc(n, sizeof(double)); zeros(v2, n);
+    double *out_p = (double *) R_alloc(p, sizeof(double)); zeros(out_p, p);
+    double *out_n = (double *) R_alloc(n, sizeof(double)); zeros(out_n, n);
 
     GetRNGstate();
 
@@ -210,74 +220,64 @@ extern "C" {
       sigmaSq = 1.0 / dtemp;
       REAL(samples_sigmaSq_r)[s] = sigmaSq;
 
-      // sample fixed effects by composition sampling
-      // dtemp = sqrt(sigmaSq);
-      // for(j = 0; j < p; j++){
-      //   beta[j] = rnorm(0.0, dtemp);
-      // }
-      //
-      // for(j = 0; j < p; j++){
-      //   REAL(samples_beta_r)[s*p + j] = beta[j];
-      // }
-      //
-      // // sample spatial effects by composition sampling
-      // dtemp2 = 1.0 / deltasq;
-      //
-      // for(i = 0; i < n; i++){
-      //   z[i] = rnorm(0.0, dtemp);
-      // }
-      //
-      // for(i = 0; i < n; i++){
-      //   REAL(samples_z_r)[s*n + i] = tmp_n1[i];
-      // }
+      // sample fixed effects and spatial effects by projection
+      dtemp = sqrt(sigmaSq);
+
+      for(i = 0; i < n; i++){
+        dtemp2 = deltaInv * Y[i];
+        tmp_n1[i] = rnorm(dtemp2, dtemp);
+        tmp_n1[i] = deltaInv * tmp_n1[i];
+        tmp_n2[i] = rnorm(0.0, dtemp);
+      }
+
+      for(j = 0; j < p; j++){
+        tmp_p1[j] = rnorm(mu_vbeta[j], dtemp);
+      }
+
+      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, Lbeta, &p, tmp_p1, &incOne FCONE FCONE FCONE);
+      F77_NAME(dtrsv)(lower, ytran, nUnit, &n, Lz, &n, tmp_n2, &incOne FCONE FCONE FCONE);
+
+      F77_NAME(dgemv)(ytran, &n, &p, &one, X, &n, tmp_n1, &incOne, &one, tmp_p1, &incOne FCONE);
+      F77_NAME(daxpy)(&n, &one, tmp_n1, &incOne, tmp_n2, &incOne);
+
+      F77_NAME(dcopy)(&p, tmp_p1, &incOne, v1, &incOne);
+      F77_NAME(dcopy)(&n, tmp_n2, &incOne, v2, &incOne);
+
+      inversionLM(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
+                  tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1, tmp_np2,
+                  out_p, out_n);
+
+      F77_NAME(dcopy)(&p, &out_p[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
+      F77_NAME(dcopy)(&n, &out_n[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
 
     }
 
     PutRNGstate();
 
-    double *v1 = (double *) R_alloc(p, sizeof(double)); zeros(v1, p);
-    double *v2 = (double *) R_alloc(n, sizeof(double)); zeros(v2, n);
-    double *v = (double *) R_alloc(nPp, sizeof(double)); zeros(v, nPp);
+    // make return object for posterior samples of sigma-sq and beta
+    SEXP result_r, resultName_r;
+    int nResultListObjs = 3;
 
-    for(j = 0; j < p; j++){
-      v1[j] = 1.0;
-    }
+    result_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
+    resultName_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
 
-    for(i = 0; i < n; i++){
-      v2[i] = 1.0;
-    }
+    // samples of beta
+    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta"));
 
-    inversionLM(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
-                tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1, tmp_np2,
-                out_p, out_n);
+    // samples of sigma-sq
+    SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
+    SET_VECTOR_ELT(resultName_r, 1, mkChar("sigmaSq"));
 
-    F77_NAME(dcopy)(&p, &out_p[0], &incOne, &v[0], &incOne);
-    F77_NAME(dcopy)(&n, &out_n[0], &incOne, &v[p], &incOne);
+    // samples of z
+    SET_VECTOR_ELT(result_r, 2, samples_z_r);
+    SET_VECTOR_ELT(resultName_r, 2, mkChar("z"));
 
-    // // make return object for posterior samples of sigma-sq and beta
-    // SEXP result_r, resultName_r;
-    // int nResultListObjs = 3;
-    //
-    // result_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
-    // resultName_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
-    //
-    // // samples of beta
-    // SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    // SET_VECTOR_ELT(resultName_r, 0, mkChar("beta"));
-    //
-    // // samples of sigma-sq
-    // SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
-    // SET_VECTOR_ELT(resultName_r, 1, mkChar("sigmaSq"));
-    //
-    // // samples of z
-    // SET_VECTOR_ELT(result_r, 2, samples_z_r);
-    // SET_VECTOR_ELT(resultName_r, 2, mkChar("z"));
-    //
-    // namesgets(result_r, resultName_r);
+    namesgets(result_r, resultName_r);
 
-    SEXP result_r = PROTECT(allocVector(REALSXP, nPp)); nProtect++;
+    // SEXP result_r = PROTECT(allocVector(REALSXP, nPp)); nProtect++;
     // SEXP result_r = PROTECT(allocMatrix(REALSXP, p, p)); nProtect++;
-    double *pointer_result_r = REAL(result_r);
+    // double *pointer_result_r = REAL(result_r);
 
     // for (i = 0; i < p; i++) {
     //   for (j = 0; j < n; j++) {
@@ -286,16 +286,7 @@ extern "C" {
     // }
 
     // copyMatrixSEXP(tmp_pp, p, p, pointer_result_r);
-    copyVectorSEXP(v, nPp, pointer_result_r);
-
-    // for(i = 0; i < p; i++){
-    //   REAL(result_r)[i] = tmp_p1[i];
-    // }
-
-    // REAL(result_r)[0] = sigmaSqIGaPost;
-    // REAL(result_r)[1] = sigmaSqIGbPost;
-
-    // REAL(result_r)[0] = sse;
+    // copyVectorSEXP(v, nPp, pointer_result_r);
 
     UNPROTECT(nProtect);
 
