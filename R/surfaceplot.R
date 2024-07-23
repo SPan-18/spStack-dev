@@ -4,7 +4,7 @@
 #' @param coords_name name of the two columns that contains the co-ordinates of the points
 #' @param var_name name of the column containing the variable to be plotted
 #' @param h integer; controls smoothness of the spatial interpolation as appearing in the \code{mba.surf} function of the \code{MBA} package. Default is 8.
-#' @param col.pal Optional; color palette, preferably divergent. Deafult is 'RdYlBu'.
+#' @param col.pal Optional; color palette interpolator, preferably divergent, use \code{colorRampPalette} function from \code{grDevices}. Deafult is 'RdYlBu'.
 #' @param mark_points Logical; if \code{TRUE}, the input points are marked
 #' @export
 #' @importFrom MBA mba.surf
@@ -38,6 +38,8 @@ surfaceplot <- function(tab, coords_name, var_name,
   if(is.null(col.pal)){
     plot <- plot + scale_fill_distiller(palette = "RdYlBu", direction = -1,
                                         label = function(x) sprintf("%.1f", x))
+  }else{
+    plot <- plot + scale_fill_gradientn(colours = col.pal(100))
   }
 
   if(mark_points){
