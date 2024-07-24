@@ -22,7 +22,7 @@ surfaceplot(
 
 \item{h}{integer; controls smoothness of the spatial interpolation as appearing in the \code{mba.surf} function of the \code{MBA} package. Default is 8.}
 
-\item{col.pal}{Optional; color palette, preferably divergent. Deafult is 'RdYlBu'.}
+\item{col.pal}{Optional; color palette, preferably divergent, use \code{colorRampPalette} function from \code{grDevices}. Deafult is 'RdYlBu'.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked}
 }
