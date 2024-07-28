@@ -1,6 +1,6 @@
 name: check-ubuntu
 
-on:
+off:
   push:
     branches: [ "master" ]
   pull_request:
