@@ -247,6 +247,9 @@ extern "C" {
                   tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1, tmp_np2,
                   out_p, out_n);
 
+      // inversionLM2(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
+      //              out_p, out_n);
+
       F77_NAME(dcopy)(&p, &out_p[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
       F77_NAME(dcopy)(&n, &out_n[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
 
