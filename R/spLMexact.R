@@ -9,7 +9,7 @@
 #' @param noise_sp_ratio noise-to-spatial variance ratio
 #' @param n.samples number of posterior samples to be generated
 #' @param verbose logical.
-#' @param ... currently no additional arguments.
+#' @param ... currently no additional argument
 #' @export
 spLMexact <- function(formula, data = parent.frame(), coords,
                       cor.fn, priors, spParams, noise_sp_ratio,
