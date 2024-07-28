@@ -19,7 +19,9 @@ jobs:
       - name: Set up R
         uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::rcmdcheck
+          extra-packages: |
+            any::rcmdcheck
+            any::Rtools
           needs: check
       - name: Check
         run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
