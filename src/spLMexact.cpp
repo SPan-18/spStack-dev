@@ -248,15 +248,15 @@ extern "C" {
 
     // samples of beta
     SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    SET_VECTOR_ELT(resultName_r, 0, mkChar("beta"));
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
 
     // samples of sigma-sq
     SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
-    SET_VECTOR_ELT(resultName_r, 1, mkChar("sigmaSq"));
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
 
     // samples of z
     SET_VECTOR_ELT(result_r, 2, samples_z_r);
-    SET_VECTOR_ELT(resultName_r, 2, mkChar("z"));
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
 
     Rf_namesgets(result_r, resultName_r);
 
