@@ -1,6 +1,6 @@
 name: check-macOS
 
-off:
+on:
   push:
     branches: [ "master" ]
   pull_request:
