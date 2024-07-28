@@ -54,7 +54,7 @@ void mysolveUT(double *A, double *b, int n){
   char const *nunit = "N";
   int incx = 1;     // Increment for x
 
-  F77_NAME(dpotrf)(upper, &n, A, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+  F77_NAME(dpotrf)(upper, &n, A, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}
   F77_NAME(dtrsv)(upper, trans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
   F77_NAME(dtrsv)(upper, ntrans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
 
@@ -69,7 +69,7 @@ void mysolveLT(double *A, double *b, int n){
   char const *nunit = "N";
   int incx = 1;     // Increment for x
 
-  F77_NAME(dpotrf)(lower, &n, A, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+  F77_NAME(dpotrf)(lower, &n, A, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}
   F77_NAME(dtrsv)(lower, ntrans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
   F77_NAME(dtrsv)(lower, trans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
 
@@ -133,7 +133,7 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
     }
 
   }else{
-    error("c++ error: corfn is not correctly specified");
+    perror("c++ error: corfn is not correctly specified");
   }
 }
 
@@ -166,7 +166,7 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
     }
 
   }else{
-    error("c++ error: corfn is not correctly specified");
+    perror("c++ error: corfn is not correctly specified");
   }
 }
 
