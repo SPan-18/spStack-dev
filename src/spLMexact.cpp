@@ -22,13 +22,11 @@ extern "C" {
     /*****************************************
      Common variables
      *****************************************/
-    // int i, j, k, info, nProtect = 0;
     int i, j, s, info, nProtect = 0;
     char const *lower = "L";
     char const *nUnit = "N";
     char const *ntran = "N";
     char const *ytran = "T";
-    // char const *rside = "R";
     char const *lside = "L";
     const double one = 1.0;
     const double negOne = -1.0;
@@ -117,70 +115,78 @@ extern "C" {
      *****************************************/
     double sigmaSqIGaPost = 0, sigmaSqIGbPost = 0;
     double sse = 0;
-    double dtemp = 0, dtemp2 = 0;
+    double dtemp = 0;
+    double muBetatVbetaInvmuBeta = 0;
 
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-    double *thetasp = (double *) R_alloc(2, sizeof(double));
+    const double deltasqInv = 1.0 / deltasq;
 
-    double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);
-    double *tmp_np = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np, np);
-    double *tmp_nn = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn, nn);
-    double *tmp_nn2 = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn2, nn);
+    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);              // correlation matrix
+    double *tmp_nn = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn, nn);      // allocate temporary n x n matrix
+    double *tmp_nn2 = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn2, nn);    // allocate temporary n x n matrix
+    double *thetasp = (double *) R_alloc(2, sizeof(double));                         // spatial process parameters
 
-    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);
-    double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);
-    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);
-    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);
+    double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);          // allocate temporary n x 1 vector
+    double *tmp_np = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np, np);      // allocate temporary n x p matrix
 
-    //construct covariance matrix
+    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);        // allocate temporary p x 1 vector
+    double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);        // allocate temporary p x 1 vector
+
+    double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);  // allocate VbetaInv
+    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);      // allocate temporary p x p matrix
+    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);    // allocate temporary p x p matrix
+
+    //construct covariance matrix (full)
     thetasp[0] = phi;
     thetasp[1] = nu;
     spCorFull(coordsD, n, thetasp, corfn, Vz);
+
+    // construct marginal covariance matrix (Vz+deltasq*I)
     F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn, &incOne);
     for(i = 0; i < n; i++){
       tmp_nn[i*n + i] += deltasq;
     }
 
-    // find sse
-    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+    // find sse to sample sigmaSq
+    // chol(Vy)
+    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: Vy dpotrf failed\n");}
 
-    F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);
-    F77_NAME(dtrsv)(lower, ntran, nUnit, &n, tmp_nn, &n, tmp_n, &incOne FCONE FCONE FCONE);
+    // find YtVyInvY
+    F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
+    F77_NAME(dtrsv)(lower, ntran, nUnit, &n, tmp_nn, &n, tmp_n, &incOne FCONE FCONE FCONE);  // tmp_n = cholinv(Vy)*Y
+    dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                     // dtemp = t(Y)*VyInv*Y
+    sse += dtemp;                                                                            // sse = YtVyinvY
 
-    dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);
-    sse += dtemp;
+    // find XtVyInvY and, VbetaInvmuBeta
+    F77_NAME(dcopy)(&np, X, &incOne, tmp_np, &incOne);                                                          // tmp_np = X
+    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &p, &one, tmp_nn, &n, tmp_np, &n FCONE FCONE FCONE FCONE);  // tmp_np = cholinv(Vy)*X
+    F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np, &n, tmp_n, &incOne, &zero, tmp_p1, &incOne FCONE);             // tmp_p1 = t(X)*VyInv*Y
 
-    F77_NAME(dcopy)(&np, X, &incOne, tmp_np, &incOne);
-    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &p, &one, tmp_nn, &n, tmp_np, &n FCONE FCONE FCONE FCONE);
-    F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np, &n, tmp_n, &incOne, &zero, tmp_p1, &incOne FCONE);
+    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                    // VbetaInv = Vbeta
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);              // tmp_p2 = VbetaInv*muBeta
 
-    F77_NAME(dcopy)(&pp, betaV, &incOne, tmp_pp, &incOne);
-    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
-    F77_NAME(dpotri)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}
-    F77_NAME(dsymv)(lower, &p, &one, tmp_pp, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);
+    // find muBetatVbetaInvmuBeta
+    muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);                               // t(muBeta)*VbetaInv*muBeta
+    sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
 
-    dtemp = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);
-    sse += dtemp;
-
-    F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);
-    F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp2, &p FCONE FCONE);
-    F77_NAME(daxpy)(&pp, &one, tmp_pp2, &incOne, tmp_pp, &incOne);
-
-    F77_NAME(dcopy)(&p, tmp_p1, &incOne, tmp_p2, &incOne);
-    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
-    F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p2, &incOne FCONE FCONE FCONE);
-
-    dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p2, &incOne), 2);
-    sse -= dtemp;
+    // find betahat = inv(XtVyInvX + VbetaInv)(XtVyInvY + VbetaInvmuBeta)
+    F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);                                                // tmp_p1 = XtVyInvY + VbetaInvmuBeta
+    F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
+    F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);                                             // tmp_pp = t(X)*VyInv*X + VbetaInv
+    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}   // tmp_pp = chol(XtVyInvX + VbetaInv)
+    F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                    // tmp_p1 = cholinv(XtVyInvX + VbetaInv)*tmp_p1
+    dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p1, &incOne), 2);                                                       // dtemp = t(m)*M*m
+    sse -= dtemp;                                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta - mtMm
 
     // set-up for sampling spatial random effects
-    F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);
-    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, tmp_nn, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);
-    F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn, &n FCONE FCONE);
-    F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);
-    F77_NAME(daxpy)(&nn, &negOne, tmp_nn, &incOne, tmp_nn2, &incOne);
-    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
-    mkLT(tmp_nn2, n);
+    F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);                                                         // tmp_nn2 = Vz
+    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, tmp_nn, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
+    F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn, &n FCONE FCONE);    // tmp_nn = Vz*VyInv*Vz
+    F77_NAME(daxpy)(&nn, &negOne, Vz, &incOne, tmp_nn, &incOne);                                                 // tmp_nn = Vz*VyInv*Vz - Vz
+    F77_NAME(dscal)(&nn, &negOne, tmp_nn, &incOne);                                                              // tmp_nn = Vz - Vz*VyInv*Vz
+    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}    // tmp_nn = chol(Vz - Vz*VyInv*Vz)
+    mkLT(tmp_nn, n);                                                                                             // make cholDinv lower-triangular
 
     // posterior parameters of sigmaSq
     sigmaSqIGaPost += sigmaSqIGa;
@@ -194,6 +200,7 @@ extern "C" {
     SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
     SEXP samples_z_r = PROTECT(allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
+    // sample storage at s-th iteration
     double sigmaSq = 0;
     double *beta = (double *) R_alloc(p, sizeof(double)); zeros(beta, p);
     double *z = (double *) R_alloc(n, sizeof(double)); zeros(z, n);
@@ -210,31 +217,23 @@ extern "C" {
       // sample fixed effects by composition sampling
       dtemp = sqrt(sigmaSq);
       for(j = 0; j < p; j++){
-        beta[j] = rnorm(0.0, dtemp);
+        beta[j] = rnorm(tmp_p1[j], dtemp);                                                   // beta ~ N(tmp_p1, sigmaSq*I)
       }
-      F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, beta, &incOne);
-      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta, &incOne FCONE FCONE FCONE);
-
-      for(j = 0; j < p; j++){
-        REAL(samples_beta_r)[s*p + j] = beta[j];
-      }
+      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta, &incOne FCONE FCONE FCONE); // beta = t(cholinv(tmp_pp))*beta
 
       // sample spatial effects by composition sampling
-      F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);
-      F77_NAME(dgemv)(ntran, &n, &p, &negOne, X, &n, beta, &incOne, &one, tmp_n, &incOne FCONE);
-      dtemp2 = 1.0 / deltasq;
-      F77_NAME(dscal)(&n, &dtemp2, tmp_n, &incOne);
-
       for(i = 0; i < n; i++){
-        z[i] = rnorm(0.0, dtemp);
+        tmp_n[i] = rnorm(0.0, dtemp);                                                               // tmp_n ~ N(0, sigmaSq*I)
       }
+      F77_NAME(dcopy)(&n, Y, &incOne, z, &incOne);                                                  // z = Y
+      F77_NAME(dgemv)(ntran, &n, &p, &negOne, X, &n, beta, &incOne, &one, z, &incOne FCONE);        // z = Y-X*beta
+      F77_NAME(dscal)(&n, &deltasqInv, z, &incOne);                                                 // z = (Y-X*beta)/deltasq
+      F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn, &n, z, &incOne, &one, tmp_n, &incOne FCONE);     // tmp_n = tmp_n + t(chol(tmp_nn))*(Y-X*beta)/deltasq
+      F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn, &n, tmp_n, &incOne, &zero, z, &incOne FCONE);    // z = chol(tmp_nn)*tmp_n
 
-      F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn2, &n, tmp_n, &incOne, &one, z, &incOne FCONE);
-      F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn2, &n, z, &incOne, &zero, tmp_n, &incOne FCONE);
-
-      for(i = 0; i < n; i++){
-        REAL(samples_z_r)[s*n + i] = tmp_n[i];
-      }
+      // copy samples into SEXP
+      F77_NAME(dcopy)(&p, &beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
+      F77_NAME(dcopy)(&n, &z[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
 
     }
 
@@ -261,8 +260,8 @@ extern "C" {
 
     namesgets(result_r, resultName_r);
 
-    // SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, nSamples, p)); nProtect++;
-    // SEXP tmp_n_r = PROTECT(allocVector(REALSXP, n)); nProtect++;
+    // SEXP result_r = PROTECT(allocMatrix(REALSXP, nSamples, p)); nProtect++;
+    // SEXP result_r1 = PROTECT(allocVector(REALSXP, 1)); nProtect++;
     // SEXP tmp_nn_r = PROTECT(allocMatrix(REALSXP, n, n)); nProtect++;
 
     // for (i = 0; i < n; i++) {
@@ -275,10 +274,10 @@ extern "C" {
     //   REAL(tmp_n_r)[i] = tmp_n[i];
     // }
 
-    // REAL(result_r)[0] = sigmaSqIGaPost;
-    // REAL(result_r)[1] = sigmaSqIGbPost;
+    // REAL(result_r1)[0] = sigmaSqIGaPost;
+    // REAL(result_r1)[1] = sigmaSqIGbPost;
 
-    // REAL(result_r)[0] = sse;
+    // REAL(result_r1)[0] = sse;
 
     UNPROTECT(nProtect);
 
