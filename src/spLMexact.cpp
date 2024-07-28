@@ -258,7 +258,7 @@ extern "C" {
     SET_VECTOR_ELT(result_r, 2, samples_z_r);
     SET_VECTOR_ELT(resultName_r, 2, mkChar("z"));
 
-    namesgets(result_r, resultName_r);
+    Rf_namesgets(result_r, resultName_r);
 
     // SEXP result_r = PROTECT(Rf_allocMatrix(REALSXP, nSamples, p)); nProtect++;
     // SEXP result_r1 = PROTECT(Rf_allocVector(REALSXP, 1)); nProtect++;
