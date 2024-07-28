@@ -21,7 +21,6 @@ jobs:
         with:
           extra-packages: |
             any::rcmdcheck
-            any::Rtools
           needs: check
       - name: Check
         run: rcmdcheck::rcmdcheck(args = "--no-manual", error_on = "error")
