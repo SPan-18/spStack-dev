@@ -196,9 +196,9 @@ extern "C" {
     sigmaSqIGbPost += 0.5 * sse;
 
     // posterior samples of sigma-sq and beta
-    SEXP samples_sigmaSq_r = PROTECT(allocVector(REALSXP, nSamples)); nProtect++;
-    SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
-    SEXP samples_z_r = PROTECT(allocMatrix(REALSXP, n, nSamples)); nProtect++;
+    SEXP samples_sigmaSq_r = PROTECT(Rf_allocVector(REALSXP, nSamples)); nProtect++;
+    SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
+    SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
     // sample storage at s-th iteration
     double sigmaSq = 0;
@@ -243,8 +243,8 @@ extern "C" {
     SEXP result_r, resultName_r;
     int nResultListObjs = 3;
 
-    result_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
+    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // samples of beta
     SET_VECTOR_ELT(result_r, 0, samples_beta_r);
@@ -260,9 +260,9 @@ extern "C" {
 
     namesgets(result_r, resultName_r);
 
-    // SEXP result_r = PROTECT(allocMatrix(REALSXP, nSamples, p)); nProtect++;
-    // SEXP result_r1 = PROTECT(allocVector(REALSXP, 1)); nProtect++;
-    // SEXP tmp_nn_r = PROTECT(allocMatrix(REALSXP, n, n)); nProtect++;
+    // SEXP result_r = PROTECT(Rf_allocMatrix(REALSXP, nSamples, p)); nProtect++;
+    // SEXP result_r1 = PROTECT(Rf_allocVector(REALSXP, 1)); nProtect++;
+    // SEXP tmp_nn_r = PROTECT(Rf_allocMatrix(REALSXP, n, n)); nProtect++;
 
     // for (i = 0; i < n; i++) {
     //   for (j = 0; j < n; j++) {

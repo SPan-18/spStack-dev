@@ -23,7 +23,6 @@ extern "C" {
     /*****************************************
      Common variables
      *****************************************/
-    // int i, j, k, info, nProtect = 0;
     int i, j, s, info, nProtect = 0;
     char const *lower = "L";
     char const *nUnit = "N";
@@ -200,9 +199,9 @@ extern "C" {
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, Lbeta, &p, mu_vbeta, &incOne FCONE FCONE FCONE);  // mu_vbeta = LbetaInv*muBeta
 
     // posterior samples of sigma-sq and beta
-    SEXP samples_sigmaSq_r = PROTECT(allocVector(REALSXP, nSamples)); nProtect++;
-    SEXP samples_beta_r = PROTECT(allocMatrix(REALSXP, p, nSamples)); nProtect++;
-    SEXP samples_z_r = PROTECT(allocMatrix(REALSXP, n, nSamples)); nProtect++;
+    SEXP samples_sigmaSq_r = PROTECT(Rf_allocVector(REALSXP, nSamples)); nProtect++;
+    SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
+    SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
     double sigmaSq = 0;
     double *v1 = (double *) R_alloc(p, sizeof(double)); zeros(v1, p);
@@ -261,8 +260,8 @@ extern "C" {
     SEXP result_r, resultName_r;
     int nResultListObjs = 3;
 
-    result_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(allocVector(VECSXP, nResultListObjs)); nProtect++;
+    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
 
     // samples of beta
     SET_VECTOR_ELT(result_r, 0, samples_beta_r);
@@ -278,8 +277,8 @@ extern "C" {
 
     namesgets(result_r, resultName_r);
 
-    // SEXP result_r = PROTECT(allocVector(REALSXP, nPp)); nProtect++;
-    // SEXP result_r = PROTECT(allocMatrix(REALSXP, p, p)); nProtect++;
+    // SEXP result_r = PROTECT(Rf_allocVector(REALSXP, nPp)); nProtect++;
+    // SEXP result_r = PROTECT(Rf_allocMatrix(REALSXP, p, p)); nProtect++;
     // double *pointer_result_r = REAL(result_r);
 
     // for (i = 0; i < p; i++) {

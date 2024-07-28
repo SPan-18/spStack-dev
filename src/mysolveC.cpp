@@ -20,7 +20,7 @@ extern "C" {
     double *b = REAL(b_r);
     int n = INTEGER(n_r)[0];
 
-    SEXP result = PROTECT(allocVector(REALSXP, n));
+    SEXP result = PROTECT(Rf_allocVector(REALSXP, n));
 
     mysolveLT(A, b, n);
 
