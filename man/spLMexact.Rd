@@ -36,7 +36,7 @@ spLMexact(
 
 \item{verbose}{logical.}
 
-\item{...}{currently no additional arguments.}
+\item{...}{currently no additional argument}
 }
 \description{
 Univariate spatial linear mixed model
