@@ -54,7 +54,7 @@ void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
   F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholVy, &n, tmp_np2, &n FCONE FCONE FCONE FCONE);  // tmp_np2 = VyInv*Vz*B
   F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &negone, Vz, &n, tmp_np2, &n, &one, tmp_np1, &n FCONE FCONE);      // tmp_np1 = (Vz - VzVyinv*Vz)*B = inv(D)*B
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &negdeltasqInv, X, &n, tmp_np1, &n, &one, tmp_pp, &p FCONE FCONE); // tmp_pp = Schur(A) = A - t(B)*inv(D)*B
-  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}    // chol(Schur(A))
+  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}    // chol(Schur(A))
   F77_NAME(dtrsv)(lower, ntran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                     // tmp_p1 = inv(Schur(A))*(v1-BtDinvB)
   F77_NAME(dcopy)(&p, tmp_p1, &incOne, out_p, &incOne);                                                        // out_p = first p elements of Mv
@@ -119,7 +119,7 @@ void inversionLM2(double *X, int n, int p, double deltasq, double *VbetaInv,
   F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholVy, &n, tmp_np2, &n FCONE FCONE FCONE FCONE);  // tmp_np2 = VyInv*Vz*B
   F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &negone, Vz, &n, tmp_np2, &n, &one, tmp_np1, &n FCONE FCONE);      // tmp_np1 = (Vz - VzVyinv*Vz)*B = inv(D)*B
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &negdeltasqInv, X, &n, tmp_np1, &n, &one, tmp_pp, &p FCONE FCONE); // tmp_pp = Schur(A) = A - t(B)*inv(D)*B
-  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}    // chol(Schur(A))
+  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}    // chol(Schur(A))
   F77_NAME(dtrsv)(lower, ntran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                     // tmp_p1 = inv(Schur(A))*(v1-BtDinvB)
   F77_NAME(dcopy)(&p, tmp_p1, &incOne, out_p, &incOne);                                                        // out_p = first p elements of Mv

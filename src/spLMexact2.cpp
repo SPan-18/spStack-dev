@@ -149,14 +149,14 @@ extern "C" {
     thetasp[1] = nu;
     spCorFull(coordsD, n, thetasp, corfn, Vz);
     F77_NAME(dcopy)(&nn, Vz, &incOne, Lz, &incOne);
-    F77_NAME(dpotrf)(lower, &n, Lz, &n, &info FCONE); if(info != 0){error("c++ error: Vz dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, Lz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
     F77_NAME(dcopy)(&nn, Vz, &incOne, cholVy, &incOne);
     for(i = 0; i < n; i++){
       cholVy[i*n + i] += deltasq;
     }
 
     // find Cholesky of (Vz + deltasq*I)
-    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){error("c++ error: Vy dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
 
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n1, &incOne);
     F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVy, &n, tmp_n1, &incOne FCONE FCONE FCONE);  // LyInv*y
@@ -169,9 +169,9 @@ extern "C" {
     F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np1, &n, tmp_n1, &incOne, &zero, tmp_p1, &incOne FCONE); // t(LyInv*y)*(LyInv*X)=Xt*VyInv*y
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);   // Lbeta
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");}  // VbetaInv
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}  // VbetaInv
     F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);  // VbetaInv*muBeta
 
     dtemp = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);  // t(muBeta)*VbetaInv*muBeta
@@ -182,7 +182,7 @@ extern "C" {
     F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);  // Xt*VyInv*X + VbetaInv
 
     F77_NAME(dcopy)(&p, tmp_p1, &incOne, tmp_p2, &incOne);
-    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}  // chol(Xt*VyInv*X + VbetaInv)
+    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // chol(Xt*VyInv*X + VbetaInv)
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p2, &incOne FCONE FCONE FCONE);  // chol(Xt*VyInv*X + VbetaInv)^{-1}(Xt*Vyinv*y + VbetaInv*muBeta)
 
     dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p2, &incOne), 2);  // t(m)*M*m

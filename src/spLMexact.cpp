@@ -148,7 +148,7 @@ extern "C" {
 
     // find sse to sample sigmaSq
     // chol(Vy)
-    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: Vy dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
 
     // find YtVyInvY
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
@@ -161,10 +161,10 @@ extern "C" {
     F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &p, &one, tmp_nn, &n, tmp_np, &n FCONE FCONE FCONE FCONE);  // tmp_np = cholinv(Vy)*X
     F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np, &n, tmp_n, &incOne, &zero, tmp_p1, &incOne FCONE);             // tmp_p1 = t(X)*VyInv*Y
 
-    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                    // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){error("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
-    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);              // tmp_p2 = VbetaInv*muBeta
+    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);               // tmp_p2 = VbetaInv*muBeta
 
     // find muBetatVbetaInvmuBeta
     muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);                               // t(muBeta)*VbetaInv*muBeta
@@ -174,7 +174,7 @@ extern "C" {
     F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);                                                // tmp_p1 = XtVyInvY + VbetaInvmuBeta
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
     F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);                                             // tmp_pp = t(X)*VyInv*X + VbetaInv
-    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}   // tmp_pp = chol(XtVyInvX + VbetaInv)
+    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_pp = chol(XtVyInvX + VbetaInv)
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                    // tmp_p1 = cholinv(XtVyInvX + VbetaInv)*tmp_p1
     dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p1, &incOne), 2);                                                       // dtemp = t(m)*M*m
     sse -= dtemp;                                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta - mtMm
@@ -185,7 +185,7 @@ extern "C" {
     F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn, &n FCONE FCONE);    // tmp_nn = Vz*VyInv*Vz
     F77_NAME(daxpy)(&nn, &negOne, Vz, &incOne, tmp_nn, &incOne);                                                 // tmp_nn = Vz*VyInv*Vz - Vz
     F77_NAME(dscal)(&nn, &negOne, tmp_nn, &incOne);                                                              // tmp_nn = Vz - Vz*VyInv*Vz
-    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){error("c++ error: dpotrf failed\n");}    // tmp_nn = chol(Vz - Vz*VyInv*Vz)
+    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // tmp_nn = chol(Vz - Vz*VyInv*Vz)
     mkLT(tmp_nn, n);                                                                                             // make cholDinv lower-triangular
 
     // posterior parameters of sigmaSq
