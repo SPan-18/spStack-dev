@@ -5,6 +5,7 @@
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
+#include <R_ext/Memory.h>
 #include <R_ext/Linpack.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
@@ -121,19 +122,18 @@ extern "C" {
     const double deltasqInv = 1.0 / deltasq;
 
     double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);              // correlation matrix
-    double *tmp_nn = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn, nn);      // allocate temporary n x n matrix
-    double *tmp_nn2 = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn2, nn);    // allocate temporary n x n matrix
+    double *cholVy = (double *) R_alloc(nn, sizeof(double)); zeros(cholVy, nn);      // allocate memory for n x n matrix
     double *thetasp = (double *) R_alloc(2, sizeof(double));                         // spatial process parameters
 
-    double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);          // allocate temporary n x 1 vector
-    double *tmp_np = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np, np);      // allocate temporary n x p matrix
+    double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);          // allocate memory for n x 1 vector
+    double *tmp_np = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np, np);      // allocate memory for n x p matrix
 
-    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);        // allocate temporary p x 1 vector
-    double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);        // allocate temporary p x 1 vector
+    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);        // allocate memory for p x 1 vector
+    double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);        // allocate memory for p x 1 vector
 
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);  // allocate VbetaInv
-    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);      // allocate temporary p x p matrix
-    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);    // allocate temporary p x p matrix
+    double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);      // allocate memory for p x p matrix
+    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);    // allocate memory for p x p matrix
 
     //construct covariance matrix (full)
     thetasp[0] = phi;
@@ -141,24 +141,24 @@ extern "C" {
     spCorFull(coordsD, n, thetasp, corfn, Vz);
 
     // construct marginal covariance matrix (Vz+deltasq*I)
-    F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn, &incOne);
+    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVy, &incOne);
     for(i = 0; i < n; i++){
-      tmp_nn[i*n + i] += deltasq;
+      cholVy[i*n + i] += deltasq;
     }
 
     // find sse to sample sigmaSq
     // chol(Vy)
-    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
 
     // find YtVyInvY
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
-    F77_NAME(dtrsv)(lower, ntran, nUnit, &n, tmp_nn, &n, tmp_n, &incOne FCONE FCONE FCONE);  // tmp_n = cholinv(Vy)*Y
+    F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVy, &n, tmp_n, &incOne FCONE FCONE FCONE);  // tmp_n = cholinv(Vy)*Y
     dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                     // dtemp = t(Y)*VyInv*Y
     sse += dtemp;                                                                            // sse = YtVyinvY
 
     // find XtVyInvY and, VbetaInvmuBeta
     F77_NAME(dcopy)(&np, X, &incOne, tmp_np, &incOne);                                                          // tmp_np = X
-    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &p, &one, tmp_nn, &n, tmp_np, &n FCONE FCONE FCONE FCONE);  // tmp_np = cholinv(Vy)*X
+    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &p, &one, cholVy, &n, tmp_np, &n FCONE FCONE FCONE FCONE);  // tmp_np = cholinv(Vy)*X
     F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np, &n, tmp_n, &incOne, &zero, tmp_p1, &incOne FCONE);             // tmp_p1 = t(X)*VyInv*Y
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
@@ -180,13 +180,17 @@ extern "C" {
     sse -= dtemp;                                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta - mtMm
 
     // set-up for sampling spatial random effects
+    double *tmp_nn2 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn2, nn);                           // calloc n x n matrix
+    double *tmp_nn3 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn3, nn);                           // calloc n x n matrix
     F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);                                                         // tmp_nn2 = Vz
-    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, tmp_nn, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
-    F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn, &n FCONE FCONE);    // tmp_nn = Vz*VyInv*Vz
-    F77_NAME(daxpy)(&nn, &negOne, Vz, &incOne, tmp_nn, &incOne);                                                 // tmp_nn = Vz*VyInv*Vz - Vz
-    F77_NAME(dscal)(&nn, &negOne, tmp_nn, &incOne);                                                              // tmp_nn = Vz - Vz*VyInv*Vz
-    F77_NAME(dpotrf)(lower, &n, tmp_nn, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // tmp_nn = chol(Vz - Vz*VyInv*Vz)
-    mkLT(tmp_nn, n);                                                                                             // make cholDinv lower-triangular
+    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
+    F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn3, &n FCONE FCONE);   // tmp_nn3 = Vz*VyInv*Vz
+    F77_NAME(daxpy)(&nn, &negOne, Vz, &incOne, tmp_nn3, &incOne);                                                // tmp_nn3 = Vz*VyInv*Vz - Vz
+    F77_NAME(dcopy)(&nn, tmp_nn3, &incOne, tmp_nn2, &incOne);                                                    // tmp_nn2 = Vz*VyInv*Vz - Vz
+    R_chk_free(tmp_nn3);                                                                                         // free tmp_nn3
+    F77_NAME(dscal)(&nn, &negOne, tmp_nn2, &incOne);                                                             // tmp_nn2 = Vz - Vz*VyInv*Vz
+    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(Vz - Vz*VyInv*Vz)
+    mkLT(tmp_nn2, n);                                                                                            // make cholDinv lower-triangular
 
     // posterior parameters of sigmaSq
     sigmaSqIGaPost += sigmaSqIGa;
@@ -200,10 +204,10 @@ extern "C" {
     SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
     SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
-    // sample storage at s-th iteration
+    // sample storage at s-th iteration temporary allocation
     double sigmaSq = 0;
-    double *beta = (double *) R_alloc(p, sizeof(double)); zeros(beta, p);
-    double *z = (double *) R_alloc(n, sizeof(double)); zeros(z, n);
+    double *beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta, p);
+    double *z = (double *) R_chk_calloc(n, sizeof(double)); zeros(z, n);
 
     GetRNGstate();
 
@@ -228,8 +232,8 @@ extern "C" {
       F77_NAME(dcopy)(&n, Y, &incOne, z, &incOne);                                                  // z = Y
       F77_NAME(dgemv)(ntran, &n, &p, &negOne, X, &n, beta, &incOne, &one, z, &incOne FCONE);        // z = Y-X*beta
       F77_NAME(dscal)(&n, &deltasqInv, z, &incOne);                                                 // z = (Y-X*beta)/deltasq
-      F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn, &n, z, &incOne, &one, tmp_n, &incOne FCONE);     // tmp_n = tmp_n + t(chol(tmp_nn))*(Y-X*beta)/deltasq
-      F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn, &n, tmp_n, &incOne, &zero, z, &incOne FCONE);    // z = chol(tmp_nn)*tmp_n
+      F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn2, &n, z, &incOne, &one, tmp_n, &incOne FCONE);    // tmp_n = tmp_n + t(chol(tmp_nn2))*(Y-X*beta)/deltasq
+      F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn2, &n, tmp_n, &incOne, &zero, z, &incOne FCONE);   // z = chol(tmp_nn2)*tmp_n
 
       // copy samples into SEXP
       F77_NAME(dcopy)(&p, &beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
@@ -238,6 +242,11 @@ extern "C" {
     }
 
     PutRNGstate();
+
+    // Free stuff
+    R_chk_free(tmp_nn2);
+    R_chk_free(beta);
+    R_chk_free(z);
 
     // make return object for posterior samples of sigma-sq and beta
     SEXP result_r, resultName_r;
