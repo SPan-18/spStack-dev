@@ -15,10 +15,11 @@
 
 extern "C" {
 
-  SEXP spLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
-                 SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
-                 SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
-                 SEXP nSamples_r, SEXP verbose_r){
+  SEXP spLMexactLOO(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
+                    SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
+                    SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
+                    SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r, SEXP CV_k_r,
+                    SEXP verbose_r){
 
     /*****************************************
      Common variables
@@ -45,8 +46,8 @@ extern "C" {
     int nn = n * n;
     int np = n * p;
 
+    // Set-up distance matrix and spatial correlation function
     double *coordsD = REAL(coordsD_r);
-
     std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
 
     //priors
@@ -247,6 +248,9 @@ extern "C" {
     R_chk_free(tmp_nn2);
     R_chk_free(beta);
     R_chk_free(z);
+
+    // Find Leave-one-out predictive densities: EXACT
+
 
     // make return object for posterior samples of sigma-sq and beta
     SEXP result_r, resultName_r;
