@@ -167,7 +167,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords,
   storage.mode(deltasq) <- "double"
 
   ####################################################
-  ## sampling and setup
+  ## sampling setup
   ####################################################
 
   if(missing(n.samples)){stop("n.samples must be specified.")}
@@ -176,13 +176,52 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords,
   storage.mode(verbose) <- "integer"
 
   ####################################################
+  ## Leave-one-out setup
+  ####################################################
+
+  if(loopd){
+    if(missing(loopd_method)){stop("loopd_method must be specified")}
+    if(!loopd_method %in% c("exact", "CV", "PSIS")){stop("loopd_method = '", loopd_method, "' is not a valid option; choose from c('exact', 'CV', 'PSIS').")}
+    if(loopd_method == "CV"){
+      if(missing(CV_k)){
+        warning("CV_k not supplied. Using default value CV_k = 10.")
+        CV_k <- as.integer(10)
+      }else{
+        if(CV_k < 10){
+          warning("Supplied CV_k is less than 10. Using CV_k = 10.")
+          CV_k <- as.integer(10)
+        }else if(CV_k > 20){
+          warning("Supplied CV_k is greater than 20. Using CV_k = 20.")
+          CV_k <- as.integer(20)
+        }else{
+          if(!is_integer(CV_k)){
+            CV_k <- as.integer(floor(CV_k))
+            warning("Supplied CV_k is not an integer. Using greatest integer less than supplied value, CV_k = ", CV_k, ".")
+          }
+        }
+      }
+    }else{
+      loopd_method <- "none"
+      CV_k <- as.integer(0)
+    }
+  }
+
+  storage.mode(CV_k) <- "integer"
+
+  ####################################################
   ## main function call
   ####################################################
 
-  out <- .Call("spLMexact", y, X, p, n, coords.D,
-               beta.prior, beta.Norm, sigma.sq.IG,
-               phi, nu, deltasq, cor.fn, n.samples, verbose)
-
+  if(loopd){
+    out <- .Call("spLMexactLOO", y, X, p, n, coords.D,
+                 beta.prior, beta.Norm, sigma.sq.IG,
+                 phi, nu, deltasq, cor.fn, n.samples,
+                 loopd, loopd_method, CV_k, verbose)
+  }else{
+    out <- .Call("spLMexact", y, X, p, n, coords.D,
+                 beta.prior, beta.Norm, sigma.sq.IG,
+                 phi, nu, deltasq, cor.fn, n.samples, verbose)
+  }
 
   return(out)
 

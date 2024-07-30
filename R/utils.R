@@ -26,3 +26,8 @@ parseFormula <-  function(formula, data, intercept=TRUE, justX=FALSE){
   }
   return(list(Y, X, xvars, xobs))
 }
+
+
+is_integer <- function(x) {
+  is.numeric(x) && (floor(x) == x)
+}

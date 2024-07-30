@@ -66,6 +66,3 @@ Univariate spatial linear mixed model
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto Smoothed Importance Sampling.”
 \emph{Journal of Machine Learning Research}, \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 }
-\seealso{
-\code{\link[loo:psis]{loo::psis()}}
-}
