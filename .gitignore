@@ -11,3 +11,4 @@
 *.dylib
 *.a
 *.lib
+.vscode
