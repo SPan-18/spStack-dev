@@ -25,13 +25,10 @@ surfaceplot <- function(tab, coords_name, var_name,
 
   plot <- ggplot(surf_df, aes_string(x = 'x', y = 'y')) +
     geom_raster(aes_string(fill = 'z')) +
-    # scale_fill_gradientn(colours = col.br(100)) +
-    # scale_fill_gradientn(colours = col.RdBu(100)) +
     theme_bw() +
     theme(axis.ticks = element_line(linewidth = 0.25),
           panel.background = element_blank(),
           panel.grid = element_blank(),
-          # legend.title = element_text(size = 10, hjust = 0.25),
           legend.box.just = "center",
           aspect.ratio = 1)
 

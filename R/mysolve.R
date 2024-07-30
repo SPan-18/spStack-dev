@@ -15,16 +15,16 @@
 #' (x <- mysolve(A, b)) # 5 -2 0
 #'
 #' @keywords utilities
-mysolve <- function(A, b){
+mysolve <- function(A, b) {
 
-  n <- nrow(A)
-  res <- matrix(0, n)
+    n <- nrow(A)
+    res <- matrix(0, n)
 
-  storage.mode(A) <- "double"
-  storage.mode(b) <- "double"
-  storage.mode(res) <- "double"
-  storage.mode(n) <- "integer"
+    storage.mode(A) <- "double"
+    storage.mode(b) <- "double"
+    storage.mode(res) <- "double"
+    storage.mode(n) <- "integer"
 
-  .Call("mysolveC", A, b, n)
+    .Call("mysolveC", A, b, n)
 
 }
