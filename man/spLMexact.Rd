@@ -18,25 +18,34 @@ spLMexact(
 )
 }
 \arguments{
-\item{formula}{a symbolic description of the regression model to be fit. See example below.}
+\item{formula}{a symbolic description of the regression model to be fit. See
+example below.}
 
-\item{data}{an optional data frame containing the variables in the model. If not found in \code{data}, the variables are taken from \code{environment(formula)}, typically the environment from which \code{spLM_stack} is called.}
+\item{data}{an optional data frame containing the variables in the model. If
+not found in \code{data}, the variables are taken from
+\code{environment(formula)}, typically the environment from which
+\code{spLMexact} is called.}
 
-\item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
+\item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation
+coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
 
-\item{cor.fn}{a quoted keyword that specifies the correlation function used to model the spatial dependence structure among the observations. Supported covariance model key words are: \code{"exponential"} and \code{"matern"}. See below for details.}
-
-\item{priors}{a list with each tag corresponding to a parameter name and containing prior details.}
-
-\item{spParams}{fixed value of spatial process parameters.}
+\item{priors}{a list with each tag corresponding to a parameter name and
+containing prior details.}
 
 \item{noise_sp_ratio}{noise-to-spatial variance ratio}
-
-\item{n.samples}{number of posterior samples to be generated}
 
 \item{verbose}{logical.}
 
 \item{...}{currently no additional argument}
+
+\item{cor_fun}{a quoted keyword that specifies the correlation function used
+to model the spatial dependence structure among the observations. Supported
+covariance model key words are: \code{'exponential'} and \code{'matern'}. See
+below for details.}
+
+\item{sp_params}{fixed value of spatial process parameters.}
+
+\item{n_samples}{number of posterior samples to be generated}
 }
 \description{
 Univariate spatial linear mixed model

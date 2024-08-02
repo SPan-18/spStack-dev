@@ -15,54 +15,68 @@ spLMexactLOO(
   n.samples,
   loopd,
   loopd_method,
-  CV_k,
+  CV_K,
   verbose = TRUE,
   ...
 )
 }
 \arguments{
-\item{formula}{a symbolic description of the regression model to be fit. See example below.}
+\item{formula}{a symbolic description of the regression model to be fit.
+See example below.}
 
-\item{data}{an optional data frame containing the variables in the model. If not found in \code{data},
-the variables are taken from \code{environment(formula)}, typically the environment from which
-\code{spLM_stack} is called.}
+\item{data}{an optional data frame containing the variables in the model.
+If not found in \code{data}, the variables are taken from
+\code{environment(formula)}, typically the environment from which
+\code{spLMexactLOO} is called.}
 
-\item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation coordinates in \eqn{R^2}{R^2}
-(e.g., easting and northing).}
+\item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation
+coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
 
-\item{cor.fn}{a quoted keyword that specifies the correlation function used to model the spatial
-dependence structure among the observations. Supported covariance model key words are: \code{"exponential"}
-and \code{"matern"}. See below for details.}
-
-\item{priors}{a list with each tag corresponding to a parameter name and containing prior details.}
-
-\item{spParams}{fixed value of spatial process parameters.}
+\item{priors}{a list with each tag corresponding to a parameter name and
+containing prior details.}
 
 \item{noise_sp_ratio}{noise-to-spatial variance ratio.}
 
-\item{n.samples}{number of posterior samples to be generated.}
+\item{loopd}{logical. If \code{loopd=TRUE}, returns leave-one-out predictive
+densities, using method as given by \code{loopd_method}.}
 
-\item{loopd}{logical. If \code{loopd=TRUE}, returns leave-one-out predictive densities, using method as
-given by \code{loopd_method}.}
+\item{loopd_method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
+valid inputs are \code{'exact'}, \code{'PSIS'}. The option \code{'exact'} corresponds to
+exact leave-one-out predictive densities which requires computation almost
+equivalent to fitting the model \eqn{n} times. The options \code{'CV'} and
+\code{'PSIS'} are faster, and finds approximate leave-one-out predictive
+densities using \eqn{k}-fold cross-validation and Pareto-smoothed importance
+sampling (Vehtari, Gelman, and Gabry 2017, Gelman \emph{et al.} 2024),
+respectively.}
 
-\item{loopd_method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE}, valid inputs are
-\code{"exact"}, \code{"PSIS"}. The option \code{"exact"} corresponds to exact leave-one-out predictive
-densities which fit the model \eqn{n} times. The options \code{"CV"} and \code{"PSIS"} are fast, and finds
-approximate leave-one-out predictive densities using \eqn{k}-fold cross-validation and Pareto-smoothed
-importance sampling (Vehtari et. al, 2024), respectively.}
-
-\item{CV_k}{Only considered if \code{loopd_method = "CV"}. It specifies the value of \eqn{k} for
-\eqn{k}-fold cross-validation. \eqn{k} must be an integer between \eqn{10} and \eqn{20} and is
-recommended only when \eqn{n > 40}. Otherwise, use \code{loopd_method = "exact"}.}
+\item{CV_K}{Only considered if \code{loopd_method='CV'}. It specifies the
+value of \eqn{K} for \eqn{K}-fold cross-validation. \eqn{K} must be an
+integer between \eqn{10} and \eqn{20} and is recommended only when sample
+size \eqn{n>40}. Otherwise, use \code{loopd_method='exact'}.}
 
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
 \item{...}{currently no additional argument}
+
+\item{cor_fun}{a quoted keyword that specifies the correlation function used
+to model the spatial dependence structure among the observations. Supported
+covariance model key words are: \code{'exponential'} and \code{'matern'}.
+See below for details.}
+
+\item{sp_params}{fixed value of spatial process parameters.}
+
+\item{n_samples}{number of posterior samples to be generated.}
 }
 \description{
 Univariate spatial linear mixed model
 }
 \references{
-Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto Smoothed Importance Sampling.”
-\emph{Journal of Machine Learning Research}, \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
+Evaluation Using Leave-One-out Cross-Validation and WAIC.” \emph{Statistics and
+Computing}, \strong{27}(5), 1413–1432.
+URL \url{https://doi.org/10.1007/s11222-016-9696-4}.
+
+Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
+Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
+\strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 }
