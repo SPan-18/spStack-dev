@@ -12,7 +12,14 @@
 # define FCONE
 #endif
 
-// Function to copy matrix from C to SEXP
+// Cholesky factor rank-1 update; chol(alpha*LLt + beta*vvt)
+// void cholRankOneUpdate(int n, double *L, double alpha, double beta, double *v){
+//
+//
+//
+// }
+
+// Copy matrix from C to SEXP
 void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP){
 
   int i, j;
@@ -25,7 +32,7 @@ void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP){
 
 }
 
-// Function to copy vector from C to SEXP
+// Copy vector from C to SEXP
 void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP){
 
   int i;
@@ -36,7 +43,30 @@ void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP){
 
 }
 
-// Function to convert a matrix to lower triangular
+// Copy a submatrix of A into a submatrix of B
+void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB,
+                int startRowA, int startColA, int startRowB, int startColB,
+                int nRowCopy, int nColCopy){
+
+  if(startRowA + nRowCopy > nRowA || startColA + nColCopy > nColA){
+    perror("Indices of rows/columns to copy exceeds dimensions of source matrix.");
+  }
+
+  if(startRowB + nRowCopy > nRowB || startColB + nColCopy > nColB){
+    perror("Indices rows/columns to copy exceeds dimensions of destination matrix.");
+  }
+
+  int col, row;
+
+  for(col = 0; col < nColCopy; col++){
+    for(row= 0; row < nRowCopy; row++){
+      B[(startColB + col)*nRowB + (startRowB + row)] = A[(startColA + col)*nRowA + (startRowA + row)];
+    }
+  }
+
+}
+
+// Convert a matrix to lower triangular
 void mkLT(double *A, int n){
   for (int i = 0; i < n; ++i){
     for (int j = 0; j < i; ++j){
@@ -45,6 +75,7 @@ void mkLT(double *A, int n){
   }
 }
 
+// Solve linear system with upper-triangular Cholesky
 void mysolveUT(double *A, double *b, int n){
 
   int info = 0;
@@ -60,6 +91,7 @@ void mysolveUT(double *A, double *b, int n){
 
 }
 
+// Solve linear system with lower-triangular Cholesky
 void mysolveLT(double *A, double *b, int n){
 
   int info = 0;
@@ -75,6 +107,7 @@ void mysolveLT(double *A, double *b, int n){
 
 }
 
+// Print a matrix with entry type double
 void printMtrx(double *m, int nRow, int nCol){
 
   int i, j;
@@ -88,6 +121,7 @@ void printMtrx(double *m, int nRow, int nCol){
   }
 }
 
+// Print a vector with entry type double
 void printVec(double *m, int n){
 
   Rprintf("\t");
@@ -97,6 +131,7 @@ void printVec(double *m, int n){
   Rprintf("\n");
 }
 
+// Print a vector with entry type integer
 void printVec(int *m, int n){
 
   Rprintf(" ");
@@ -106,6 +141,7 @@ void printVec(int *m, int n){
   Rprintf("\n");
 }
 
+// Create lower-triangular spatial correlation matrix
 void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
   int i,j;
 
@@ -118,9 +154,6 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
     }
 
   }else if(corfn == "matern"){
-
-    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*pi/2*(besselI(d*phi,-nu)-besselI(d*phi, nu))/sin(nu*pi), or
-    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*besselK(x=d*phi, nu=nu)
 
     for(i = 0; i < n; i++){
       for(j = i; j < n; j++){
@@ -137,6 +170,7 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
   }
 }
 
+// Create full spatial correlation matrix
 void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
   int i,j;
 
@@ -150,9 +184,6 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
     }
 
   }else if(corfn == "matern"){
-
-    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*pi/2*(besselI(d*phi,-nu)-besselI(d*phi, nu))/sin(nu*pi), or
-    //(d*phi)^nu/(2^(nu-1)*gamma(nu))*besselK(x=d*phi, nu=nu)
 
     for(i = 0; i < n; i++){
       for(j = i; j < n; j++){
@@ -170,11 +201,13 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
   }
 }
 
+// Fill a double vector with zeros
 void zeros(double *x, int length){
   for(int i = 0; i < length; i++)
     x[i] = 0.0;
 }
 
+// Fill an integer vector with zeros
 void zeros(int *x, int length){
   for(int i = 0; i < length; i++)
     x[i] = 0;

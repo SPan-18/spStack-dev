@@ -3,6 +3,10 @@
 
 void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP);
 
+void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB,
+                int startRowA, int startColA, int startRowB, int startColB,
+                int nRowCopy, int nColCopy);
+
 void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
 
 void mkLT(double *A, int n);
