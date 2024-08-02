@@ -35,7 +35,11 @@ coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
 \item{priors}{a list with each tag corresponding to a parameter name and
 containing prior details.}
 
+\item{spParams}{fixed value of spatial process parameters.}
+
 \item{noise_sp_ratio}{noise-to-spatial variance ratio.}
+
+\item{n.samples}{number of posterior samples to be generated.}
 
 \item{loopd}{logical. If \code{loopd=TRUE}, returns leave-one-out predictive
 densities, using method as given by \code{loopd_method}.}
@@ -58,14 +62,10 @@ size \eqn{n>40}. Otherwise, use \code{loopd_method='exact'}.}
 
 \item{...}{currently no additional argument}
 
-\item{cor_fun}{a quoted keyword that specifies the correlation function used
+\item{cor.fun}{a quoted keyword that specifies the correlation function used
 to model the spatial dependence structure among the observations. Supported
 covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
-
-\item{sp_params}{fixed value of spatial process parameters.}
-
-\item{n_samples}{number of posterior samples to be generated.}
 }
 \description{
 Univariate spatial linear mixed model
