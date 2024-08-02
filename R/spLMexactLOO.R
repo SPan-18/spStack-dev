@@ -8,15 +8,15 @@
 #'  \code{spLMexactLOO} is called.
 #' @param coords an \eqn{n \times 2}{n x 2} matrix of the observation
 #'  coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).
-#' @param cor_fun a quoted keyword that specifies the correlation function used
+#' @param cor.fun a quoted keyword that specifies the correlation function used
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.
 #' @param priors a list with each tag corresponding to a parameter name and
 #'  containing prior details.
-#' @param sp_params fixed value of spatial process parameters.
+#' @param spParams fixed value of spatial process parameters.
 #' @param noise_sp_ratio noise-to-spatial variance ratio.
-#' @param n_samples number of posterior samples to be generated.
+#' @param n.samples number of posterior samples to be generated.
 #' @param loopd logical. If `loopd=TRUE`, returns leave-one-out predictive
 #'  densities, using method as given by \code{loopd_method}.
 #' @param loopd_method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
