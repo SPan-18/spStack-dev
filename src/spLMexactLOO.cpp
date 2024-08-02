@@ -18,7 +18,7 @@ extern "C" {
   SEXP spLMexactLOO(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
                     SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
                     SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
-                    SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r, SEXP CV_k_r,
+                    SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r, SEXP CV_K_r,
                     SEXP verbose_r){
 
     /*****************************************
@@ -74,6 +74,11 @@ extern "C" {
       nu = REAL(nu_r)[0];
     }
 
+    // Leave-one-out predictive density details
+    int loopd = INTEGER(loopd_r)[0];
+    std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
+    int CV_K = INTEGER(CV_K_r)[0];
+
     int nSamples = INTEGER(nSamples_r)[0];
     int verbose = INTEGER(verbose_r)[0];
 
@@ -108,7 +113,7 @@ extern "C" {
       }
       Rprintf("\tNoise-to-spatial variance ratio = %.5f\n\n", deltasq);
 
-      Rprintf("Number of posterior samples = %i.\n", nSamples);
+      Rprintf("Number of posterior samples = %i.\n\n", nSamples);
 
     }
 
@@ -254,29 +259,105 @@ extern "C" {
     R_chk_free(beta);
     R_chk_free(z);
 
-    // Find Leave-one-out predictive densities: EXACT
-
-
-    // make return object for posterior samples of sigma-sq and beta
+    // make return object
     SEXP result_r, resultName_r;
-    int nResultListObjs = 3;
 
-    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    // If loopd is TRUE, set-up Leave-one-out predictive density calculation
+    if(loopd){
 
-    // samples of beta
-    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+      int n1 = n - 1;
+      int n1n1 = n1 * n1;
 
-    // samples of sigma-sq
-    SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
+      double *loopd_out = (double *) R_alloc(n, sizeof(double)); zeros(loopd_out, n);
+      SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
-    // samples of z
-    SET_VECTOR_ELT(result_r, 2, samples_z_r);
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
+      const char *exact_str = "exact";
+      const char *cv_str = "cv";
+      const char *psis_str = "psis";
 
-    Rf_namesgets(result_r, resultName_r);
+      // Exact leave-one-out predictive densities calculation
+      if(loopd_method == exact_str){
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("Exact"); Rprintf("\n\n");
+        }
+
+        double *tmp_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(tmp_n1n1, n1n1);
+
+        // copySubmat(cholVy, n, n, tmp_n1n1, n1, n1, 0, 0, 0, 0, n1, n1);
+        // printMtrx(cholVy, n, n); Rprintf("\n");
+        // printMtrx(tmp_n1n1, n1, n1); Rprintf("\n");
+
+      }
+
+      if(loopd_method == cv_str){
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("K-fold cross-validation"); Rprintf("\n");
+          Rprintf("CV_K = %d\n", CV_K); Rprintf("\n\n");
+        }
+
+
+      }
+
+      if(loopd_method == psis_str){
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("Pareto smoothed importance sampling"); Rprintf("\n\n");
+        }
+
+
+      }
+
+      F77_NAME(dcopy)(&n, &loopd_out[0], &incOne, &REAL(loopd_out_r)[0], &incOne);
+
+      // make return object for posterior samples and leave-one-out predictive densities
+      int nResultListObjs = 4;
+
+      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+      // samples of beta
+      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+      // samples of sigma-sq
+      SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
+      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 2, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
+
+      // leave-one-out predictive densities
+      SET_VECTOR_ELT(result_r, 3, loopd_out_r);
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
+
+      Rf_namesgets(result_r, resultName_r);
+
+    }else{
+
+      // make return object for posterior samples of sigma-sq, beta and z
+      int nResultListObjs = 3;
+
+      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+      // samples of beta
+      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+      // samples of sigma-sq
+      SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
+      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 2, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
+
+      Rf_namesgets(result_r, resultName_r);
+
+    }
 
     // SEXP result_r = PROTECT(Rf_allocMatrix(REALSXP, nSamples, p)); nProtect++;
     // SEXP result_r1 = PROTECT(Rf_allocVector(REALSXP, 1)); nProtect++;
