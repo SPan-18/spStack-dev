@@ -8,7 +8,7 @@
 #'  \code{spLMexactLOO} is called.
 #' @param coords an \eqn{n \times 2}{n x 2} matrix of the observation
 #'  coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).
-#' @param cor.fun a quoted keyword that specifies the correlation function used
+#' @param cor.fn a quoted keyword that specifies the correlation function used
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.

@@ -32,6 +32,11 @@ If not found in \code{data}, the variables are taken from
 \item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation
 coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
 
+\item{cor.fn}{a quoted keyword that specifies the correlation function used
+to model the spatial dependence structure among the observations. Supported
+covariance model key words are: \code{'exponential'} and \code{'matern'}.
+See below for details.}
+
 \item{priors}{a list with each tag corresponding to a parameter name and
 containing prior details.}
 
@@ -61,11 +66,6 @@ size \eqn{n>40}. Otherwise, use \code{loopd_method='exact'}.}
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
 \item{...}{currently no additional argument}
-
-\item{cor.fun}{a quoted keyword that specifies the correlation function used
-to model the spatial dependence structure among the observations. Supported
-covariance model key words are: \code{'exponential'} and \code{'matern'}.
-See below for details.}
 }
 \description{
 Univariate spatial linear mixed model
