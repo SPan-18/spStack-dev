@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <string>
 #include "util.h"
+#include "MatrixAlgos.h"
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -282,11 +283,29 @@ extern "C" {
           Rprintf("Exact"); Rprintf("\n\n");
         }
 
-        double *tmp_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(tmp_n1n1, n1n1);
+        double *looChol = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looChol, n1n1);
+        // double *tmp_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(tmp_n1n1, n1n1);
+        double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
+        // double *tmp_n12 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n12, n1);
 
         // copySubmat(cholVy, n, n, tmp_n1n1, n1, n1, 0, 0, 0, 0, n1, n1);
         // printMtrx(cholVy, n, n); Rprintf("\n");
         // printMtrx(tmp_n1n1, n1, n1); Rprintf("\n");
+
+        // copySubmat(cholVy, n, n, tmp_n1n1, n1, n1, 1, 1, 0, 0, n1, n1);
+        // printMtrx(tmp_n1n1, n1, n1); Rprintf("\n");
+        // copyVecExcludingOne(&cholVy[0], tmp_n11, n, 0);
+        // printVec(tmp_n11, n1); Rprintf("\n");
+        // cholRankOneUpdate(n1, tmp_n1n1, 1.0, 1.0, tmp_n11, looChol, tmp_n12);
+        // printMtrx(looChol, n1, n1); Rprintf("\n");
+
+        cholRowDelUpdate(n, cholVy, 4, looChol, tmp_n11);
+        printMtrx(looChol, n1, n1); Rprintf("\n");
+
+        // R_chk_free(tmp_n1n1);
+        R_chk_free(tmp_n11);
+        // R_chk_free(tmp_n12);
+        R_chk_free(looChol);
 
       }
 

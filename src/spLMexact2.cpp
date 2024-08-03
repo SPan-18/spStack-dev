@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <string>
 #include "util.h"
-#include "inversion.h"
+#include "MatrixAlgos.h"
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
