@@ -12,12 +12,17 @@
 # define FCONE
 #endif
 
-// Cholesky factor rank-1 update; chol(alpha*LLt + beta*vvt)
-// void cholRankOneUpdate(int n, double *L, double alpha, double beta, double *v){
-//
-//
-//
-// }
+// Copy a vector excluding the i-th entry
+void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index){
+
+  int i = 0, j = 0;
+
+  for(i = 0; i < n; i++){
+    if(i != exclude_index){
+      v2[j++] = v1[i];
+    }
+  }
+}
 
 // Copy matrix from C to SEXP
 void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP){
