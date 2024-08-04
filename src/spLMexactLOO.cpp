@@ -19,8 +19,8 @@ extern "C" {
   SEXP spLMexactLOO(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
                     SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
                     SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
-                    SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r, SEXP CV_K_r,
-                    SEXP verbose_r){
+                    SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
+                    SEXP CV_K_r, SEXP verbose_r){
 
     /*****************************************
      Common variables
@@ -103,7 +103,8 @@ extern "C" {
         Rprintf("\n");
       }
 
-      Rprintf("\tsigma.sq IG hyperpriors shape = %.5f and scale = %.5f\n\n", sigmaSqIGa, sigmaSqIGb);
+      Rprintf("\tsigma.sq IG hyperpriors shape = %.5f and scale = %.5f\n\n",
+              sigmaSqIGa, sigmaSqIGb);
 
       Rprintf("Spatial process parameters:\n");
 
