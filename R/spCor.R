@@ -9,7 +9,8 @@ spCor <- function(D, cor.fn, spParams) {
             stop("spParams must contain phi and nu.")
         phi <- spParams[1]
         nu <- spParams[2]
-        R <- (D * phi)^nu/(2^(nu - 1) * gamma(nu)) * besselK(x = D * phi, nu = nu)
+        R <- (D * phi)^nu/(2^(nu - 1) * gamma(nu)) * besselK(x = D * phi,
+                                                             nu = nu)
         diag(R) <- 1
     } else if (cor.fn == "gaussian") {
         if (length(spParams) > 1)
@@ -22,10 +23,14 @@ spCor <- function(D, cor.fn, spParams) {
         phi <- spParams[1]
         R <- D
         R[TRUE] <- 1
-        R[D > 0 & D < 1/phi] <- 1 - 1.5 * phi * D[D > 0 & D <= 1/phi] + 0.5 * ((phi * D[D > 0 & D <= 1/phi])^3)
+        R[D > 0 & D < 1/phi] <- 1 - 1.5 * phi * D[D > 0 & D <= 1/phi] +
+          0.5 * ((phi * D[D > 0 & D <= 1/phi])^3)
         R[D >= 1/phi] <- 0
     } else {
-        stop("error: in spCor, specified cor.fn '", cor.fn, "' is not a valid option; choose, from gaussian, exponential, matern, spherical.")
+        stop("error: in spCor, specified cor.fn '", cor.fn, "' is not a valid
+             option; choose, from gaussian, exponential, matern, spherical.")
     }
+
     R
+
 }

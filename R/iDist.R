@@ -1,10 +1,15 @@
-#' Computes the inter-site Euclidean distance matrix for one or two sets of points.
+#' Computes the inter-site Euclidean distance matrix for one or two sets of
+#' points.
 #'
 #' @usage iDist(coords.1, coords.2, ...)
-#' @param coords.1 an \eqn{n\times p}{nxp} matrix with each row corresponding to a point in \eqn{p}{p} dimensional space.
-#' @param coords.2 an \eqn{m\times p}{mxp} matrix with each row corresponding to a point in \eqn{p}{p} dimensional space. If this is missing then \code{coords.1} is used.
+#' @param coords.1 an \eqn{n\times p}{nxp} matrix with each row corresponding to
+#' a point in \eqn{p}{p} dimensional space.
+#' @param coords.2 an \eqn{m\times p}{mxp} matrix with each row corresponding to
+#' a point in \eqn{p}{p} dimensional space. If this is missing then
+#' \code{coords.1} is used.
 #' @param ... currently no additional arguments.
-#' @returns The \eqn{n\times n}{nxn} or \eqn{n\times m}{nxm} inter-site Euclidean distance matrix.
+#' @returns The \eqn{n\times n}{nxn} or \eqn{n\times m}{nxm} inter-site
+#' Euclidean distance matrix.
 #' @examples
 #' \dontrun{
 #' n <- 10

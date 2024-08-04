@@ -25,7 +25,9 @@ parseFormula <- function(formula, data, intercept = TRUE, justX = FALSE) {
     } else {
         Y <- as.matrix(model.response(mf, "numeric"))  # Y matrix
     }
+
     return(list(Y, X, xvars, xobs))
+
 }
 
 

@@ -1,6 +1,7 @@
 #' Solve a positive-definite linear system
 #'
-#' Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a positive-definite matrix and \eqn{b}{b} is a vector.
+#' Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a
+#' positive-definite matrix and \eqn{b}{b} is a vector.
 #'
 #' @useDynLib spStack
 #' @param A an \eqn{n\times n}{nxn} positive-definite matrix

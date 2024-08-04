@@ -13,7 +13,8 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #'
 #' @param n Sample size
 #' @param beta \eqn{p}{p}-dimensional vector of fixed effects
-#' @param cor.fn Character string corresponding a correlation function, valid inputs are 'exponential' and 'matern'.
+#' @param cor.fn Character string corresponding a correlation function, valid
+#' inputs are 'exponential' and 'matern'.
 #' @param spParams Spatial process parameters
 #' @param spvar Fixed value of spatial variance
 #' @param deltasq Noise-to-spatial variance ratio
@@ -39,7 +40,8 @@ sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq) {
         X <- cbind(rep(1, n), sapply(1:(p - 1), function(x) rnorm(n)))
         y <- X %*% beta + z + rnorm(n, mean = 0, sd = sqrt(nugget))
         dat <- cbind(S, X[, -1], y, z)
-        names(dat) = c("s1", "s2", paste("x", 1:(p - 1), sep = ""), "y", "z_true")
+        names(dat) = c("s1", "s2", paste("x", 1:(p - 1), sep = ""), "y",
+                       "z_true")
 
     }
 

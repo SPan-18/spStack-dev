@@ -41,10 +41,12 @@
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 #' @export
-spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors, spParams, noise_sp_ratio, n.samples, loopd, loopd_method,
+spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
+                         spParams, noise_sp_ratio, n.samples,
+                         loopd, loopd_method,
                          CV_K, verbose = TRUE, ...) {
 
-  #################################################### check for unused args
+  ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
   for (i in elip.args) {
@@ -52,7 +54,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
       warning("'", i, "' is not an argument")
   }
 
-  #################################################### formula
+  ##### formula #####
   if (missing(formula)) {
     stop("error: formula must be specified!")
   }
@@ -75,7 +77,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   storage.mode(p) <- "integer"
   storage.mode(n) <- "integer"
 
-  #################### coords
+  ##### coords #####
   if (!is.matrix(coords)) {
     stop("error: coords must n-by-2 matrix of xy-coordinate locations")
   }
@@ -87,15 +89,16 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   coords.D <- 0
   coords.D <- iDist(coords)
 
-  #################################################### correlation function
+  ##### correlation function #####
   if (missing(cor.fn)) {
     stop("error: cor.fn must be specified")
   }
   if (!cor.fn %in% c("exponential", "matern")) {
-    stop("cor.fn = '", cor.fn, "' is not a valid option; choose from c('exponential', 'matern').")
+    stop("cor.fn = '", cor.fn, "' is not a valid option; choose from
+         c('exponential', 'matern').")
   }
 
-  #################################################### priors
+  ##### priors #####
   beta.prior <- "flat"
   beta.Norm <- 0
   sigma.sq.IG <- 0
@@ -115,10 +118,12 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
         stop("error: beta.Norm must be a list of length 2")
       }
       if (length(beta.Norm[[1]]) != p) {
-        stop(paste("error: beta.Norm[[1]] must be a vector of length, ", p, ".", sep = ""))
+        stop(paste("error: beta.Norm[[1]] must be a vector of length, ", p, ".",
+                   sep = ""))
       }
       if (length(beta.Norm[[2]]) != p^2) {
-        stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p, " correlation matrix.", sep = ""))
+        stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
+                   " correlation matrix.", sep = ""))
       }
       beta.prior <- "normal"
     }
@@ -141,7 +146,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   ## storage mode
   storage.mode(sigma.sq.IG) <- "double"
 
-  #################################################### spatial process parameters
+  ##### spatial process parameters #####
   phi <- 0
   nu <- 0
 
@@ -183,7 +188,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   storage.mode(phi) <- "double"
   storage.mode(nu) <- "double"
 
-  #################################################### noise-to-spatial variance ratio
+  ##### noise-to-spatial variance ratio #####
   deltasq <- 0
 
   if (missing(noise_sp_ratio)) {
@@ -202,7 +207,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   ## storage mode
   storage.mode(deltasq) <- "double"
 
-  #################################################### sampling setup
+  ##### sampling setup #####
 
   if (missing(n.samples)) {
     stop("n.samples must be specified.")
@@ -211,7 +216,7 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   storage.mode(n.samples) <- "integer"
   storage.mode(verbose) <- "integer"
 
-  #################################################### Leave-one-out setup
+  ##### Leave-one-out setup #####
 
   if (loopd) {
     if (missing(loopd_method)) {
@@ -220,7 +225,8 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
       loopd_method <- tolower(loopd_method)
     }
     if (!loopd_method %in% c("exact", "cv", "psis")) {
-      stop("loopd_method = '", loopd_method, "' is not a valid option; choose from c('exact', 'CV', 'PSIS').")
+      stop("loopd_method = '", loopd_method, "' is not a valid option; choose
+           from c('exact', 'CV', 'PSIS').")
     }
     if (loopd_method == "cv") {
       if (missing(CV_K)) {
@@ -236,7 +242,8 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
         } else {
           if (!is_integer(CV_K)) {
             CV_K <- as.integer(floor(CV_K))
-            warning("Supplied CV_K is not an integer. Using greatest integer less than supplied value, CV_K = ", CV_K, ".")
+            warning("Supplied CV_K is not an integer. Using greatest integer
+                    less than supplied value, CV_K = ", CV_K, ".")
           }
         }
       }
@@ -249,13 +256,15 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
 
   storage.mode(CV_K) <- "integer"
 
-  #################################################### main function call
+  ##### main function call #####
 
   if (loopd) {
-    out <- .Call("spLMexactLOO", y, X, p, n, coords.D, beta.prior, beta.Norm, sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, loopd,
+    out <- .Call("spLMexactLOO", y, X, p, n, coords.D, beta.prior, beta.Norm,
+                 sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, loopd,
                  loopd_method, CV_K, verbose)
   } else {
-    out <- .Call("spLMexact", y, X, p, n, coords.D, beta.prior, beta.Norm, sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, verbose)
+    out <- .Call("spLMexact", y, X, p, n, coords.D, beta.prior, beta.Norm,
+                 sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, verbose)
   }
 
   return(out)
