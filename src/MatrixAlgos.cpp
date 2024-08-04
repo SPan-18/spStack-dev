@@ -2,10 +2,10 @@
 #include <string>
 #include "util.h"
 #include "MatrixAlgos.h"
-
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
+#include <R_ext/Memory.h>
 #include <R_ext/Lapack.h>
 #include <R_ext/BLAS.h>
 #include <R_ext/Utils.h>
@@ -270,15 +270,15 @@ void inversionLM2(double *X, int n, int p, double deltasq, double *VbetaInv,
   const double deltasqInv = 1.0 / deltasq;
   const double negdeltasqInv = - 1.0 / deltasq;
 
-  double *tmp_n1 = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n1, n);
-  double *tmp_n2 = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n2, n);
+  double *tmp_n1 = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n1, n);
+  double *tmp_n2 = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n2, n);
 
-  double *tmp_np1 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np1, np);
-  double *tmp_np2 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np2, np);
+  double *tmp_np1 = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np1, np);
+  double *tmp_np2 = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np2, np);
 
-  double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);
+  double *tmp_p1 = (double *) R_chk_calloc(p, sizeof(double)); zeros(tmp_p1, p);
 
-  double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);
+  double *tmp_pp = (double *) R_chk_calloc(pp, sizeof(double)); zeros(tmp_pp, pp);
 
   F77_NAME(dgemv)(ntran, &n, &n, &one, Vz, &n, v2, &incOne, &zero, tmp_n1, &incOne FCONE);                     // tmp_n1 = Vz*v2
   F77_NAME(dcopy)(&n, tmp_n1, &incOne, tmp_n2, &incOne);                                                       // tmp_n1 = tmp_n2
@@ -310,6 +310,13 @@ void inversionLM2(double *X, int n, int p, double deltasq, double *VbetaInv,
   F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVy, &n, tmp_n1, &incOne FCONE FCONE FCONE);                     // tmp_n1 = VyInv*Vz*B*inv(Schur(A))*(v1-BtDinvB)
   F77_NAME(dgemv)(ntran, &n, &n, &negone, Vz, &n, tmp_n1, &incOne, &one, tmp_n2, &incOne FCONE);               // tmp_n2 = inv(D)*B*inv(Schur(A))*(v1-BtDinvB)
   F77_NAME(daxpy)(&n, &negone, tmp_n2, &incOne, out_n, &incOne);                                               // out_n = inv(D)*v2 - inv(D)*B*inv(Schur(A))*(v1-BtDinvB)
+
+  R_chk_free(tmp_n1);
+  R_chk_free(tmp_n2);
+  R_chk_free(tmp_np1);
+  R_chk_free(tmp_np2);
+  R_chk_free(tmp_p1);
+  R_chk_free(tmp_pp);
 
 }
 
