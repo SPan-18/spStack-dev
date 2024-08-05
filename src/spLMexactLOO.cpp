@@ -135,8 +135,8 @@ extern "C" {
 
     double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);          // allocate memory for n x 1 vector
 
-    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);        // allocate memory for p x 1 vector
-    double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);        // allocate memory for p x 1 vector
+    double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);                  // allocate memory for p x 1 vector
+    double *VbetaInvMuBeta = (double *) R_alloc(p, sizeof(double)); zeros(VbetaInvMuBeta, p);  // allocate memory for p x 1 vector
 
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);  // allocate VbetaInv
     double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);      // allocate memory for p x p matrix
@@ -167,10 +167,10 @@ extern "C" {
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
-    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);               // tmp_p2 = VbetaInv*muBeta
+    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, VbetaInvMuBeta, &incOne FCONE);       // VbetaInvMuBeta = VbetaInv*muBeta
 
     // find muBetatVbetaInvmuBeta
-    muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);                               // t(muBeta)*VbetaInv*muBeta
+    muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, VbetaInvMuBeta, &incOne);                       // t(muBeta)*VbetaInv*muBeta
     sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
 
     //  find XtVyInvY
@@ -180,7 +180,7 @@ extern "C" {
     F77_NAME(dgemv)(ytran, &n, &p, &one, tmp_np, &n, tmp_n, &incOne, &zero, tmp_p1, &incOne FCONE);             // tmp_p1 = t(X)*VyInv*Y
 
     // find betahat = inv(XtVyInvX + VbetaInv)(XtVyInvY + VbetaInvmuBeta)
-    F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);                                                // tmp_p1 = XtVyInvY + VbetaInvmuBeta
+    F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, tmp_p1, &incOne);                                        // tmp_p1 = XtVyInvY + VbetaInvmuBeta
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
 
     // deallocate tmp_np
@@ -301,7 +301,7 @@ extern "C" {
         // printMtrx(looChol, n1, n1); Rprintf("\n");
 
         cholRowDelUpdate(n, cholVy, 4, looChol, tmp_n11);
-        printMtrx(looChol, n1, n1); Rprintf("\n");
+        // printMtrx(looChol, n1, n1); Rprintf("\n");
 
         // R_chk_free(tmp_n1n1);
         R_chk_free(tmp_n11);
