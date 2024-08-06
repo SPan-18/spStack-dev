@@ -89,7 +89,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
     nk = n - 1;
     int delPlusOne = del + 1;
-    w = (double *)R_chk_realloc(w, nk * sizeof(double));
+    w = (double *) R_chk_realloc(w, nk * sizeof(double));
     F77_NAME(dcopy)(&n1, &L[1], &incOne, w, &incOne);
     b = 1.0;
 
@@ -140,7 +140,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
     copySubmat(L, n, n, L1, n1, n1, 0, 0, 0, 0, del, del);
     copySubmat(L, n, n, L1, n1, n1, delPlusOne, 0, del, 0, nk, del);
 
-    w = (double *)R_chk_realloc(w, nk * sizeof(double));
+    w = (double *) R_chk_realloc(w, nk * sizeof(double));
     F77_NAME(dcopy)(&nk, &L[del*n + delPlusOne], &incOne, w, &incOne);
     b = 1.0;
 
@@ -196,7 +196,7 @@ void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
                  double *Vz, double *cholVy, double *v1, double *v2,
                  double *tmp_n1, double *tmp_n2, double *tmp_p1,
                  double *tmp_pp, double *tmp_np1, double*tmp_np2,
-                 double *out_p, double *out_n){
+                 double *out_p, double *out_n, int LOO){
 
   int pp = p * p;
   int np = n * p;
@@ -215,11 +215,25 @@ void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
   const double deltasqInv = 1.0 / deltasq;
   const double negdeltasqInv = - 1.0 / deltasq;
 
-  F77_NAME(dgemv)(ntran, &n, &n, &one, Vz, &n, v2, &incOne, &zero, tmp_n1, &incOne FCONE);                     // tmp_n1 = Vz*v2
-  F77_NAME(dcopy)(&n, tmp_n1, &incOne, tmp_n2, &incOne);                                                       // tmp_n1 = tmp_n2
-  F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);
-  F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);                     // tmp_n2 = VyInv*Vz*v2
-  F77_NAME(dgemv)(ntran, &n, &n, &negone, Vz, &n, tmp_n2, &incOne, &one, tmp_n1, &incOne FCONE);               // tmp_n1 = inv(VzInv+deltasq*I)*v2
+  if(LOO){
+
+    F77_NAME(dcopy)(&n, v2, &incOne, tmp_n1, &incOne);                                                         // tmp_n1 = v2
+    // printVec(tmp_n1, n); Rprintf("\n");
+    F77_NAME(dcopy)(&n, tmp_n1, &incOne, tmp_n2, &incOne);                                                     // tmp_n1 = tmp_n2
+    F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);
+    F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);                   // tmp_n2 = VyInv*v2
+    F77_NAME(dgemv)(ntran, &n, &n, &negone, Vz, &n, tmp_n2, &incOne, &one, tmp_n1, &incOne FCONE);             // tmp_n1 = inv(VzInv+deltasq*I)*VzInv*v2
+
+  }else{
+
+    F77_NAME(dgemv)(ntran, &n, &n, &one, Vz, &n, v2, &incOne, &zero, tmp_n1, &incOne FCONE);                   // tmp_n1 = Vz*v2
+    F77_NAME(dcopy)(&n, tmp_n1, &incOne, tmp_n2, &incOne);                                                     // tmp_n2 = tmp_n1
+    F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);
+    F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVy, &n, tmp_n2, &incOne FCONE FCONE FCONE);                   // tmp_n2 = VyInv*Vz*v2
+    F77_NAME(dgemv)(ntran, &n, &n, &negone, Vz, &n, tmp_n2, &incOne, &one, tmp_n1, &incOne FCONE);             // tmp_n1 = inv(VzInv+deltasq*I)*v2
+
+  }
+
   F77_NAME(dcopy)(&n, tmp_n1, &incOne, out_n, &incOne);                                                        // out_n = tmp_n1 = inv(D)*v2
   F77_NAME(dcopy)(&p, v1, &incOne, tmp_p1, &incOne);                                                           // tmp_p1 = v1
   F77_NAME(dgemv)(ytran, &n, &p, &negdeltasqInv, X, &n, tmp_n1, &incOne, &one, tmp_p1, &incOne FCONE);         // tmp_p1 = v1 - t(B)*inv(D)*v2
@@ -233,7 +247,7 @@ void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
   F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholVy, &n, tmp_np2, &n FCONE FCONE FCONE FCONE);  // tmp_np2 = VyInv*Vz*B
   F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &negone, Vz, &n, tmp_np2, &n, &one, tmp_np1, &n FCONE FCONE);      // tmp_np1 = (Vz - VzVyinv*Vz)*B = inv(D)*B
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &negdeltasqInv, X, &n, tmp_np1, &n, &one, tmp_pp, &p FCONE FCONE); // tmp_pp = Schur(A) = A - t(B)*inv(D)*B
-  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}    // chol(Schur(A))
+  F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // chol(Schur(A))
   F77_NAME(dtrsv)(lower, ntran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                     // tmp_p1 = inv(Schur(A))*(v1-BtDinvB)
   F77_NAME(dcopy)(&p, tmp_p1, &incOne, out_p, &incOne);                                                        // out_p = first p elements of Mv
