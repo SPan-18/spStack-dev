@@ -17,11 +17,69 @@ void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index){
 
   int i = 0, j = 0;
 
-  for(i = 0; i < n; i++){
-    if(i != exclude_index){
-      v2[j++] = v1[i];
+  if(exclude_index < 0 || exclude_index > n){
+    perror("Index to delete is out of bounds.");
+  }else{
+    for(i = 0; i < n; i++){
+      if(i != exclude_index){
+        v2[j++] = v1[i];
+      }
     }
   }
+}
+
+// Copy a matrix excluding the i-th row
+void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(exclude_index < 0 || exclude_index > nRowM1){
+    perror("Row index to exclude is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i == exclude_index) continue;
+        M2[new_index++] = M1[j*nRowM1 + i];
+      }
+    }
+  }
+}
+
+// Copy a matrix deleting ith row and jth column
+void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(del_indexRow < 0 || del_indexRow > nRowM1){
+    perror("Row index to delete is out of bounds.");
+  }else if(del_indexCol < 0 || del_indexCol > nColM1){
+    perror("Column index to delete is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      if(j == del_indexCol) continue;
+      for(i = 0; i < nRowM1; i++){
+        if(i == del_indexRow) continue;
+        M2[new_index++] = M1[j*nRowM1 + i];
+      }
+    }
+  }
+}
+
+// Copy a row of a matrix to a vector
+void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
+
+  int j = 0;
+
+  // if(copy_index < 0 || copy_index > nRowM){
+  //   perror("Row index to copy is out of bounds.");
+  // }else{
+  //
+  // }
+
+  for(j = 0; j < nColM; j++){
+    vec[j] = M[nRowM*j + copy_index];
+  }
+
 }
 
 // Copy matrix from C to SEXP
