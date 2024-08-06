@@ -11,7 +11,8 @@ sim_spData(n, beta, cor.fn, spParams, spvar, deltasq)
 
 \item{beta}{\eqn{p}{p}-dimensional vector of fixed effects}
 
-\item{cor.fn}{Character string corresponding a correlation function, valid inputs are 'exponential' and 'matern'.}
+\item{cor.fn}{Character string corresponding a correlation function, valid
+inputs are 'exponential' and 'matern'.}
 
 \item{spParams}{Spatial process parameters}
 

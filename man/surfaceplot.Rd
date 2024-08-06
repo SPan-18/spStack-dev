@@ -14,15 +14,20 @@ surfaceplot(
 )
 }
 \arguments{
-\item{tab}{a data-frame containing spatial co-ordinates and the variable to plot}
+\item{tab}{a data-frame containing spatial co-ordinates and the variable to
+plot}
 
-\item{coords_name}{name of the two columns that contains the co-ordinates of the points}
+\item{coords_name}{name of the two columns that contains the co-ordinates of
+the points}
 
 \item{var_name}{name of the column containing the variable to be plotted}
 
-\item{h}{integer; controls smoothness of the spatial interpolation as appearing in the \code{mba.surf} function of the \code{MBA} package. Default is 8.}
+\item{h}{integer; controls smoothness of the spatial interpolation as
+appearing in the \code{mba.surf} function of the \code{MBA} package.
+Default is 8.}
 
-\item{col.pal}{Optional; color palette, preferably divergent, use \code{colorRampPalette} function from \code{grDevices}. Deafult is 'RdYlBu'.}
+\item{col.pal}{Optional; color palette, preferably divergent, use
+\code{colorRampPalette} function from \code{grDevices}. Deafult is 'RdYlBu'.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked}
 }

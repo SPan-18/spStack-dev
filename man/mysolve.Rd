@@ -15,7 +15,8 @@ mysolve(A, b)
 The \eqn{n\times 1}{nx1} solution to the system
 }
 \description{
-Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a positive-definite matrix and \eqn{b}{b} is a vector.
+Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a
+positive-definite matrix and \eqn{b}{b} is a vector.
 }
 \examples{
 A <- rbind(c(1, 2, 3),
