@@ -244,7 +244,7 @@ extern "C" {
 
       inversionLM(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
                   tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1, tmp_np2,
-                  out_p, out_n);
+                  out_p, out_n, 0);
 
       // inversionLM2(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
       //              out_p, out_n);
