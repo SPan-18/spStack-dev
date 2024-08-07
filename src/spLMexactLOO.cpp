@@ -356,8 +356,6 @@ extern "C" {
           dtemp = Rf_dt(dtemp, 2*a_star, 1);
           dtemp -= log(scale);
 
-          // Rprintf("x = %5f, loc = %5f, scale = %5f, df = %5f\n", Y[loo_index], location, scale, a_star);
-
           REAL(loopd_out_r)[loo_index] = dtemp;
 
         }
@@ -384,6 +382,8 @@ extern "C" {
           Rprintf("CV_K = %d\n", CV_K); Rprintf("\n\n");
         }
 
+        // CLAIM: Computation for K-fold cross-validation is same as exact LOOPD.
+        Rprintf("Feature not available yet. Use loopd_method='exact'.\n");
 
       }
 
@@ -392,6 +392,7 @@ extern "C" {
           Rprintf("Method for LOOPD calculation: ");
           Rprintf("Pareto smoothed importance sampling"); Rprintf("\n\n");
         }
+
 
 
       }
