@@ -13,7 +13,11 @@
 # define FCONE
 #endif
 
-// Cholesky factor rank-1 update; chol(alpha*LLt + beta*vvt)
+// Cholesky factor rank-1 update; chol(alpha*LLt + beta*vvt), as appearing in Krause and Igel (2015).
+// REFERENCE:
+// Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one Covariance Matrix Update for Evolution Strategies.
+// In Proceedings of the 2015 ACM Conference on Foundations of Genetic Algorithms XIII (FOGA '15). Association for
+// Computing Machinery, New York, NY, USA, 129–136. https://doi.org/10.1145/2725494.2725496
 void cholRankOneUpdate(int n, double *L1, double alpha, double beta, double *v, double *L2, double *w){
 
   int j, k;
@@ -68,7 +72,8 @@ void cholRankOneUpdate(int n, double *L1, double alpha, double beta, double *v, 
 
 }
 
-// Cholesky factor update after deletion of a row/column
+// Cholesky factor update after deletion of a row/column where rank-1 updates are
+// carried out using Krause and Igel (2015).
 void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
   int j, k;
