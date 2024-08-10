@@ -297,7 +297,7 @@ extern "C" {
         double *tmp_n1p2 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p2, n1p);
         double *out_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(out_p, p);
         double *out_n1 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(out_n1, n1);
-        double *w = (double *) R_chk_calloc(n1, sizeof(double)); zeros(w, n1);
+        // double *w = (double *) R_chk_calloc(n1, sizeof(double)); zeros(w, n1);
         // NOTE: w is reallocated inside cholRowDelUpdate, do not change this name for the sake of memory management
 
         const double deltasqInv = 1.0 / deltasq;
@@ -315,8 +315,8 @@ extern "C" {
 
           copyMatrixDelRow(X, n, p, looX, loo_index);                   // Row-deleted X
           copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);   // Row-column deleted Vz
-          cholRowDelUpdate(n, cholVy, loo_index, looCholVy, w);         // Row-deletion CHOL update Vy
-          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, w);         // Row-deletion CHOL update Vz
+          cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);         // Row-deletion CHOL update Vy
+          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);         // Row-deletion CHOL update Vz
           copyMatrixRowToVec(X, n, p, h1, loo_index);                   // h1 = X[i,1:p]
           copyVecExcludingOne(&Vz[loo_index*n], h2, n, loo_index);      // h2 = Vz[-i,i]
 
@@ -371,7 +371,7 @@ extern "C" {
         R_chk_free(tmp_n1p2);
         R_chk_free(out_p);
         R_chk_free(out_n1);
-        R_chk_free(w);
+        // R_chk_free(w);
 
       }
 

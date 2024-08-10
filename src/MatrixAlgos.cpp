@@ -94,7 +94,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
     nk = n - 1;
     int delPlusOne = del + 1;
-    w = (double *) R_chk_realloc(w, nk * sizeof(double));
+    // w = (double *) R_chk_realloc(w, nk * sizeof(double));
     F77_NAME(dcopy)(&n1, &L[1], &incOne, w, &incOne);
     b = 1.0;
 
@@ -145,7 +145,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
     copySubmat(L, n, n, L1, n1, n1, 0, 0, 0, 0, del, del);
     copySubmat(L, n, n, L1, n1, n1, delPlusOne, 0, del, 0, nk, del);
 
-    w = (double *) R_chk_realloc(w, nk * sizeof(double));
+    // w = (double *) R_chk_realloc(w, nk * sizeof(double));
     F77_NAME(dcopy)(&nk, &L[del*n + delPlusOne], &incOne, w, &incOne);
     b = 1.0;
 
