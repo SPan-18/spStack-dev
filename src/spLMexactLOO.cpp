@@ -297,8 +297,6 @@ extern "C" {
         double *tmp_n1p2 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p2, n1p);
         double *out_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(out_p, p);
         double *out_n1 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(out_n1, n1);
-        // double *w = (double *) R_chk_calloc(n1, sizeof(double)); zeros(w, n1);
-        // NOTE: w is reallocated inside cholRowDelUpdate, do not change this name for the sake of memory management
 
         const double deltasqInv = 1.0 / deltasq;
 
@@ -371,7 +369,6 @@ extern "C" {
         R_chk_free(tmp_n1p2);
         R_chk_free(out_p);
         R_chk_free(out_n1);
-        // R_chk_free(w);
 
       }
 
