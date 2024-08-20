@@ -279,16 +279,22 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   }
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
-
+  print(min(loopd_mat))
+  print(max(loopd_mat))
+  print(summary(loopd_mat))
 #   return(loopd_mat)
 
   out_CVXR <- get_stacking_weights(loopd_mat, solver = solver)
+#   out_CVXR <- stacking_weights(loopd_mat, solver = solver)
+#   w_hat <- loo::stacking_weights(loopd_mat)
   run.time <- proc.time() - ptm
 
   w_hat <- out_CVXR$weights
   solver_status <- out_CVXR$status
   w_hat <- sapply(w_hat, function(x) max(0, x))
   w_hat <- w_hat / sum(w_hat)
+#   w_hat <- as.numeric(w_hat)
+#   solver_status <- "BFGS"
 
   if(verbose){
     stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
