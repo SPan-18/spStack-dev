@@ -38,6 +38,7 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
+#' @importFrom knitr kable
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params_list, n.samples, loopd_method,
@@ -92,7 +93,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   }
   if (!cor.fn %in% c("exponential", "matern")) {
     stop("cor.fn = '", cor.fn, "' is not a valid option; choose from
-         c('exponential', 'matern').")
+    c('exponential', 'matern').")
   }
 
   ##### priors #####
@@ -212,6 +213,8 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   storage.mode(verbose_child) <- "integer"
 
   #### main function call ####
+  ptm <- proc.time()
+
   if(parallel){
 
     # Get current plan invoked by future::plan() by the user
@@ -275,10 +278,41 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   }
 
-  if(is.null(solver)){
-    print("solver NULL.")
+  loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
+
+#   return(loopd_mat)
+
+  out_CVXR <- get_stacking_weights(loopd_mat, solver = solver)
+  run.time <- proc.time() - ptm
+
+  w_hat <- out_CVXR$weights
+  solver_status <- out_CVXR$status
+  w_hat <- sapply(w_hat, function(x) max(0, x))
+  w_hat <- w_hat / sum(w_hat)
+
+  if(verbose){
+    stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
+    stack_out <- cbind(stack_out, round(w_hat, 3))
+    colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
+    rownames(stack_out) = paste("Model", 1:nrow(stack_out))
+    cat("STACKING WEIGHTS:\n")
+    print(knitr::kable(stack_out))
   }
 
-  return(samps)
+  out <- list()
+  out$y <- y
+  out$X <- X
+  out$X.names <- X.names
+  out$coords <- coords
+  out$cor.fn <- cor.fn
+  out$beta.prior.norm <- beta.Norm
+  out$run.time <- run.time
+  out$samples <- samps
+  out$stacking_weights <- w_hat
+  out$solver_status <- solver_status
+
+  class(out) <- "spLMstack"
+
+  return(out)
 
 }
