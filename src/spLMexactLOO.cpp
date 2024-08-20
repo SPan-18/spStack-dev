@@ -311,8 +311,8 @@ extern "C" {
 
           copyMatrixDelRow(X, n, p, looX, loo_index);                   // Row-deleted X
           copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);   // Row-column deleted Vz
-          cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);         // Row-deletion CHOL update Vy
-          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);         // Row-deletion CHOL update Vz
+          cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);   // Row-deletion CHOL update Vy
+          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);   // Row-deletion CHOL update Vz
           copyMatrixRowToVec(X, n, p, h1, loo_index);                   // h1 = X[i,1:p]
           copyVecExcludingOne(&Vz[loo_index*n], h2, n, loo_index);      // h2 = Vz[-i,i]
 
@@ -334,7 +334,7 @@ extern "C" {
           location += F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);                             // loc = t(h)*Mstar*(gamma_hat)
 
           b_star = pow(F77_NAME(dnrm2)(&n, h2, &incOne), 2);            // b_star = t(Y[-i])*Y[-i]/(deltasq)^2
-          b_star *= deltasq;                                             // b_star = t(Y[-i])*Y[-i]/deltasq
+          b_star *= deltasq;                                            // b_star = t(Y[-i])*Y[-i]/deltasq
 
           inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
                       tmp_n11, tmp_n12, tmp_p1, tmp_pp, tmp_n1p1, tmp_n1p2,
