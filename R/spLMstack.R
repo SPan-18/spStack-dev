@@ -38,7 +38,6 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
-#' @importFrom knitr kable
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params_list, n.samples, loopd_method,
@@ -279,9 +278,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   }
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
-  print(min(loopd_mat))
-  print(max(loopd_mat))
-  print(summary(loopd_mat))
+  loopd_mat[loopd_mat < -10] <- -10
 #   return(loopd_mat)
 
   out_CVXR <- get_stacking_weights(loopd_mat, solver = solver)
@@ -301,8 +298,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     stack_out <- cbind(stack_out, round(w_hat, 3))
     colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
     rownames(stack_out) = paste("Model", 1:nrow(stack_out))
-    cat("STACKING WEIGHTS:\n")
-    print(knitr::kable(stack_out))
+    pretty_print_matrix(stack_out, heading = "STACKING WEIGHTS:")
   }
 
   out <- list()
