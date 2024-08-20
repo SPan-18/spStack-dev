@@ -245,21 +245,21 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     }
 
     samps <- future_lapply(1:length(list_candidate), function(x){
-                           .Call("spLMexactLOO", y, X, p, n, coords.D,
-                           beta.prior, beta.Norm, sigma.sq.IG,
-                           as.numeric(list_candidate[[x]]["phi"]),
-                           as.numeric(list_candidate[[x]]["nu"]),
-                           as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                           cor.fn, n.samples, loopd, loopd_method, CV_K,
-                           verbose_child)
-                           }, future.seed = TRUE)
+                    .Call("spLMexactLOO", y, X, p, n, coords.D,
+                          beta.prior, beta.Norm, sigma.sq.IG,
+                          as.numeric(list_candidate[[x]]["phi"]),
+                          as.numeric(list_candidate[[x]]["nu"]),
+                          as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
+                          cor.fn, n.samples, loopd, loopd_method,
+                          verbose_child)
+                          }, future.seed = TRUE)
 
   }else{
 
     # Get current plan invoked by future::plan() by the user
     current_plan <- future::plan()
     if(!inherits(current_plan, "sequential")){
-      warning("\tParallelization plan other than 'sequential' setup but parallel
+      warning("Parallelization plan other than 'sequential' setup but parallel
       is set to FALSE. Ignoring parallelization plan.")
     }
 
@@ -269,9 +269,9 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),
                           as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                          cor.fn, n.samples, loopd, loopd_method, CV_K,
+                          cor.fn, n.samples, loopd, loopd_method,
                           verbose_child)
-                    })
+                        })
 
   }
 

@@ -20,22 +20,13 @@
 #' @param loopd logical. If `loopd=TRUE`, returns leave-one-out predictive
 #'  densities, using method as given by \code{loopd_method}.
 #' @param loopd_method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
-#'  valid inputs are `'exact'`, `'PSIS'`. The option `'exact'` corresponds to
+#'  valid inputs are `'exact'` and `'PSIS'`. The option `'exact'` corresponds to
 #'  exact leave-one-out predictive densities which requires computation almost
-#'  equivalent to fitting the model \eqn{n} times. The options `'CV'` and
-#'  `'PSIS'` are faster, and finds approximate leave-one-out predictive
-#'  densities using \eqn{k}-fold cross-validation and Pareto-smoothed importance
-#'  sampling (Vehtari, Gelman, and Gabry 2017, Gelman *et al.* 2024),
-#'  respectively.
-#' @param CV_K Only considered if \code{loopd_method='CV'}. It specifies the
-#'  value of \eqn{K} for \eqn{K}-fold cross-validation. \eqn{K} must be an
-#'  integer between \eqn{10} and \eqn{20} and is recommended only when sample
-#'  size \eqn{n>40}. Otherwise, use \code{loopd_method='exact'}.
+#'  equivalent to fitting the model \eqn{n} times. The option `'PSIS'` is
+#'  faster and finds approximate leave-one-out predictive densities using
+#'  Pareto-smoothed importance sampling (Gelman *et al.* 2024).
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
 #' @param ... currently no additional argument
-#' @references Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
-#'  Evaluation Using Leave-One-out Cross-Validation and WAIC.” *Statistics and
-#'  Computing*, **27**(5), 1413–1432.
 #'  URL \url{https://doi.org/10.1007/s11222-016-9696-4}.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
@@ -44,7 +35,7 @@
 spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
                          spParams, noise_sp_ratio, n.samples,
                          loopd, loopd_method,
-                         CV_K, verbose = TRUE, ...) {
+                         verbose = TRUE, ...) {
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -224,44 +215,20 @@ spLMexactLOO <- function(formula, data = parent.frame(), coords, cor.fn, priors,
     } else {
       loopd_method <- tolower(loopd_method)
     }
-    if (!loopd_method %in% c("exact", "cv", "psis")) {
+    if (!loopd_method %in% c("exact", "psis")) {
       stop("loopd_method = '", loopd_method, "' is not a valid option; choose
-           from c('exact', 'CV', 'PSIS').")
-    }
-    if (loopd_method == "cv") {
-      if (missing(CV_K)) {
-        warning("CV_K not supplied. Using default value CV_K = 10.")
-        CV_K <- as.integer(10)
-      } else {
-        if (CV_K < 10) {
-          warning("Supplied CV_K is less than 10. Using CV_K = 10.")
-          CV_K <- as.integer(10)
-        } else if (CV_K > 20) {
-          warning("Supplied CV_K is greater than 20. Using CV_K = 20.")
-          CV_K <- as.integer(20)
-        } else {
-          if (!is_integer(CV_K)) {
-            CV_K <- as.integer(floor(CV_K))
-            warning("Supplied CV_K is not an integer. Using greatest integer
-                    less than supplied value, CV_K = ", CV_K, ".")
-          }
-        }
-      }
-    } else {
-      CV_K <- as.integer(0)
+           from c('exact', 'PSIS').")
     }
   } else {
     loopd_method <- "none"
   }
-
-  storage.mode(CV_K) <- "integer"
 
   ##### main function call #####
 
   if (loopd) {
     out <- .Call("spLMexactLOO", y, X, p, n, coords.D, beta.prior, beta.Norm,
                  sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, loopd,
-                 loopd_method, CV_K, verbose)
+                 loopd_method, verbose)
   } else {
     out <- .Call("spLMexact", y, X, p, n, coords.D, beta.prior, beta.Norm,
                  sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, verbose)

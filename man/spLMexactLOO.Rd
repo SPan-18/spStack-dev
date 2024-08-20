@@ -15,7 +15,6 @@ spLMexactLOO(
   n.samples,
   loopd,
   loopd_method,
-  CV_K,
   verbose = TRUE,
   ...
 )
@@ -50,32 +49,21 @@ containing prior details.}
 densities, using method as given by \code{loopd_method}.}
 
 \item{loopd_method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
-valid inputs are \code{'exact'}, \code{'PSIS'}. The option \code{'exact'} corresponds to
+valid inputs are \code{'exact'} and \code{'PSIS'}. The option \code{'exact'} corresponds to
 exact leave-one-out predictive densities which requires computation almost
-equivalent to fitting the model \eqn{n} times. The options \code{'CV'} and
-\code{'PSIS'} are faster, and finds approximate leave-one-out predictive
-densities using \eqn{k}-fold cross-validation and Pareto-smoothed importance
-sampling (Vehtari, Gelman, and Gabry 2017, Gelman \emph{et al.} 2024),
-respectively.}
-
-\item{CV_K}{Only considered if \code{loopd_method='CV'}. It specifies the
-value of \eqn{K} for \eqn{K}-fold cross-validation. \eqn{K} must be an
-integer between \eqn{10} and \eqn{20} and is recommended only when sample
-size \eqn{n>40}. Otherwise, use \code{loopd_method='exact'}.}
+equivalent to fitting the model \eqn{n} times. The option \code{'PSIS'} is
+faster and finds approximate leave-one-out predictive densities using
+Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
 
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
-\item{...}{currently no additional argument}
+\item{...}{currently no additional argument
+URL \url{https://doi.org/10.1007/s11222-016-9696-4}.}
 }
 \description{
 Univariate spatial linear mixed model
 }
 \references{
-Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
-Evaluation Using Leave-One-out Cross-Validation and WAIC.” \emph{Statistics and
-Computing}, \strong{27}(5), 1413–1432.
-URL \url{https://doi.org/10.1007/s11222-016-9696-4}.
-
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

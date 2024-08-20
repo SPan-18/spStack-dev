@@ -20,7 +20,7 @@ extern "C" {
                     SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
                     SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
                     SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                    SEXP CV_K_r, SEXP verbose_r){
+                    SEXP verbose_r){
 
     /*****************************************
      Common variables
@@ -78,7 +78,6 @@ extern "C" {
     // Leave-one-out predictive density details
     int loopd = INTEGER(loopd_r)[0];
     std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
-    int CV_K = INTEGER(CV_K_r)[0];
 
     int nSamples = INTEGER(nSamples_r)[0];
     int verbose = INTEGER(verbose_r)[0];
@@ -274,7 +273,6 @@ extern "C" {
       SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
       const char *exact_str = "exact";
-      const char *cv_str = "cv";
       const char *psis_str = "psis";
 
       // Exact leave-one-out predictive densities calculation
@@ -372,29 +370,18 @@ extern "C" {
 
       }
 
-      if(loopd_method == cv_str){
-        if(verbose){
-          Rprintf("Method for LOOPD calculation: ");
-          Rprintf("K-fold cross-validation"); Rprintf("\n");
-          Rprintf("CV_K = %d\n", CV_K); Rprintf("\n\n");
-        }
-
-        // CLAIM: Computation for K-fold cross-validation is same as exact LOOPD.
-        Rprintf("Feature not available yet. Use loopd_method='exact'.\n");
-
-      }
-
       if(loopd_method == psis_str){
         if(verbose){
           Rprintf("Method for LOOPD calculation: ");
           Rprintf("Pareto smoothed importance sampling"); Rprintf("\n\n");
         }
 
-
+        int loo_index = 0;
+        for(loo_index = 0; loo_index < n; loo_index++){
+          REAL(loopd_out_r)[loo_index] = 0.0;
+        }
 
       }
-
-      // F77_NAME(dcopy)(&n, &loopd_out[0], &incOne, &REAL(loopd_out_r)[0], &incOne);
 
       // make return object for posterior samples and leave-one-out predictive densities
       int nResultListObjs = 4;
