@@ -26,8 +26,7 @@
 #'  faster and finds approximate leave-one-out predictive densities using
 #'  Pareto-smoothed importance sampling (Gelman *et al.* 2024).
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
-#' @param ... currently no additional argument
-#'  URL \url{https://doi.org/10.1007/s11222-016-9696-4}.
+#' @param ... currently no additional argument.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

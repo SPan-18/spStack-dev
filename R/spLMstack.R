@@ -1,5 +1,8 @@
-#' Univariate spatial linear mixed model using Bayesian predictive stacking
+#' Univariate spatial linear model using Bayesian predictive stacking
 #'
+#' @description Fits Bayesian spatial linear model on several candidate models
+#'  specified by user via candidate values of some spatial process parameters
+#'  and subsequently combines inference by stacking of predictive densities.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -14,23 +17,40 @@
 #'  See below for details.
 #' @param priors a list with each tag corresponding to a parameter name and
 #'  containing prior details.
-#' @param params_list a list containing candidate values of spatial process
+#' @param params.list a list containing candidate values of spatial process
 #'  parameters and noise-to-spatial variance ratio. See example.
 #' @param n.samples number of posterior samples to be generated.
-#' @param loopd_method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
-#'  valid inputs are `'exact'`, `'PSIS'`. The option `'exact'` corresponds to
-#'  exact leave-one-out predictive densities which requires computation almost
-#'  equivalent to fitting the model \eqn{n} times. The option `'PSIS'` is
-#'  faster, as it finds approximate leave-one-out predictive densities using
-#'  Pareto-smoothed importance sampling (Gelman *et al.* 2024).
+#' @param loopd.method character. Valid inputs are `'exact'` and `'PSIS'`. The
+#'  option `'exact'` corresponds to exact leave-one-out predictive densities.
+#'  The option `'PSIS'` is faster, as it finds approximate leave-one-out
+#'  predictive densities using Pareto-smoothed importance sampling
+#'  (Gelman *et al.* 2024).
 #' @param parallel logical. If \code{FALSE}, the parallelization plan, if set up
-#'  by the user is ignored. If \code{TRUE}, inherits the parallelization plan
+#'  by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
 #'  set by the user using the \code{future} package.
-#' @param solver Specifies the name of the solver that will be used to obtain
-#'  optimal stacking weights for each candidate model.
-#' @param verbose logical. If \code{verbose = TRUE}, prints model-specific
-#'  optimal stacking weights.
+#' @param solver (optional) Specifies the name of the solver that will be used
+#'  to obtain optimal stacking weights for each candidate model. Default is
+#'  \code{"ECOS"}. Users can use other solvers supported by the [CVXR] package.
+#' @param verbose logical. If \code{TRUE}, prints model-specific optimal
+#'  stacking weights.
 #' @param ... currently no additional argument.
+#' @return An object of class \code{spLMstack}, which is a list with the
+#'  following tags -
+#' \item{samples}{a list of length equal to total number of candidate models
+#'  with each entry corresponding to a list of length 4, containing posterior
+#'  samples of fixed effects (\code{beta}), variance parameter
+#'  (\code{sigmaSq}), spatial effects (\code{z}), and, leave-one-out predictive
+#'  densities (\code{loopd}) for that particular model.}
+#' \item{n.models}{number of candidate models that are fit.}
+#' \item{candidate.models}{a matrix with \code{n_model} rows with each row
+#'  containing details of the model parameters and its optimal weight.}
+#' \item{stacking.weights}{a numeric vector of length equal to the number of
+#'  candidate models storing the optimal stacking weights.}
+#' \item{run.time}{a \code{proc_time} object with runtime details.}
+#' \item{solver.status}{solver status as returned by the optimization routine.}
+#' The return object might include additional data used for subsequent
+#' prediction and/or model fit evaluation.
+#' @seealso [spLMexact()]
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
@@ -40,8 +60,8 @@
 #' @importFrom future.apply future_lapply
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
-                      priors, params_list, n.samples, loopd_method,
-                      parallel = FALSE, solver, verbose = TRUE, ...){
+                      priors, params.list, n.samples, loopd.method,
+                      parallel = FALSE, solver = "ECOS", verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -143,59 +163,59 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   ## storage mode
   storage.mode(sigma.sq.IG) <- "double"
 
-  #### set-up params_list for stacking parameters ####
+  #### set-up params.list for stacking parameters ####
 
-  if(missing(params_list)){
+  if(missing(params.list)){
 
-    warning("warning: params_list must be supplied. Using defaults.")
+    warning("warning: params.list must be supplied. Using defaults.")
 
-    params_list <- vector(mode = "list", length = 3)
-    names(params_list) <- c("phi", "nu", "noise_sp_ratio")
+    params.list <- vector(mode = "list", length = 3)
+    names(params.list) <- c("phi", "nu", "noise_sp_ratio")
     ####### 1L REQUIRES AUTOMATION #######
-    params_list[[1L]] <- c(3, 5, 10)
-    params_list[[2L]] <- c(0.5, 1.0, 1.5)
-    params_list[[3L]] <- c(0.25, 1.0, 2.0)
+    params.list[[1L]] <- c(3, 5, 10)
+    params.list[[2L]] <- c(0.5, 1.0, 1.5)
+    params.list[[3L]] <- c(0.25, 1.0, 2.0)
 
   }else{
 
-    names(params_list) <- tolower(names(params_list))
+    names(params.list) <- tolower(names(params.list))
 
-    if(!"phi" %in% names(params_list)){
+    if(!"phi" %in% names(params.list)){
       stop("error: candidate values of phi must be specified in params_list.")
     }
 
-    if(!"nu" %in% names(params_list)){
+    if(!"nu" %in% names(params.list)){
       warning("warning: candidate values of nu not specified. Using defaults
               c(0.5, 1, 1.5).")
-      params_list[["nu"]] <- c(0.5, 1.0, 1.5)
+      params.list[["nu"]] <- c(0.5, 1.0, 1.5)
     }
 
-    if(!"noise_sp_ratio" %in% names(params_list)){
+    if(!"noise_sp_ratio" %in% names(params.list)){
       warning("warning: candidate values of noise_sp_ratio not specified. Using
               defaults c(0.25, 1, 2).")
-      params_list[["noise_sp_ratio"]] <- c(0.25, 1.0, 2.0)
+      params.list[["noise_sp_ratio"]] <- c(0.25, 1.0, 2.0)
     }
 
-    params_list <- params_list[c("phi", "nu", "noise_sp_ratio")]
+    params.list <- params.list[c("phi", "nu", "noise_sp_ratio")]
 
   }
 
   # setup parameters for candidate models based on cartesian product of
   # candidate values of each parameter
-  list_candidate <- candidate_models(params_list)
+  list_candidate <- candidate_models(params.list)
 
   #### Leave-one-out setup ####
   loopd <- TRUE
   CV_K <- as.integer(0)
   storage.mode(CV_K) <- "integer"
 
-  if(missing(loopd_method)){
-    warning("loopd_method not specified. Using 'exact'.")
+  if(missing(loopd.method)){
+    warning("loopd.method not specified. Using 'exact'.")
   }
 
-  loopd_method <- tolower(loopd_method)
+  loopd.method <- tolower(loopd.method)
 
-  if(!loopd_method %in% c("exact", "psis")){
+  if(!loopd.method %in% c("exact", "psis")){
     stop("error: Invalid loopd_method. Valid options are 'exact' and 'PSIS'.")
   }
 
@@ -252,7 +272,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),
                           as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                          cor.fn, n.samples, loopd, loopd_method,
+                          cor.fn, n.samples, loopd, loopd.method,
                           verbose_child)
                           }, future.seed = TRUE)
 
@@ -271,7 +291,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),
                           as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                          cor.fn, n.samples, loopd, loopd_method,
+                          cor.fn, n.samples, loopd, loopd.method,
                           verbose_child)
                         })
 
@@ -293,11 +313,12 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 #   w_hat <- as.numeric(w_hat)
 #   solver_status <- "BFGS"
 
-  if(verbose){
-    stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
+stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
     stack_out <- cbind(stack_out, round(w_hat, 3))
     colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
     rownames(stack_out) = paste("Model", 1:nrow(stack_out))
+
+  if(verbose){
     pretty_print_matrix(stack_out, heading = "STACKING WEIGHTS:")
   }
 
@@ -308,10 +329,12 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$coords <- coords
   out$cor.fn <- cor.fn
   out$beta.prior.norm <- beta.Norm
-  out$run.time <- run.time
   out$samples <- samps
-  out$stacking_weights <- w_hat
-  out$solver_status <- solver_status
+  out$n.models <- length(list_candidate)
+  out$candidate.models <- stack_out
+  out$stacking.weights <- w_hat
+  out$run.time <- run.time
+  out$solver.status <- solver_status
 
   class(out) <- "spLMstack"
 

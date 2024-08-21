@@ -2,7 +2,7 @@
 % Please edit documentation in R/spLMstack.R
 \name{spLMstack}
 \alias{spLMstack}
-\title{Univariate spatial linear mixed model using Bayesian predictive stacking}
+\title{Univariate spatial linear model using Bayesian predictive stacking}
 \usage{
 spLMstack(
   formula,
@@ -10,11 +10,11 @@ spLMstack(
   coords,
   cor.fn,
   priors,
-  params_list,
+  params.list,
   n.samples,
-  loopd_method,
+  loopd.method,
   parallel = FALSE,
-  solver,
+  solver = "ECOS",
   verbose = TRUE,
   ...
 )
@@ -39,35 +39,58 @@ See below for details.}
 \item{priors}{a list with each tag corresponding to a parameter name and
 containing prior details.}
 
-\item{params_list}{a list containing candidate values of spatial process
+\item{params.list}{a list containing candidate values of spatial process
 parameters and noise-to-spatial variance ratio. See example.}
 
 \item{n.samples}{number of posterior samples to be generated.}
 
-\item{loopd_method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
-valid inputs are \code{'exact'}, \code{'PSIS'}. The option \code{'exact'} corresponds to
-exact leave-one-out predictive densities which requires computation almost
-equivalent to fitting the model \eqn{n} times. The option \code{'PSIS'} is
-faster, as it finds approximate leave-one-out predictive densities using
-Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
+\item{loopd.method}{character. Valid inputs are \code{'exact'} and \code{'PSIS'}. The
+option \code{'exact'} corresponds to exact leave-one-out predictive densities.
+The option \code{'PSIS'} is faster, as it finds approximate leave-one-out
+predictive densities using Pareto-smoothed importance sampling
+(Gelman \emph{et al.} 2024).}
 
 \item{parallel}{logical. If \code{FALSE}, the parallelization plan, if set up
-by the user is ignored. If \code{TRUE}, inherits the parallelization plan
+by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
 set by the user using the \code{future} package.}
 
-\item{solver}{Specifies the name of the solver that will be used to obtain
-optimal stacking weights for each candidate model.}
+\item{solver}{(optional) Specifies the name of the solver that will be used
+to obtain optimal stacking weights for each candidate model. Default is
+\code{"ECOS"}. Users can use other solvers supported by the \link{CVXR} package.}
 
-\item{verbose}{logical. If \code{verbose = TRUE}, prints model-specific
-optimal stacking weights.}
+\item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
+stacking weights.}
 
 \item{...}{currently no additional argument.}
 }
+\value{
+An object of class \code{spLMstack}, which is a list with the
+following tags -
+\item{samples}{a list of length equal to total number of candidate models
+with each entry corresponding to a list of length 4, containing posterior
+samples of fixed effects (\code{beta}), variance parameter
+(\code{sigmaSq}), spatial effects (\code{z}), and, leave-one-out predictive
+densities (\code{loopd}) for that particular model.}
+\item{n.models}{number of candidate models that are fit.}
+\item{candidate.models}{a matrix with \code{n_model} rows with each row
+containing details of the model parameters and its optimal weight.}
+\item{stacking.weights}{a numeric vector of length equal to the number of
+candidate models storing the optimal stacking weights.}
+\item{run.time}{a \code{proc_time} object with runtime details.}
+\item{solver.status}{solver status as returned by the optimization routine.}
+The return object might include additional data used for subsequent
+prediction and/or model fit evaluation.
+}
 \description{
-Univariate spatial linear mixed model using Bayesian predictive stacking
+Fits Bayesian spatial linear model on several candidate models
+specified by user via candidate values of some spatial process parameters
+and subsequently combines inference by stacking of predictive densities.
 }
 \references{
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+}
+\seealso{
+\code{\link[=spLMexact]{spLMexact()}}
 }
