@@ -18,15 +18,33 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #' @param spParams Spatial process parameters
 #' @param spvar Fixed value of spatial variance
 #' @param deltasq Noise-to-spatial variance ratio
+#' @param family Specifies the distribution of the response as a member of the
+#'  exponential family.
 #' @importFrom stats dist runif
+#' @examples
+#' \dontrun{
+#' set.seed(1729)
+#' n <- 500
+#' beta <- c(2, 5)
+#' phi0 <- 2
+#' nu0 <- 0.5
+#' spParams <- c(phi0, nu0)
+#' spvar <- 0.4
+#' deltasq <- 1
+#' sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
+#'                    spParams = spParams, spvar = spvar, deltasq = deltasq,
+#'                    family = "gaussian")
+#' }
 #' @export
-sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq) {
+sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq, family) {
 
     S <- data.frame(s1 = runif(n, 0, 1), s2 = runif(n, 0, 1))
     D <- as.matrix(dist(S))
     V <- spvar * spCor(D, cor.fn, spParams)
     z <- rmvn(1, rep(0, n), V)
-    nugget <- deltasq * spvar
+
+    if(family == "gaussian"){
+      nugget <- deltasq * spvar
 
     if (length(beta) == 1) {
 
@@ -44,7 +62,7 @@ sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq) {
                        "z_true")
 
     }
-
+    }
     return(dat)
 
 }

@@ -29,7 +29,7 @@ If not found in \code{data}, the variables are taken from
 \code{spLMexactLOO} is called.}
 
 \item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation
-coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).}
+coordinates in \eqn{\mathbb{R}^2} (e.g., easting and northing).}
 
 \item{cor.fn}{a quoted keyword that specifies the correlation function used
 to model the spatial dependence structure among the observations. Supported
@@ -63,18 +63,94 @@ Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
 \value{
 An object of class \code{spLMexact}, which is a list with the
 following tags -
-\item{beta}{posterior samples of fixed effects.}
-\item{sigmaSq}{posterior samples of variance parameter.}
-\item{z}{posterior samples of the spatial effects.}
-\item{loopd}{only if \code{loopd=TRUE} is set, contains leave-one-out
-predictive densities.}
+\item{samples}{a list of length 3, containing posterior samples of fixed
+effects (\code{beta}), variance parameter (\code{sigmaSq}), spatial effects
+(\code{z}).}
+\item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
+densities.}
+\item{model.params}{Values of the fixed parameters that includes
+\code{phi} (spatial decay), \code{nu} (spatial smoothness) and
+\code{noise_sp_ratio} (noise-to-spatial variance ratio).}
 The return object might include additional data used for subsequent
 prediction and/or model fit evaluation.
 }
 \description{
-Univariate spatial linear mixed model
+Fits a Bayesian spatial linear model with spatial process
+parameters and the noise-to-spatial variance ratio fixed to a value supplied
+by the user. The output contains posterior samples of the fixed effects,
+variance parameter, spatial random effects and, if required, leave-one-out
+predictive densities.
+}
+\details{
+Suppose \eqn{\chi = (s_1, \ldots, s_n)} denotes the \eqn{n}
+spatial locations the response \eqn{y} is observed. With this function, we
+fit a conjugate Bayesian hierarchical spatial model
+\deqn{
+\begin{aligned}
+y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \quad
+z \mid \sigma^2 \sim N(0, \sigma^2 R(\chi; \phi, \nu)), \\
+\beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
+\sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma)
+\end{aligned}
+}
+where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu}, the
+noise-to-spatial variance ratio \eqn{\delta^2} and the hyperparameters
+\eqn{\mu_\beta}, \eqn{V_\beta}, \eqn{a_\sigma} and \eqn{b_\sigma}. We utilize
+a composition sampling strategy to sample the model parameters from their
+joint posterior distribution which can be written as
+\deqn{
+p(\sigma^2, \beta, z \mid y) = p(\sigma^2 \mid y) \times
+p(\beta \mid \sigma^2, y) \times p(z \mid \beta, \sigma^2, y).
+}
+We proceed by first sampling \eqn{\sigma^2} from its marginal posterior,
+then given the samples of \eqn{\sigma^2}, we sample \eqn{\beta} and
+subsequently, we sample \eqn{z} conditioned on the posterior samples of
+\eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020).
+}
+\examples{
+\dontrun{
+# load data
+data(simLMdat)
+
+# prior parameters
+muBeta <- c(0, 0)
+VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
+sigmaSqIGa <- 2
+sigmaSqIGb <- 0.1
+# setup prior list
+prior_list <- list(beta.norm = list(muBeta, VBeta),
+                   sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
+
+# supply fixed values of model parameters
+phi0 <- 3
+nu0 <- 0.75
+noise.sp.ratio <- 0.8
+
+mod1 <- spLMexact(y ~ x1, data = simLMdat,
+                  coords = as.matrix(simLMdat[, c("s1", "s2")]),
+                  cor.fn = "matern",
+                  priors = prior_list,
+                  spParams = list(phi = phi0, nu = nu0),
+                  noise_sp_ratio = noise.sp.ratio,
+                  n.samples = 1000,
+                  loopd = TRUE, loopd.method = "exact")
+
+beta.post <- mod1$samples$beta
+z.post.median <- apply(mod1$samples$z, 1, median)
+simLMdat$z.post.median <- z.post.median
+plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+                     var_name = "z_true")
+plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+                     var_name = "z.post.median")
+plot1
+plot2
+}
 }
 \references{
+Banerjee S (2020). “Modeling massive spatial datasets using a
+conjugate Bayesian linear modeling framework.” \emph{Spatial Statistics}, \strong{37},
+100417. ISSN 2211-6753. \url{https://doi.org/10.1016/j.spasta.2020.100417}.
+
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

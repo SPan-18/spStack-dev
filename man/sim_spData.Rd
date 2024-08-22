@@ -4,7 +4,7 @@
 \alias{sim_spData}
 \title{Simulate spatial data on unit square}
 \usage{
-sim_spData(n, beta, cor.fn, spParams, spvar, deltasq)
+sim_spData(n, beta, cor.fn, spParams, spvar, deltasq, family)
 }
 \arguments{
 \item{n}{Sample size}
@@ -19,7 +19,25 @@ inputs are 'exponential' and 'matern'.}
 \item{spvar}{Fixed value of spatial variance}
 
 \item{deltasq}{Noise-to-spatial variance ratio}
+
+\item{family}{Specifies the distribution of the response as a member of the
+exponential family.}
 }
 \description{
 Simulate spatial data on unit square
+}
+\examples{
+\dontrun{
+set.seed(1729)
+n <- 500
+beta <- c(2, 5)
+phi0 <- 2
+nu0 <- 0.5
+spParams <- c(phi0, nu0)
+spvar <- 0.4
+deltasq <- 1
+sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
+                   spParams = spParams, spvar = spvar, deltasq = deltasq,
+                   family = "gaussian")
+}
 }

@@ -8,11 +8,12 @@ Author: Soumyakanti Pan [aut, cre],
   Sudipto Banerjee [aut]
 Description: Fits univariate spatial-temporal random effects models for point-referenced data using Bayesian predictive stacking. Details are given in Pan, Zhang, Bradley, and Banerjee (2024) <https://doi.org/10.48550/arXiv.2406.04655>.
 Imports: CVXR, future, future.apply, ggplot2, MBA, rstudioapi
-License: GPL (>= 2)
+License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Suggests:
-    testthat (>= 3.0.0)
+Suggests: testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1
+Depends:
+    R (>= 2.10)

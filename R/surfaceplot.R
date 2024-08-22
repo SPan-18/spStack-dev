@@ -9,16 +9,29 @@
 #' appearing in the \code{mba.surf} function of the \code{MBA} package.
 #' Default is 8.
 #' @param col.pal Optional; color palette, preferably divergent, use
-#' \code{colorRampPalette} function from \code{grDevices}. Deafult is 'RdYlBu'.
-#' @param mark_points Logical; if \code{TRUE}, the input points are marked
-#' @export
+#' \code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.
+#' @param mark_points Logical; if \code{TRUE}, the input points are marked.
+#' Default is \code{FALSE}.
 #' @importFrom MBA mba.surf
 #' @importFrom ggplot2 ggplot aes_string geom_raster scale_fill_distiller
 #' geom_point scale_fill_gradientn
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
+#' @examples
+#' data(simLMdat)
+#' plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+#'                      var_name = "z_true")
+#' plot1
+#'
+#' # try your favourite color palette
+#' col.br <- colorRampPalette(c("blue", "white", "red"))
+#' col.br.pal <- col.br(100)
+#' plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+#'                      var_name = "z_true", col.pal = col.br.pal)
+#' plot2
+#' @export
 surfaceplot <- function(tab, coords_name, var_name, h = 8,
-                        col.pal = NULL, mark_points = FALSE){
+                        col.pal, mark_points = FALSE){
 
   surf <- mba.surf(tab[,c(coords_name, var_name)],
                    no.X = 250, no.Y = 250, h = h, m = 1, n = 1,
@@ -37,7 +50,7 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
           legend.box.just = "center",
           aspect.ratio = 1)
 
-  if(is.null(col.pal)){
+  if(missing(col.pal)){
     plot <- plot + scale_fill_distiller(palette = "RdYlBu", direction = -1,
                                         label = function(x) sprintf("%.1f", x))
   }else{

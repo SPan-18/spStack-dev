@@ -49,5 +49,6 @@ iDist <- function(coords.1, coords.2, ...) {
     storage.mode(p) <- "integer"
 
     .Call("idist", coords.1, n1, coords.2, n2, p, D)
-    D
+
+    return(D)
 }
