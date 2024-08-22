@@ -36,7 +36,7 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #'                    family = "gaussian")
 #' }
 #' @export
-sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq, family) {
+sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq, family){
 
     S <- data.frame(s1 = runif(n, 0, 1), s2 = runif(n, 0, 1))
     D <- as.matrix(dist(S))
@@ -46,13 +46,13 @@ sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq, family) {
     if(family == "gaussian"){
       nugget <- deltasq * spvar
 
-    if (length(beta) == 1) {
+    if (length(beta) == 1){
 
         y <- beta + z + rnorm(n, mean = 0, sd = sqrt(nugget))
         dat <- cbind(S, y, z)
         names(dat) <- c("s1", "s2", "y", "z_true")
 
-    } else if (length(beta) > 1) {
+    }else if(length(beta) > 1){
 
         p <- length(beta)
         X <- cbind(rep(1, n), sapply(1:(p - 1), function(x) rnorm(n)))

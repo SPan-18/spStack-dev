@@ -118,22 +118,22 @@
 spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
                       spParams, noise_sp_ratio, n.samples,
                       loopd = FALSE, loopd.method = "exact",
-                      verbose = TRUE, ...) {
+                      verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
   elip.args <- names(list(...))
-  for (i in elip.args) {
+  for(i in elip.args){
     if (!i %in% formal.args)
       warning("'", i, "' is not an argument")
   }
 
   ##### formula #####
-  if (missing(formula)) {
+  if(missing(formula)){
     stop("error: formula must be specified!")
   }
 
-  if (inherits(formula, "formula")) {
+  if(inherits(formula, "formula")){
     holder <- parseFormula(formula, data)
     y <- holder[[1]]
     X <- as.matrix(holder[[2]])
@@ -152,10 +152,10 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   storage.mode(n) <- "integer"
 
   ##### coords #####
-  if (!is.matrix(coords)) {
+  if(!is.matrix(coords)){
     stop("error: coords must n-by-2 matrix of xy-coordinate locations")
   }
-  if (ncol(coords) != 2 || nrow(coords) != n) {
+  if(ncol(coords) != 2 || nrow(coords) != n){
     stop("error: either the coords have more than two columns or,
     number of rows is different than data used in the model formula")
   }
@@ -164,10 +164,10 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   coords.D <- iDist(coords)
 
   ##### correlation function #####
-  if (missing(cor.fn)) {
+  if(missing(cor.fn)){
     stop("error: cor.fn must be specified")
   }
-  if (!cor.fn %in% c("exponential", "matern")) {
+  if(!cor.fn %in% c("exponential", "matern")){
     stop("cor.fn = '", cor.fn, "' is not a valid option; choose from
          c('exponential', 'matern').")
   }
@@ -177,25 +177,25 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   beta.Norm <- 0
   sigma.sq.IG <- 0
 
-  if (missing(priors)) {
+  if(missing(priors)){
 
     warning("prior list not supplied, using defaults.")
 
-  } else {
+  }else{
 
     names(priors) <- tolower(names(priors))
 
     ## Setup prior for beta
-    if ("beta.norm" %in% names(priors)) {
+    if("beta.norm" %in% names(priors)){
       beta.Norm <- priors[["beta.norm"]]
-      if (!is.list(beta.Norm) || length(beta.Norm) != 2) {
+      if(!is.list(beta.Norm) || length(beta.Norm) != 2){
         stop("error: beta.Norm must be a list of length 2")
       }
-      if (length(beta.Norm[[1]]) != p) {
+      if(length(beta.Norm[[1]]) != p){
         stop(paste("error: beta.Norm[[1]] must be a vector of length, ", p, ".",
                    sep = ""))
       }
-      if (length(beta.Norm[[2]]) != p^2) {
+      if(length(beta.Norm[[2]]) != p^2){
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
                    " correlation matrix.", sep = ""))
       }
@@ -203,15 +203,15 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
     }
 
     ## Setup prior for sigma.sq
-    if (!"sigma.sq.ig" %in% names(priors)) {
+    if(!"sigma.sq.ig" %in% names(priors)){
       stop("error: sigma.sq.IG must be specified")
     }
     sigma.sq.IG <- priors[["sigma.sq.ig"]]
 
-    if (!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2) {
+    if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
       stop("error: sigma.sq.IG must be a vector of length 2")
     }
-    if (any(sigma.sq.IG <= 0)) {
+    if(any(sigma.sq.IG <= 0)){
       stop("error: sigma.sq.IG must be a positive vector of length 2")
     }
 
@@ -224,25 +224,25 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   phi <- 0
   nu <- 0
 
-  if (missing(spParams)) {
+  if(missing(spParams)){
     stop("spParams (spatial process parameters) must be supplied.")
   }
 
   names(spParams) <- tolower(names(spParams))
 
-  if (!"phi" %in% names(spParams)) {
+  if(!"phi" %in% names(spParams)){
     stop("phi must be supplied.")
   }
   phi <- spParams[["phi"]]
 
-  if (!is.numeric(phi) || length(phi) != 1) {
+  if(!is.numeric(phi) || length(phi) != 1){
     stop("phi must be a numeric scalar.")
   }
-  if (phi <= 0) {
+  if(phi <= 0){
     stop("phi (decay parameter) must be a positive real number.")
   }
 
-  if (cor.fn == "matern") {
+  if(cor.fn == "matern"){
 
     if (!"nu" %in% names(spParams)) {
       stop("nu (smoothness parameter) must be supplied.")
@@ -265,15 +265,15 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   ##### noise-to-spatial variance ratio #####
   deltasq <- 0
 
-  if (missing(noise_sp_ratio)) {
+  if(missing(noise_sp_ratio)){
     warning("noise_sp_ratio not supplied. Using noise_sp_ratio = 1.")
     deltasq = 1
-  } else {
+  }else{
     deltasq <- noise_sp_ratio
-    if (!is.numeric(deltasq) || length(deltasq) != 1) {
+    if(!is.numeric(deltasq) || length(deltasq) != 1){
       stop("noise_sp_ratio must be a numeric scalar.")
     }
-    if (deltasq <= 0) {
+    if(deltasq <= 0){
       stop("noise_sp_ratio must be a positive real number.")
     }
   }
@@ -292,28 +292,28 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
 
   ##### Leave-one-out setup #####
 
-  if (loopd) {
-    if (missing(loopd.method)) {
+  if(loopd){
+    if(missing(loopd.method)){
       stop("loopd.method must be specified")
-    } else {
+    }else{
       loopd.method <- tolower(loopd.method)
     }
-    if (!loopd.method %in% c("exact", "psis")) {
+    if(!loopd.method %in% c("exact", "psis")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose
            from c('exact', 'PSIS').")
     }
-  } else {
+  }else{
     loopd.method <- "none"
   }
 
   ##### main function call #####
   ptm <- proc.time()
 
-  if (loopd) {
+  if(loopd){
     samps <- .Call("spLMexactLOO", y, X, p, n, coords.D, beta.prior, beta.Norm,
                    sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, loopd,
                    loopd.method, verbose)
-  } else {
+  }else{
     samps <- .Call("spLMexact", y, X, p, n, coords.D, beta.prior, beta.Norm,
                    sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, verbose)
   }
