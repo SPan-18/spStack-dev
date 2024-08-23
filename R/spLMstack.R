@@ -1,8 +1,8 @@
 #' Univariate spatial linear model using Bayesian predictive stacking
 #'
 #' @description Fits Bayesian spatial linear model on several candidate models
-#'  specified by user via candidate values of some spatial process parameters
-#'  and subsequently combines inference by stacking of predictive densities.
+#'  specified by user via candidate values of some model parameters and
+#'  subsequently combines inference by stacking predictive densities.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -10,7 +10,7 @@
 #'  \code{environment(formula)}, typically the environment from which
 #'  \code{spLMstack} is called.
 #' @param coords an \eqn{n \times 2}{n x 2} matrix of the observation
-#'  coordinates in \eqn{R^2}{R^2} (e.g., easting and northing).
+#'  coordinates in \eqn{\mathbb{R}^2} (e.g., easting and northing).
 #' @param cor.fn a quoted keyword that specifies the correlation function used
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
@@ -27,7 +27,11 @@
 #'  (Gelman *et al.* 2024).
 #' @param parallel logical. If \code{FALSE}, the parallelization plan, if set up
 #'  by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
-#'  set by the user using the \code{future} package.
+#'  set by the user using the \code{future} package only. Depending on the
+#'  parallelization backend available, the user may choose any plan using the
+#'  function [future::plan()]. More details on how to setup paralleization plan
+#'  using the package [future] is available at
+#'  \url{https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #'  to obtain optimal stacking weights for each candidate model. Default is
 #'  \code{"ECOS"}. Users can use other solvers supported by the [CVXR] package.
@@ -50,6 +54,23 @@
 #' \item{solver.status}{solver status as returned by the optimization routine.}
 #' The return object might include additional data used for subsequent
 #' prediction and/or model fit evaluation.
+#' @details Instead of assigning a prior on the process parameters \eqn{\phi}
+#'  and \eqn{\nu}, noise-to-spatial variance ratio \eqn{\delta^2}, we consider
+#'  a set of candidate models based on some candidate values of these parameters
+#'  supplied by the user. Suppose the set of candidate models is
+#'  \eqn{\mathcal{M} = \{M_1, \ldots, M_G\}}. The for each
+#'  \eqn{g = 1, \ldots, G}, we sample from the posterior distribution
+#'  \eqn{p(\sigma^2, \beta, z \mid y, M_g)} under the model \eqn{M_g} and find
+#'  leave-one-out predictive densities \eqn{p(y_i \mid y_{-i}, M_g)}. Then we
+#'  solve the optimization problem
+#'  \deqn{
+#'  \begin{aligned}
+#'  \max_{w_1, \ldots, w_G}& \, \frac{1}{n} \sum_{i = 1}^n \log \sum_{g = 1}^G
+#'  w_g p(y_i \mid y_{-i}, M_g) \\
+#'  \text{subject to} & \quad w_g \geq 0, \sum_{g = 1}^G w_g = 1
+#'  \end{aligned}
+#'  }
+#' to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 #' @seealso [spLMexact()]
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
@@ -58,6 +79,32 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
+#' @examples
+#' # load data and work with first 100 rows
+#' data(simLMdat)
+#' dat <- simLMdat[1:100, ]
+#'
+#' # setup prior list
+#' muBeta <- c(0, 0)
+#' VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
+#' sigmaSqIGa <- 2
+#' sigmaSqIGb <- 0.1
+#' prior_list <- list(beta.norm = list(muBeta, VBeta),
+#'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
+#'
+#' # library(future)                    # if parallel = TRUE
+#' # plan('multicore', workers = 6)     # if running from terminal on Unix (Mac/Linux)
+#' mod1 <- spLMstack(y ~ x1, data = dat,
+#'                   coords = as.matrix(dat[, c("s1", "s2")]),
+#'                   cor.fn = "matern",
+#'                   priors = prior_list,
+#'                   params.list = list(phi = c(1.5, 3, 5),
+#'                                      nu = c(0.5, 1, 1.5),
+#'                                      noise_sp_ratio = c(0.5, 1)),
+#'                   n.samples = 1000, loopd.method = "exact",
+#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#' # plan('sequential')                  # turn off parallelization plan
+#' str(mod1)
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,
@@ -146,15 +193,15 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     }
 
     ## Setup prior for sigma.sq
-    if (!"sigma.sq.ig" %in% names(priors)) {
+    if(!"sigma.sq.ig" %in% names(priors)){
       stop("error: sigma.sq.IG must be specified")
     }
     sigma.sq.IG <- priors[["sigma.sq.ig"]]
 
-    if (!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2) {
+    if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
       stop("error: sigma.sq.IG must be a vector of length 2")
     }
-    if (any(sigma.sq.IG <= 0)) {
+    if(any(sigma.sq.IG <= 0)){
       stop("error: sigma.sq.IG must be a positive vector of length 2")
     }
 
@@ -167,14 +214,14 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   if(missing(params.list)){
 
-    warning("warning: params.list must be supplied. Using defaults.")
+    stop("error: params.list must be supplied.")
 
-    params.list <- vector(mode = "list", length = 3)
-    names(params.list) <- c("phi", "nu", "noise_sp_ratio")
-    ####### 1L REQUIRES AUTOMATION #######
-    params.list[[1L]] <- c(3, 5, 10)
-    params.list[[2L]] <- c(0.5, 1.0, 1.5)
-    params.list[[3L]] <- c(0.25, 1.0, 2.0)
+    # params.list <- vector(mode = "list", length = 3)
+    # names(params.list) <- c("phi", "nu", "noise_sp_ratio")
+    # ####### 1L REQUIRES AUTOMATION #######
+    # params.list[[1L]] <- c(3, 5, 10)
+    # params.list[[2L]] <- c(0.5, 1.0, 1.5)
+    # params.list[[3L]] <- c(0.25, 1.0, 2.0)
 
   }else{
 
@@ -206,8 +253,6 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   #### Leave-one-out setup ####
   loopd <- TRUE
-  CV_K <- as.integer(0)
-  storage.mode(CV_K) <- "integer"
 
   if(missing(loopd.method)){
     warning("loopd.method not specified. Using 'exact'.")
@@ -298,6 +343,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   }
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
+  # assists numerical stability for CVXR objective function evaluation
   loopd_mat[loopd_mat < -10] <- -10
 #   return(loopd_mat)
 
@@ -307,10 +353,10 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   run.time <- proc.time() - ptm
 
   w_hat <- out_CVXR$weights
+  w_hat <- as.numeric(w_hat)
   solver_status <- out_CVXR$status
   w_hat <- sapply(w_hat, function(x) max(0, x))
   w_hat <- w_hat / sum(w_hat)
-#   w_hat <- as.numeric(w_hat)
 #   solver_status <- "BFGS"
 
 stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
@@ -322,6 +368,12 @@ stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
     pretty_print_matrix(stack_out, heading = "STACKING WEIGHTS:")
   }
 
+  loopd_list <- lapply(samps, function(x) x[["loopd"]])
+  names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
+
+  samps <- lapply(samps, function(x) x[1:3])
+  names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
+
   out <- list()
   out$y <- y
   out$X <- X
@@ -330,6 +382,7 @@ stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
   out$cor.fn <- cor.fn
   out$beta.prior.norm <- beta.Norm
   out$samples <- samps
+  out$loopd <- loopd_list
   out$n.models <- length(list_candidate)
   out$candidate.models <- stack_out
   out$stacking.weights <- w_hat

@@ -81,12 +81,11 @@
 #' # load data
 #' data(simLMdat)
 #'
-#' # prior parameters
+#' # setup prior list
 #' muBeta <- c(0, 0)
 #' VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
 #' sigmaSqIGa <- 2
 #' sigmaSqIGb <- 0.1
-#' # setup prior list
 #' prior_list <- list(beta.norm = list(muBeta, VBeta),
 #'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 #'
