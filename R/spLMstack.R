@@ -80,6 +80,7 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
+#' \dontrun{
 #' # load data and work with first 100 rows
 #' data(simLMdat)
 #' dat <- simLMdat[1:100, ]
@@ -98,13 +99,17 @@
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   priors = prior_list,
-#'                   params.list = list(phi = c(1.5, 3, 5),
-#'                                      nu = c(0.5, 1, 1.5),
-#'                                      noise_sp_ratio = c(0.5, 1)),
+#'                   params.list = list(phi = c(1.5, 3),
+#'                                      nu = c(0.5, 1),
+#'                                      noise_sp_ratio = c(1)),
 #'                   n.samples = 1000, loopd.method = "exact",
 #'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
 #' # plan('sequential')                  # turn off parallelization plan
 #' str(mod1)
+#' post_samps <- stackedSampler(mod1)
+#' post_beta <- post_samps$beta
+#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,

@@ -111,6 +111,7 @@ subsequently, we sample \eqn{z} conditioned on the posterior samples of
 \dontrun{
 # load data
 data(simLMdat)
+dat <- simLMdat[1:100, ]
 
 # setup prior list
 muBeta <- c(0, 0)
@@ -125,8 +126,8 @@ phi0 <- 3
 nu0 <- 0.75
 noise.sp.ratio <- 0.8
 
-mod1 <- spLMexact(y ~ x1, data = simLMdat,
-                  coords = as.matrix(simLMdat[, c("s1", "s2")]),
+mod1 <- spLMexact(y ~ x1, data = dat,
+                  coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
                   spParams = list(phi = phi0, nu = nu0),
@@ -136,10 +137,10 @@ mod1 <- spLMexact(y ~ x1, data = simLMdat,
 
 beta.post <- mod1$samples$beta
 z.post.median <- apply(mod1$samples$z, 1, median)
-simLMdat$z.post.median <- z.post.median
-plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+dat$z.post.median <- z.post.median
+plot1 <- surfaceplot(dat, coords_name = c("s1", "s2"),
                      var_name = "z_true")
-plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+plot2 <- surfaceplot(dat, coords_name = c("s1", "s2"),
                      var_name = "z.post.median")
 plot1
 plot2

@@ -18,6 +18,7 @@
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
+#' \dontrun{
 #' data(simLMdat)
 #' plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
 #'                      var_name = "z_true")
@@ -29,6 +30,7 @@
 #' plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
 #'                      var_name = "z_true", col.pal = col.br.pal)
 #' plot2
+#' }
 #' @export
 surfaceplot <- function(tab, coords_name, var_name, h = 8,
                         col.pal, mark_points = FALSE){

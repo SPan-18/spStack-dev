@@ -4,12 +4,12 @@
 #' distribution to obtain final posterior samples for analysis. This function
 #' applies on outputs of functions like [spLMstack()].
 #' @param mod_out output object from [spLMstack()].
-#' @param n.samples number of posterior samples to draw from the stacked
-#' posterior. If it exceeds the number of posterior draws used in the original
-#' function, then it throws a warning and resamples within the available
-#' samples. It is recommended, to run the original function with the number of
-#' samples that is desired at the final step. If missing, inherits the number
-#' of posterior samples from the orinial output.
+#' @param n.samples (optional) If missing, inherits the number
+#' of posterior samples from the originial output. Otherwise, it specifies
+#' number of posterior samples to draw from the stacked posterior. If it exceeds
+#' the number of posterior draws used in the original function, then a warning
+#' is thrown and the samples are obtained by resampling. It is recommended, to
+#' run the original function with enough samples.
 #' @return An object of class \code{stacked_posterior}, which is a list with the
 #' following tags -
 #' \item{beta}{samples of the fixed effect from the stacked joint posterior.}
@@ -26,6 +26,38 @@
 #' where \eqn{\mathcal{M} = \{M_1, \ldots, M_g\}} is the collection of candidate
 #' models.
 #' @seealso [spLMstack()]
+#' @examples
+#' \dontrun{
+#' data(simLMdat)
+#' dat <- simLMdat[1:100, ]
+#'
+#' # setup prior list
+#' muBeta <- c(0, 0)
+#' VBeta <- cbind(c(10.0, 0.0), c(0.0, 10.0))
+#' sigmaSqIGa <- 2
+#' sigmaSqIGb <- 2
+#' prior_list <- list(beta.norm = list(muBeta, VBeta),
+#'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
+#'
+#' # library(future)                    # if parallel = TRUE
+#' # plan('multicore', workers = 6)     # if running from terminal on Unix (Mac/Linux)
+#' mod1 <- spLMstack(y ~ x1, data = dat,
+#'                   coords = as.matrix(dat[, c("s1", "s2")]),
+#'                   cor.fn = "matern",
+#'                   priors = prior_list,
+#'                   params.list = list(phi = c(1.5, 3),
+#'                                      nu = c(0.5, 1),
+#'                                      noise_sp_ratio = c(1)),
+#'                   n.samples = 1000, loopd.method = "exact",
+#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#' # plan('sequential')
+#' print(mod1$solver.status)
+#' print(mod1$run.time)
+#'
+#' post_samps <- stackedSampler(mod1)
+#' post_beta <- post_samps$beta
+#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#' }
 #' @export
 stackedSampler <- function(mod_out, n.samples){
 
