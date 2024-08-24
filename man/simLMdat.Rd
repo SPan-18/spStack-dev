@@ -54,7 +54,7 @@ sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
                    spParams = spParams, spvar = spvar, deltasq = deltasq,
                    family = "gaussian")
 plot1 <- surfaceplot(sim1, coords_name = c("s1", "s2"), var_name = "z_true",
-                     mark_points = TRUE, col.pal = NULL)
+                     mark_points = TRUE)
 plot1
 
 library(ggplot2)

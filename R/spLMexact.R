@@ -1,4 +1,4 @@
-#' Univariate spatial linear mixed model
+#' Univariate spatial linear model
 #'
 #' @description Fits a Bayesian spatial linear model with spatial process
 #'  parameters and the noise-to-spatial variance ratio fixed to a value supplied
@@ -34,7 +34,7 @@
 #' @param data an optional data frame containing the variables in the model.
 #'  If not found in \code{data}, the variables are taken from
 #'  \code{environment(formula)}, typically the environment from which
-#'  \code{spLMexactLOO} is called.
+#'  \code{spLMexact} is called.
 #' @param coords an \eqn{n \times 2}{n x 2} matrix of the observation
 #'  coordinates in \eqn{\mathbb{R}^2} (e.g., easting and northing).
 #' @param cor.fn a quoted keyword that specifies the correlation function used
@@ -197,7 +197,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
       }
       if(length(beta.Norm[[2]]) != p^2){
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
-                   " correlation matrix.", sep = ""))
+                   " covariance matrix.", sep = ""))
       }
       beta.prior <- "normal"
     }
@@ -331,7 +331,11 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   if(loopd){
     out$loopd <- samps[["loopd"]]
   }
-  out$model.params <- c(phi, nu, deltasq)
+  if(cor.fn == 'matern'){
+    out$model.params <- c(phi, nu, deltasq)
+  }else{
+    out$model.params <- c(phi, deltasq)
+  }
   out$run.time <- run.time
 
   class(out) <- "spLMexact"

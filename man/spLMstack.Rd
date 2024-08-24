@@ -40,7 +40,7 @@ See below for details.}
 containing prior details.}
 
 \item{params.list}{a list containing candidate values of spatial process
-parameters and noise-to-spatial variance ratio. See example.}
+parameters for the \code{cor.fn} used, and, noise-to-spatial variance ratio.}
 
 \item{n.samples}{number of posterior samples to be generated.}
 
@@ -124,7 +124,7 @@ prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
 # library(future)                    # if parallel = TRUE
-# plan('multicore', workers = 6)     # if running from terminal on Unix (Mac/Linux)
+# plan('multicore', workers = 6)     # if running from terminal on Mac/Linux
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
@@ -139,6 +139,28 @@ str(mod1)
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+
+post_z <- post_samps$z
+post_z_summ <- t(apply(post_z, 1,
+                       function(x) quantile(x, c(0.025, 0.5, 0.975))))
+
+z_combn <- data.frame(z = dat$z_true,
+                      zL = post_z_summ[, 1],
+                      zM = post_z_summ[, 2],
+                      zU = post_z_summ[, 3])
+
+library(ggplot2)
+plot1 <- ggplot(data = z_combn, aes(x = z)) +
+  geom_point(aes(y = zM), size = 0.25,
+             color = "darkblue", alpha = 0.5) +
+  geom_errorbar(aes(ymin = zL, ymax = zU),
+                width = 0.05, alpha = 0.15) +
+  geom_abline(slope = 1, intercept = 0,
+              color = "red", linetype = "solid") +
+  xlab("True z") + ylab("Stacked posterior of z") +
+  theme_bw() +
+  theme(panel.background = element_blank(),
+        aspect.ratio = 1)
 }
 }
 \references{

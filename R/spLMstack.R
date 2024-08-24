@@ -18,7 +18,7 @@
 #' @param priors a list with each tag corresponding to a parameter name and
 #'  containing prior details.
 #' @param params.list a list containing candidate values of spatial process
-#'  parameters and noise-to-spatial variance ratio. See example.
+#'  parameters for the `cor.fn` used, and, noise-to-spatial variance ratio.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd.method character. Valid inputs are `'exact'` and `'PSIS'`. The
 #'  option `'exact'` corresponds to exact leave-one-out predictive densities.
@@ -94,7 +94,7 @@
 #'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 #'
 #' # library(future)                    # if parallel = TRUE
-#' # plan('multicore', workers = 6)     # if running from terminal on Unix (Mac/Linux)
+#' # plan('multicore', workers = 6)     # if running from terminal on Mac/Linux
 #' mod1 <- spLMstack(y ~ x1, data = dat,
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
@@ -109,6 +109,29 @@
 #' post_samps <- stackedSampler(mod1)
 #' post_beta <- post_samps$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#'
+#' post_z <- post_samps$z
+#' post_z_summ <- t(apply(post_z, 1,
+#'                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+#'
+#' z_combn <- data.frame(z = dat$z_true,
+#'                       zL = post_z_summ[, 1],
+#'                       zM = post_z_summ[, 2],
+#'                       zU = post_z_summ[, 3])
+#'
+#' library(ggplot2)
+#' plot1 <- ggplot(data = z_combn, aes(x = z)) +
+#'   geom_point(aes(y = zM), size = 0.25,
+#'              color = "darkblue", alpha = 0.5) +
+#'   geom_errorbar(aes(ymin = zL, ymax = zU),
+#'                 width = 0.05, alpha = 0.15) +
+#'   geom_abline(slope = 1, intercept = 0,
+#'               color = "red", linetype = "solid") +
+#'   xlab("True z") + ylab("Stacked posterior of z") +
+#'   theme_bw() +
+#'   theme(panel.background = element_blank(),
+#'         aspect.ratio = 1)
+
 #' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
@@ -236,10 +259,17 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       stop("error: candidate values of phi must be specified in params_list.")
     }
 
-    if(!"nu" %in% names(params.list)){
-      warning("warning: candidate values of nu not specified. Using defaults
-              c(0.5, 1, 1.5).")
-      params.list[["nu"]] <- c(0.5, 1.0, 1.5)
+    if(cor.fn == 'matern'){
+      if(!"nu" %in% names(params.list)){
+        warning("warning: candidate values of nu not specified. Using defaults
+                c(0.5, 1, 1.5).")
+        params.list[["nu"]] <- c(0.5, 1.0, 1.5)
+      }
+    }else{
+      if("nu" %in% names(params.list)){
+        warning("cor.fn = 'exponential'. Ignoring candidate values of nu.")
+      }
+      params.list[["nu"]] <- c(0.0)
     }
 
     if(!"noise_sp_ratio" %in% names(params.list)){
@@ -350,7 +380,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
   # assists numerical stability for CVXR objective function evaluation
   loopd_mat[loopd_mat < -10] <- -10
-#   return(loopd_mat)
+  # return(loopd_mat)
 
   out_CVXR <- get_stacking_weights(loopd_mat, solver = solver)
 #   out_CVXR <- stacking_weights(loopd_mat, solver = solver)
@@ -364,10 +394,14 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   w_hat <- w_hat / sum(w_hat)
 #   solver_status <- "BFGS"
 
-stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
-    stack_out <- cbind(stack_out, round(w_hat, 3))
-    colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
-    rownames(stack_out) = paste("Model", 1:nrow(stack_out))
+  stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
+  stack_out <- cbind(stack_out, round(w_hat, 3))
+  colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
+  rownames(stack_out) = paste("Model", 1:nrow(stack_out))
+
+  if(cor.fn == 'exponential'){
+    stack_out <- stack_out[, c("phi", "noise_sp_ratio", "weight")]
+  }
 
   if(verbose){
     pretty_print_matrix(stack_out, heading = "STACKING WEIGHTS:")

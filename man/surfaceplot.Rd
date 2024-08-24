@@ -29,6 +29,7 @@ Default is \code{FALSE}.}
 Make a surface plot
 }
 \examples{
+\dontrun{
 data(simLMdat)
 plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
                      var_name = "z_true")
@@ -40,4 +41,5 @@ col.br.pal <- col.br(100)
 plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
                      var_name = "z_true", col.pal = col.br.pal)
 plot2
+}
 }

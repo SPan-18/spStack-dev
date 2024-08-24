@@ -21,7 +21,7 @@ inputs are 'exponential' and 'matern'.}
 \item{deltasq}{Noise-to-spatial variance ratio}
 
 \item{family}{Specifies the distribution of the response as a member of the
-exponential family.}
+exponential family. Valid inputs are \code{"gaussian"}, \code{"poisson"}.}
 }
 \description{
 Simulate spatial data on unit square
