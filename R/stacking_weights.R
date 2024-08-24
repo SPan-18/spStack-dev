@@ -19,7 +19,6 @@
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion).” *Bayesian
 #' Analysis*, **13**(3), 917 – 1007. \url{https://doi.org/10.1214/17-BA1091}.
-#' @seealso [loo::stacking_weights()]
 #' @export
 get_stacking_weights <- function(log_loopd, solver = "ECOS"){
 
