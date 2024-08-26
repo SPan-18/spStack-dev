@@ -52,15 +52,14 @@ predictive densities using Pareto-smoothed importance sampling
 
 \item{parallel}{logical. If \code{FALSE}, the parallelization plan, if set up
 by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
-set by the user using the \code{future} package only. Depending on the
-parallelization backend available, the user may choose any plan using the
-function \code{\link[future:plan]{future::plan()}}. More details on how to setup paralleization plan
-using the package \link{future} is available at
-\url{https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html}.}
+set by the user using the function \code{\link[future:plan]{future::plan()}} only. Depending on the
+parallel backend available, users may choose their own plan. More details
+are available at \url{https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html}.}
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
 to obtain optimal stacking weights for each candidate model. Default is
-\code{"ECOS"}. Users can use other solvers supported by the \link{CVXR} package.}
+\code{"ECOS"}. Users can use other solvers supported by the
+\link[CVXR]{CVXR-package} package.}
 
 \item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
 stacking weights.}
