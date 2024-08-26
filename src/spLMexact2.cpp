@@ -135,7 +135,7 @@ extern "C" {
     double *tmp_n2 = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n2, n);
 
     double *tmp_np1 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np1, np);
-    double *tmp_np2 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np2, np);
+    // double *tmp_np2 = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np2, np);
 
     double *tmp_p1 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p1, p);
     double *tmp_p2 = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p2, p);
@@ -243,7 +243,7 @@ extern "C" {
       F77_NAME(dcopy)(&n, tmp_n2, &incOne, v2, &incOne);
 
       inversionLM(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,
-                  tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1, tmp_np2,
+                  tmp_n1, tmp_n2, tmp_p1, tmp_pp, tmp_np1,
                   out_p, out_n, 0);
 
       // inversionLM2(X, n, p, deltasq, VbetaInv, Vz, cholVy, v1, v2,

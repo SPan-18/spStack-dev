@@ -119,7 +119,8 @@ extern "C" {
     double dtemp = 0;
     double muBetatVbetaInvmuBeta = 0;
 
-    const double deltasqInv = 1.0 / deltasq;
+    // const double deltasqInv = 1.0 / deltasq;
+    const double delta = sqrt(deltasq);
 
     double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);              // correlation matrix
     double *cholVy = (double *) R_alloc(nn, sizeof(double)); zeros(cholVy, nn);      // allocate memory for n x n matrix
@@ -186,15 +187,10 @@ extern "C" {
 
     // set-up for sampling spatial random effects
     double *tmp_nn2 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn2, nn);                           // calloc n x n matrix
-    double *tmp_nn3 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn3, nn);                           // calloc n x n matrix
     F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);                                                         // tmp_nn2 = Vz
     F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
-    F77_NAME(dgemm)(ytran, ntran, &n, &n, &n, &one, tmp_nn2, &n, tmp_nn2, &n, &zero, tmp_nn3, &n FCONE FCONE);   // tmp_nn3 = Vz*VyInv*Vz
-    F77_NAME(daxpy)(&nn, &negOne, Vz, &incOne, tmp_nn3, &incOne);                                                // tmp_nn3 = Vz*VyInv*Vz - Vz
-    F77_NAME(dcopy)(&nn, tmp_nn3, &incOne, tmp_nn2, &incOne);                                                    // tmp_nn2 = Vz*VyInv*Vz - Vz
-    R_chk_free(tmp_nn3);                                                                                         // free tmp_nn3
-    F77_NAME(dscal)(&nn, &negOne, tmp_nn2, &incOne);                                                             // tmp_nn2 = Vz - Vz*VyInv*Vz
-    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(Vz - Vz*VyInv*Vz)
+    F77_NAME(dtrsm)(lside, lower, ytran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = inv(Vy)*Vz
+    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(inv(Vy)*Vz)
     mkLT(tmp_nn2, n);                                                                                            // make cholDinv lower-triangular
 
     // posterior parameters of sigmaSq
@@ -230,13 +226,13 @@ extern "C" {
       }
       F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta, &incOne FCONE FCONE FCONE); // beta = t(cholinv(tmp_pp))*beta
 
+      dtemp = dtemp * delta;                                                                 // dtemp = sqrt(sigmaSq*deltasq)
       // sample spatial effects by composition sampling
       for(i = 0; i < n; i++){
         tmp_n[i] = rnorm(0.0, dtemp);                                                               // tmp_n ~ N(0, sigmaSq*I)
       }
       F77_NAME(dcopy)(&n, Y, &incOne, z, &incOne);                                                  // z = Y
       F77_NAME(dgemv)(ntran, &n, &p, &negOne, X, &n, beta, &incOne, &one, z, &incOne FCONE);        // z = Y-X*beta
-      F77_NAME(dscal)(&n, &deltasqInv, z, &incOne);                                                 // z = (Y-X*beta)/deltasq
       F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn2, &n, z, &incOne, &one, tmp_n, &incOne FCONE);    // tmp_n = tmp_n + t(chol(tmp_nn2))*(Y-X*beta)/deltasq
       F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn2, &n, tmp_n, &incOne, &zero, z, &incOne FCONE);   // z = chol(tmp_nn2)*tmp_n
 
