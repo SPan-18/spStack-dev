@@ -113,22 +113,20 @@ extern "C" {
     /*****************************************
      Set-up preprocessing matrices etc.
      *****************************************/
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);              // correlation matrix
-    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);
-    double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);      // allocate memory for n x n matrix
-    double *cholSchur_n = (double *) R_alloc(nn, sizeof(double)); zeros(cholSchur_n, nn); // allocate memory for Schur complement
-    double *cholSchur_p = (double *) R_alloc(pp, sizeof(double)); zeros(cholSchur_p, pp); // allocate memory for Schur complement
-    double *D1invX = (double *) R_alloc(np, sizeof(double)); zeros(D1invX, np);
-    double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);  // allocate VbetaInv
-    double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);
-    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);
-    double *thetasp = (double *) R_alloc(2, sizeof(double));                         // spatial process parameters
+    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                       // correlation matrix
+    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz
+    double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);     // allocate memory for n x n matrix
+    double *cholSchur_n = (double *) R_alloc(nn, sizeof(double)); zeros(cholSchur_n, nn);     // allocate memory for Schur complement
+    double *cholSchur_p = (double *) R_alloc(pp, sizeof(double)); zeros(cholSchur_p, pp);     // allocate memory for Schur complement
+    double *D1invX = (double *) R_alloc(np, sizeof(double)); zeros(D1invX, np);               // allocate for preprocessing
+    double *DinvB_pn = (double *) R_alloc(np, sizeof(double)); zeros(DinvB_pn, np);           // allocate memory for p x n matrix
+    double *DinvB_nn = (double *) R_alloc(nn, sizeof(double)); zeros(DinvB_nn, nn);           // allocate memory for n x n matrix
+    double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);           // allocate VbetaInv
+    double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
+    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
+    double *thetasp = (double *) R_alloc(2, sizeof(double));                                  // spatial process parameters
 
-    double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);           // allocate memory for n x 1 vector
-    double *tmp_p = (double *) R_alloc(p, sizeof(double)); zeros(tmp_p, p);           // allocate memory for p x 1 vector
-    double *tmp_np = (double *) R_alloc(np, sizeof(double)); zeros(tmp_np, np);       // allocate memory for n x p matrix
-    double *tmp_pn = (double *) R_alloc(np, sizeof(double)); zeros(tmp_pn, np);       // allocate memory for p x n matrix
-    double *tmp_nn = (double *) R_alloc(nn, sizeof(double)); zeros(tmp_nn, nn);       // allocate memory for n x n matrix
+
 
     //construct covariance matrix (full)
     thetasp[0] = phi;
@@ -157,13 +155,19 @@ extern "C" {
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
 
     // Get the Schur complement of top left nxn submatrix of (HtH)
-    cholSchurGLM(X, n, p, sigmaSq_xi, XtX, VbetaInv, Vz, cholVzPlusI, tmp_nn, tmp_np, tmp_pn,
-                 cholSchur_p, cholSchur_n, D1invX);
+    double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);       // temporary allocate memory for n x p matrix
+    double *tmp_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn, nn);       // temporary allocate memory for n x n matrix
 
-    double *v_eta = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_eta, n);
-    double *v_xi = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_xi, n);
-    double *v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(v_beta, p);
-    double *v_z = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_z, n);
+    cholSchurGLM(X, n, p, sigmaSq_xi, XtX, VbetaInv, Vz, cholVzPlusI, tmp_nn, tmp_np,
+                 DinvB_pn, DinvB_nn, cholSchur_p, cholSchur_n, D1invX);
+
+    R_chk_free(tmp_nn);
+    R_chk_free(tmp_np);
+
+    double *v_eta = (double *) R_alloc(n, sizeof(double)); zeros(v_eta, n);
+    double *v_xi = (double *) R_alloc(n, sizeof(double)); zeros(v_xi, n);
+    double *v_beta = (double *) R_alloc(p, sizeof(double)); zeros(v_beta, p);
+    double *v_z = (double *) R_alloc(n, sizeof(double)); zeros(v_z, n);
 
     for(i = 0; i < n; i++){
       v_eta[i] = 1.0;
@@ -176,12 +180,18 @@ extern "C" {
     }
 
     // projection step
-    projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-            cholVz, Vz, cholVzPlusI, D1invX, tmp_n, tmp_p);
+    double *tmp_n = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n, n);           // allocate memory for n x 1 vector
+    double *tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(tmp_p, p);           // allocate memory for p x 1 vector
 
-    R_chk_free(v_xi);
-    R_chk_free(v_beta);
-    R_chk_free(v_z);
+    projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
+            cholVz, Vz, cholVzPlusI, D1invX, DinvB_pn, DinvB_nn, tmp_n, tmp_p);
+
+    R_chk_free(tmp_n);
+    R_chk_free(tmp_p);
+
+    printVec(v_xi, n);
+    printVec(v_beta, p);
+    printVec(v_z, n);
 
     SEXP result_r;
     result_r = PROTECT(Rf_allocVector(REALSXP, 1)); nProtect++;
