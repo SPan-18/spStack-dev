@@ -12,7 +12,8 @@
 #'  \code{environment(formula)}, typically the environment from which
 #'  \code{spGLMexact} is called.
 #' @param family Specifies the distribution of the response as a member of the
-#'  exponential family.
+#'  exponential family. Valid optionas are `"poisson"`, `"binomial"` and
+#'  `"binary"`.
 #' @param coords an \eqn{n \times 2}{n x 2} matrix of the observation
 #'  coordinates in \eqn{\mathbb{R}^2} (e.g., easting and northing).
 #' @param cor.fn a quoted keyword that specifies the correlation function used
@@ -32,17 +33,19 @@
 #'  densities, using method as given by \code{loopd.method}. Deafult is
 #'  \code{FALSE}.
 #' @param loopd.method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
-#'  valid inputs are `'exact'` and `'PSIS'`. The option `'exact'` corresponds to
-#'  exact leave-one-out predictive densities which requires computation almost
-#'  equivalent to fitting the model \eqn{n} times. The option `'PSIS'` is
-#'  faster and finds approximate leave-one-out predictive densities using
-#'  Pareto-smoothed importance sampling (Gelman *et al.* 2024).
+#'  valid inputs are `'exact'`, `'CV'` and `'PSIS'`. The option `'exact'`
+#'  corresponds to exact leave-one-out predictive densities which requires
+#'  computation almost equivalent to fitting the model \eqn{n} times. The
+#'  options `'CV'` and `'PSIS'` are faster and they implement \eqn{K}-fold
+#'  cross validation and Pareto-smoothed importance sampling to find approximate
+#'  leave-one-out predictive densities (Vehtari *et al.* 2017).
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
 #' @param ... currently no additional argument.
 #' @seealso [spLMexact()]
-#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-#'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
-#'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+#' @references Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
+#' Evaluation Using Leave-One-out Cross-Validation and WAIC.”
+#' *Statistics and Computing*, **27**(5), 1413–1432. ISSN 0960-3174.
+#' \url{https://doi.org/10.1007/s11222-016-9696-4}.
 #' @export
 spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
@@ -80,6 +83,21 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   storage.mode(X) <- "double"
   storage.mode(p) <- "integer"
   storage.mode(n) <- "integer"
+
+  ##### family #####
+  if(missing){
+    stop("error: family not specified.")
+  }else{
+    if(!is.character(family)){
+      stop("error:family must be a character string. Choose from c('poisson',
+           'binary', 'binomial').")
+    }
+    family <- tolower(family)
+    if(!family %in% c('poisson', 'binary', 'binomial')){
+      stop("error: Invalid family. Choose from c('poisson', 'binary',
+           'binomial').")
+    }
+  }
 
   ##### coords #####
   if(!is.matrix(coords)){
@@ -239,9 +257,9 @@ spGLMexact <- function(formula, data = parent.frame(), family,
     }else{
       loopd.method <- tolower(loopd.method)
     }
-    if(!loopd.method %in% c("exact", "psis")){
+    if(!loopd.method %in% c("CV", "psis")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose
-           from c('exact', 'PSIS').")
+           from c('CV', 'PSIS').")
     }
   }else{
     loopd.method <- "none"
