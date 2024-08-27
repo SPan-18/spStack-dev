@@ -13,7 +13,7 @@
 # define FCONE
 #endif
 
-// Cholesky factor rank-1 update; chol(alpha*LLt + beta*vvt), as appearing in Krause and Igel (2015).
+// Rank-1 update of Cholesky factor; chol(alpha*LLt + beta*vvt), as appearing in Krause and Igel (2015).
 // REFERENCE:
 // Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one Covariance Matrix Update for Evolution Strategies.
 // In Proceedings of the 2015 ACM Conference on Foundations of Genetic Algorithms XIII (FOGA '15). Association for
@@ -196,6 +196,70 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
 }
 
+// get the Schur complement of xi-cov submatrix for GLM case
+void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double *VbetaInv,
+                  double *Vz, double *cholVzPlusI, double *tmp_nn, double *tmp_np,
+                  double *tmp_pn, double *out_pp, double *out_nn, double *D1invB1){
+
+  int np = n * p;
+  int pp = p * p;
+  int nn = n * n;
+  int i;
+
+  int info = 0;
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  char const *lside = "L";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaSqxi2 = (sigmaSqxi + 1.0) / sigmaSqxi;
+
+  F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &one, Vz, &n, X, &n, &zero, tmp_np, &n FCONE FCONE);                  // tmp_np = Vz*X
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &p, &one, cholVzPlusI, &n, tmp_np, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholVzPlusI, &n, tmp_np, &n FCONE FCONE FCONE FCONE); // tmp_np = inv(VzInv+I)*X
+  F77_NAME(dcopy)(&np, tmp_np, &incOne, D1invB1, &incOne);
+  F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, tmp_np, &n, &zero, out_pp, &p FCONE FCONE);              // out_pp = t(X)*inv(VzInv+I)*X
+  F77_NAME(dscal)(&pp, &negone, out_pp, &incOne);                                                                 // out_pp = - XtD1invX
+  F77_NAME(daxpy)(&pp, &one, XtX, &incOne, out_pp, &incOne);                                                      // out_pp = XtX - XtD1invX
+  F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, out_pp, &incOne);                                                 // out_pp = XtX + VbetaInv - XtD1invX
+  F77_NAME(dpotrf)(lower, &p, out_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}      // chol(Schur(A1))
+  F77_NAME(daxpy)(&np, &negone, X, &incOne, tmp_np, &incOne);                                                     // tmp_np = inv(VzInv+I)*X-X
+  F77_NAME(dscal)(&np, &negone, tmp_np, &incOne);                                                                 // tmp_np = X-inv(VzInv+I)*X
+  transpose_matrix(tmp_np, n, p, tmp_pn);                                                                         // tmp_pn = t(tmp_np)
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, out_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, out_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);      // tmp_pn = inv(schur(A1))*(X-inv(VzInv+I)*X)
+  F77_NAME(dgemm)(ntran, ntran, &n, &n, &p, &one, X, &n, tmp_pn, &p, &zero, tmp_nn, &n FCONE FCONE);              // tmp_nn = X*inv(schur(A1))*(X-inv(VzInv+I)*X)
+  F77_NAME(dscal)(&nn, &negone, tmp_nn, &incOne);                                                                 // tmp_nn = -X*inv(schur(A1))*(X-inv(VzInv+I)*X)
+
+  for(i = 0; i < n; i++){
+    tmp_nn[i * n + i] += 1.0;
+  }
+
+  F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, Vz, &n, tmp_nn, &n, &zero, out_nn, &n FCONE FCONE);             // out_nn = Vz*(I-X*inv(schur(A1))*(X-inv(VzInv+I)*X))
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n, &one, cholVzPlusI, &n, out_nn, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &n, &one, cholVzPlusI, &n, out_nn, &n FCONE FCONE FCONE FCONE); // out_nn = inv(D1)*out_nn
+
+  for(i = 0; i < n; i++){
+    tmp_nn[i * n + i] -= 1.0;                                                                                     // tmp_nn = -X*inv(schur(A1))*(X-inv(VzInv+I)*X)
+  }
+
+  F77_NAME(dscal)(&nn, &negone, tmp_nn, &incOne);                                                                 // tmp_nn = X*inv(schur(A1))*(X-inv(VzInv+I)*X)
+  F77_NAME(daxpy)(&nn, &one, tmp_nn, &incOne, out_nn, &incOne);                                                   // out_nn = X*tmp_pn + out_nn
+  F77_NAME(dscal)(&nn, &negone, out_nn, &incOne);                                                                 // out_nn = - BtDinvB
+
+  for(i = 0; i < n; i++){
+    out_nn[i * n + i] += sigmaSqxi2;                                                                              // out_nn = A - BtDinvB
+  }
+
+  // Find Cholesky factor of Schur complement
+  F77_NAME(dpotrf)(lower, &n, out_nn, &n, &info FCONE); if(info != 0){perror("c++ error: Schur dpotrf failed\n");}
+
+}
+
 // No memory allocation inside 'hot' function
 void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
                  double *Vz, double *cholVy, double *v1, double *v2,
@@ -343,4 +407,63 @@ int mapIndex(int i, int j, int nRowB, int nColB, int startRowB, int startColB, i
   int indexA = rowA + colA * nRowA;
 
   return indexA;
+}
+
+// projection operator for GLM
+void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_beta, double *v_z,
+             double *cholpSchur, double *cholnSchur, double sigmaSqxi, double *Lbeta, double *Lz,
+             double *Vz, double *cholVzPlusI, double *D1invB1, double *tmp_n, double *tmp_p){
+
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaSqxiInv = 1.0 / sigmaSqxi;
+
+  // Find components of t(H)*v, where (3n+p)x1 vector v = [v_eta, v_xi, v_beta, v_z]
+  F77_NAME(dscal)(&n, &sigmaSqxiInv, v_xi, &incOne);                                               // v_xi = v_xi/sigmasqxi
+  F77_NAME(daxpy)(&n, &one, v_eta, &incOne, v_xi, &incOne);                                        // v_xi = v_eta + v_xi/sigmasqxi
+
+  F77_NAME(dtrsv)(lower, ytran, nunit, &p, Lbeta, &p, v_beta, &incOne FCONE FCONE FCONE);          // v_beta = LbetatInv*v_beta
+  F77_NAME(dgemv)(ytran, &n, &p, &one, X, &n, v_eta, &incOne, &one, v_beta, &incOne FCONE);        // v_beta = Xt*v_eta + LbetaInv*v_beta
+
+  F77_NAME(dtrsv)(lower, ytran, nunit, &n, Lz, &n, v_z, &incOne FCONE FCONE FCONE);                // v_z = LztInv*v_z
+  F77_NAME(daxpy)(&n, &one, v_eta, &incOne, v_z, &incOne);                                         // v_z = v_eta + LztInv*v_z
+
+  // Find inv(VzInv+I)*v22
+  F77_NAME(dgemv)(ntran, &n, &n, &one, Vz, &n, v_z, &incOne, &zero, tmp_n, &incOne FCONE);         // tmp_n = Vz*v22
+  F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVzPlusI, &n, tmp_n, &incOne FCONE FCONE FCONE);
+  F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVzPlusI, &n, tmp_n, &incOne FCONE FCONE FCONE);     // tmp_n = D1inv*v22
+
+  // Find (v21 - t(B1)*D1inv*v22)
+  F77_NAME(dgemv)(ytran, &n, &p, &negone, D1invB1, &n, v_z, &incOne, &one, v_beta, &incOne FCONE); // v21 = v21 - B1t*D1Inv*v22
+
+  // Find inv(schurA1)*(v21 - t(B1)*D1inv*v22)
+  F77_NAME(dtrsv)(lower, ntran, nunit, &p, cholpSchur, &p, v_beta, &incOne FCONE FCONE FCONE);
+  F77_NAME(dtrsv)(lower, ytran, nunit, &p, cholpSchur, &p, v_beta, &incOne FCONE FCONE FCONE);     // v_beta = inv(sA1)*(v21 - t(B1)*D1inv*v22)
+
+  F77_NAME(dcopy)(&p, v_beta, &incOne, tmp_p, &incOne);                                            // tmp_p = inv(sA1)*(v21 - t(B1)*D1inv*v22)
+  F77_NAME(dgemv)(ntran, &n, &p, &one, D1invB1, &n, tmp_p, &incOne, &zero, v_z, &incOne FCONE);    // v_z = D1invB1*inv(sA1)*(v21 - t(B1)*D1inv*v22)
+  F77_NAME(dscal)(&n, &negone, v_z, &incOne);                                                      // v_z = -D1invB1*inv(sA1)*(v21 - t(B1)*D1inv*v22)
+  F77_NAME(daxpy)(&n, &one, tmp_n, &incOne, v_z, &incOne);                                         // v_z = D1inv*v22 - D1invB1*inv(sA1)*(v21 - t(B1)*D1inv*v22)
+
+  // extract DinvB submatrices?
+
+}
+
+// Function to transpose a matrix in column-major form
+void transpose_matrix(double *M, int nrow, int ncol, double *Mt){
+
+  int i, j;
+
+  for(i = 0; i < nrow; i++){
+    for(j = 0; j < ncol; j++){
+      Mt[j + i * ncol] = M[i + j * nrow];
+    }
+  }
+
 }
