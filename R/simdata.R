@@ -19,8 +19,8 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #' @param spvar Fixed value of spatial variance
 #' @param deltasq Noise-to-spatial variance ratio
 #' @param family Specifies the distribution of the response as a member of the
-#'  exponential family. Valid inputs are `"gaussian"`, `"poisson"`, "binary",
-#'  and "binomial".
+#'  exponential family. Valid inputs are `"gaussian"`, `"poisson"`, `"binary"`,
+#'  and `"binomial"`.
 #' @param n_binom Necessary only when `family = "binomial"`. Must be a numeric
 #'  vector of length `n` that will specify the number of trials for each
 #'  observation. If it is of length 1, then that value is considered to be the

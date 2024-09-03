@@ -79,7 +79,6 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
-#' \dontrun{
 #' # load data and work with first 100 rows
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
@@ -130,7 +129,6 @@
 #'   theme_bw() +
 #'   theme(panel.background = element_blank(),
 #'         aspect.ratio = 1)
-#' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,

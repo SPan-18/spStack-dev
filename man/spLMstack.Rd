@@ -109,7 +109,6 @@ solve the optimization problem
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
-\dontrun{
 # load data and work with first 100 rows
 data(simGaussian)
 dat <- simGaussian[1:100, ]
@@ -160,7 +159,6 @@ plot1 <- ggplot(data = z_combn, aes(x = z)) +
   theme_bw() +
   theme(panel.background = element_blank(),
         aspect.ratio = 1)
-}
 }
 \references{
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto

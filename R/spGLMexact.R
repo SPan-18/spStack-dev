@@ -97,7 +97,6 @@
 #' *Statistics and Computing*, **27**(5), 1413–1432. ISSN 0960-3174.
 #' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
-#' \dontrun{
 #' # Example 1: Analyze spatial poisson count data
 #' data(simPoisson)
 #' dat <- simPoisson
@@ -137,7 +136,6 @@
 #' # summarize posterior samples
 #' post_beta <- mod3$samples$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#' }
 #' @export
 spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,

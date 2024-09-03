@@ -123,7 +123,6 @@ values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 }
 \examples{
-\dontrun{
 # Example 1: Analyze spatial poisson count data
 data(simPoisson)
 dat <- simPoisson
@@ -163,7 +162,6 @@ mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
 # summarize posterior samples
 post_beta <- mod3$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-}
 }
 \references{
 Bradley JR, Clinch M (2024). “Generating Independent Replicates
