@@ -129,6 +129,11 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
 
 }
 
+// Function to compute log(x/(1-x)) for a given x
+double logit(double x){
+  return log(x) - log(1.0 - x);
+}
+
 // Convert a matrix to lower triangular
 void mkLT(double *A, int n){
   for (int i = 0; i < n; ++i){

@@ -16,7 +16,7 @@
 
 extern "C" {
 
-  SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r,
+  SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                   SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                   SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                   SEXP epsilon_r, SEXP nSamples_r, SEXP verbose_r){
@@ -24,15 +24,11 @@ extern "C" {
     /*****************************************
      Common variables
      *****************************************/
-    // int i, j, s, info, nProtect = 0;
-    int i, info, nProtect = 0;
+    int i, j, s, info, nProtect = 0;
     char const *lower = "L";
-    // char const *nUnit = "N";
     char const *ntran = "N";
     char const *ytran = "T";
-    // char const *lside = "L";
     const double one = 1.0;
-    // const double negOne = -1.0;
     const double zero = 0.0;
     const int incOne = 1;
 
@@ -40,6 +36,7 @@ extern "C" {
      Set-up
      *****************************************/
     double *Y = REAL(Y_r);
+    double *nBinom = REAL(nBinom_r);
     double *X = REAL(X_r);
     int p = INTEGER(p_r)[0];
     int pp = p * p;
@@ -61,6 +58,7 @@ extern "C" {
     double nu_beta = REAL(nu_beta_r)[0];
     double nu_z = REAL(nu_z_r)[0];
     double sigmaSq_xi = REAL(sigmaSq_xi_r)[0];
+    double sigma_xi = sqrt(sigmaSq_xi);
 
     // spatial process parameters
     double phi = REAL(phi_r)[0];
@@ -91,12 +89,13 @@ extern "C" {
 
       Rprintf("\tbeta normal:\n");
       Rprintf("\tmu:"); printVec(betaMu, p);
-      Rprintf("\tcov:"); printMtrx(betaV, p, p);
+      Rprintf("\tcov:\n"); printMtrx(betaV, p, p);
       Rprintf("\n");
 
-      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2),\tnu.beta = %.2f\n", nu_beta);
+      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2), nu.beta = %.2f\n", nu_beta);
       Rprintf("\tsigmaSq.z ~ IG(nu.z/2, nu.z/2),\tnu.z = %.2f\n", nu_z);
-      Rprintf("\tsigmaSq.xi = %.2f\n\n", sigmaSq_xi);
+      Rprintf("\tsigmaSq.xi = %.2f\n", sigmaSq_xi);
+      Rprintf("\tBoundary adjustment parameter = %.2f\n\n", epsilon);
 
       Rprintf("Spatial process parameters:\n");
 
@@ -107,12 +106,15 @@ extern "C" {
       }
 
       Rprintf("Number of posterior samples = %i.\n", nSamples);
+      Rprintf("----------------------------------------\n");
 
     }
 
     /*****************************************
      Set-up preprocessing matrices etc.
      *****************************************/
+    double dtemp1, dtemp2, dtemp3;
+
     double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                       // correlation matrix
     double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz
     double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);     // allocate memory for n x n matrix
@@ -125,8 +127,6 @@ extern "C" {
     double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
     double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
     double *thetasp = (double *) R_alloc(2, sizeof(double));                                  // spatial process parameters
-
-
 
     //construct covariance matrix (full)
     thetasp[0] = phi;
@@ -164,39 +164,122 @@ extern "C" {
     R_chk_free(tmp_nn);
     R_chk_free(tmp_np);
 
-    double *v_eta = (double *) R_alloc(n, sizeof(double)); zeros(v_eta, n);
-    double *v_xi = (double *) R_alloc(n, sizeof(double)); zeros(v_xi, n);
-    double *v_beta = (double *) R_alloc(p, sizeof(double)); zeros(v_beta, p);
-    double *v_z = (double *) R_alloc(n, sizeof(double)); zeros(v_z, n);
+    /*****************************************
+     Set-up posterior sampling
+     *****************************************/
+    // posterior samples of sigma-sq and beta
+    SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
+    SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
+    SEXP samples_xi_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
-    for(i = 0; i < n; i++){
-      v_eta[i] = 1.0;
-      v_xi[i] = 1.0;
-      v_z[i] = 1.0;
-    }
+    const char *family_poisson = "poisson";
+    const char *family_binary = "binary";
+    const char *family_binomial = "binomial";
 
-    for(i = 0; i < p; i++){
-      v_beta[i] = 1.0;
-    }
+    double *v_eta = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_eta, n);
+    double *v_xi = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_xi, n);
+    double *v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(v_beta, p);
+    double *v_z = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_z, n);
 
-    // projection step
     double *tmp_n = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n, n);           // allocate memory for n x 1 vector
     double *tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(tmp_p, p);           // allocate memory for p x 1 vector
 
-    projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-            cholVz, Vz, cholVzPlusI, D1invX, DinvB_pn, DinvB_nn, tmp_n, tmp_p);
+    GetRNGstate();
+
+    for(s = 0; s < nSamples; s++){
+
+      if(family == family_poisson){
+        for(i = 0; i < n; i++){
+          dtemp1 = Y[i] + epsilon;
+          dtemp2 = 1.0;
+          dtemp3 = rgamma(dtemp1, dtemp2);
+          v_eta[i] = log(dtemp3);
+        }
+      }
+
+      if(family == family_binomial){
+        for(i = 0; i < n; i++){
+          dtemp1 = Y[i] + epsilon;
+          dtemp2 = nBinom[i];
+          dtemp2 += 2.0 * epsilon;
+          dtemp2 -= dtemp1;
+          dtemp3 = rbeta(dtemp1, dtemp2);
+          v_eta[i] = logit(dtemp3);
+        }
+      }
+
+      if(family == family_binary){
+        for(i = 0; i < n; i++){
+          dtemp1 = Y[i] + epsilon;
+          dtemp2 = nBinom[i];
+          dtemp2 += 2.0 * epsilon;
+          dtemp2 -= dtemp1;
+          dtemp3 = rbeta(dtemp1, dtemp2);
+          v_eta[i] = logit(dtemp3);
+        }
+      }
+
+      dtemp1 = 0.5 * nu_beta;
+      dtemp2 = 1.0 / dtemp1;
+      dtemp3 = rgamma(dtemp1, dtemp2);
+      dtemp3 = 1.0 / dtemp3;
+      dtemp3 = sqrt(dtemp3);
+      for(j = 0; j < p; j++){
+        v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ N(0, 1)
+      }
+
+      dtemp1 = 0.5 * nu_z;
+      dtemp2 = 1.0 / dtemp1;
+      dtemp3 = rgamma(dtemp1, dtemp2);
+      dtemp3 = 1.0 / dtemp3;
+      dtemp3 = sqrt(dtemp3);
+      for(i = 0; i < n; i++){
+        v_xi[i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, 1)
+        v_z[i] = rnorm(0.0, dtemp3);                                                     // v_z ~ N(0, 1)
+      }
+
+      // projection step
+      projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
+              cholVz, Vz, cholVzPlusI, D1invX, DinvB_pn, DinvB_nn, tmp_n, tmp_p);
+
+      // copy samples into SEXP return object
+      F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
+      F77_NAME(dcopy)(&n, &v_z[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
+      F77_NAME(dcopy)(&n, &v_xi[0], &incOne, &REAL(samples_xi_r)[s*n], &incOne);
+
+    }
+
+    PutRNGstate();
 
     R_chk_free(tmp_n);
     R_chk_free(tmp_p);
+    R_chk_free(v_eta);
+    R_chk_free(v_xi);
+    R_chk_free(v_beta);
+    R_chk_free(v_z);
 
-    printVec(v_xi, n);
-    printVec(v_beta, p);
-    printVec(v_z, n);
+    // make return object
+    SEXP result_r, resultName_r;
 
-    SEXP result_r;
-    result_r = PROTECT(Rf_allocVector(REALSXP, 1)); nProtect++;
+    // make return object for posterior samples and leave-one-out predictive densities
+    int nResultListObjs = 4;
 
-    REAL(result_r)[0] = 0.1;
+    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+    // samples of beta
+    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+    // samples of z
+    SET_VECTOR_ELT(result_r, 1, samples_z_r);
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+
+    // samples of z
+    SET_VECTOR_ELT(result_r, 2, samples_xi_r);
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+
+    Rf_namesgets(result_r, resultName_r);
 
     UNPROTECT(nProtect);
 

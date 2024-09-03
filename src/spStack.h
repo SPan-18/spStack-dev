@@ -7,7 +7,7 @@ extern "C" {
 
   SEXP mysolveC(SEXP A_r, SEXP b_r, SEXP n_r);
 
-  SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r,
+  SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                   SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                   SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                   SEXP epsilon_r, SEXP nSamples_r, SEXP verbose_r);

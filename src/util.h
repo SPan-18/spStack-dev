@@ -17,6 +17,8 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
 
 void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
 
+double logit(double x);
+
 void mkLT(double *A, int n);
 
 void mysolveLT(double *A, double *b, int n);
