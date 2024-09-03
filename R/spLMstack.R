@@ -81,8 +81,8 @@
 #' @examples
 #' \dontrun{
 #' # load data and work with first 100 rows
-#' data(simLMdat)
-#' dat <- simLMdat[1:100, ]
+#' data(simGaussian)
+#' dat <- simGaussian[1:100, ]
 #'
 #' # setup prior list
 #' muBeta <- c(0, 0)
@@ -130,7 +130,6 @@
 #'   theme_bw() +
 #'   theme(panel.background = element_blank(),
 #'         aspect.ratio = 1)
-
 #' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,

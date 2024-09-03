@@ -79,8 +79,8 @@
 #' @examples
 #' \dontrun{
 #' # load data
-#' data(simLMdat)
-#' dat <- simLMdat[1:100, ]
+#' data(simGaussian)
+#' dat <- simGaussian[1:100, ]
 #'
 #' # setup prior list
 #' muBeta <- c(0, 0)
@@ -178,9 +178,9 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   sigma.sq.IG <- 0
 
   if(missing(priors)){
-
-    warning("prior list not supplied, using defaults.")
-
+    beta.prior <- "normal"
+    beta.Norm <- list(rep(0.0, p), diag(100.0, p))
+    sigma.sq.IG <- c(2, 0.1)
   }else{
 
     names(priors) <- tolower(names(priors))

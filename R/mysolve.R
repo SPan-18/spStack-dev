@@ -9,12 +9,13 @@
 #' @returns The \eqn{n\times 1}{nx1} solution to the system
 #' @export
 #' @examples
+#' \dontrun{
 #' A <- rbind(c(1, 2, 3),
 #'            c(2, 5, 7),
 #'            c(3, 7, 14))
 #' b <- c(1, 0, 1)
 #' (x <- mysolve(A, b)) # 5 -2 0
-#'
+#' }
 #' @keywords utilities
 mysolve <- function(A, b) {
 

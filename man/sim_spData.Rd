@@ -4,7 +4,7 @@
 \alias{sim_spData}
 \title{Simulate spatial data on unit square}
 \usage{
-sim_spData(n, beta, cor.fn, spParams, spvar, deltasq, family)
+sim_spData(n, beta, cor.fn, spParams, spvar, deltasq, family, n_binom)
 }
 \arguments{
 \item{n}{Sample size}
@@ -21,7 +21,13 @@ inputs are 'exponential' and 'matern'.}
 \item{deltasq}{Noise-to-spatial variance ratio}
 
 \item{family}{Specifies the distribution of the response as a member of the
-exponential family. Valid inputs are \code{"gaussian"}, \code{"poisson"}.}
+exponential family. Valid inputs are \code{"gaussian"}, \code{"poisson"}, "binary",
+and "binomial".}
+
+\item{n_binom}{Necessary only when \code{family = "binomial"}. Must be a numeric
+vector of length \code{n} that will specify the number of trials for each
+observation. If it is of length 1, then that value is considered to be the
+common value for the number of trials for all \code{n} observations.}
 }
 \description{
 Simulate spatial data on unit square

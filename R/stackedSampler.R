@@ -28,8 +28,8 @@
 #' @seealso [spLMstack()]
 #' @examples
 #' \dontrun{
-#' data(simLMdat)
-#' dat <- simLMdat[1:100, ]
+#' data(simGaussian)
+#' dat <- simGaussian[1:100, ]
 #'
 #' # setup prior list
 #' muBeta <- c(0, 0)

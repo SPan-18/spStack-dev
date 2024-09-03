@@ -19,11 +19,12 @@ Solves the linear system \eqn{Ax = b}{Ax = b} where \eqn{A}{A} is a
 positive-definite matrix and \eqn{b}{b} is a vector.
 }
 \examples{
+\dontrun{
 A <- rbind(c(1, 2, 3),
            c(2, 5, 7),
            c(3, 7, 14))
 b <- c(1, 0, 1)
 (x <- mysolve(A, b)) # 5 -2 0
-
+}
 }
 \keyword{utilities}

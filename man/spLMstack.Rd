@@ -111,8 +111,8 @@ to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 \examples{
 \dontrun{
 # load data and work with first 100 rows
-data(simLMdat)
-dat <- simLMdat[1:100, ]
+data(simGaussian)
+dat <- simGaussian[1:100, ]
 
 # setup prior list
 muBeta <- c(0, 0)

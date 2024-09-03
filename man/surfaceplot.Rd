@@ -15,9 +15,8 @@ the points}
 
 \item{var_name}{name of the column containing the variable to be plotted}
 
-\item{h}{integer; controls smoothness of the spatial interpolation as
-appearing in the \code{mba.surf} function of the \code{MBA} package.
-Default is 8.}
+\item{h}{integer; (optional) controls smoothness of the spatial interpolation
+as appearing in the \code{\link[MBA:mba.surf]{MBA::mba.surf()}} function. Default is 8.}
 
 \item{col.pal}{Optional; color palette, preferably divergent, use
 \code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.}
@@ -30,15 +29,15 @@ Make a surface plot
 }
 \examples{
 \dontrun{
-data(simLMdat)
-plot1 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+data(simGaussian)
+plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
                      var_name = "z_true")
 plot1
 
 # try your favourite color palette
 col.br <- colorRampPalette(c("blue", "white", "red"))
 col.br.pal <- col.br(100)
-plot2 <- surfaceplot(simLMdat, coords_name = c("s1", "s2"),
+plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
                      var_name = "z_true", col.pal = col.br.pal)
 plot2
 }

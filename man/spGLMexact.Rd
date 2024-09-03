@@ -30,7 +30,8 @@ If not found in \code{data}, the variables are taken from
 \code{spGLMexact} is called.}
 
 \item{family}{Specifies the distribution of the response as a member of the
-exponential family.}
+exponential family. Supported options are \code{'poisson'}, \code{'binomial'} and
+\code{'binary'}.}
 
 \item{coords}{an \eqn{n \times 2}{n x 2} matrix of the observation
 coordinates in \eqn{\mathbb{R}^2} (e.g., easting and northing).}
@@ -40,16 +41,15 @@ to model the spatial dependence structure among the observations. Supported
 covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
 
-\item{priors}{(optional )a list with each tag corresponding to a
+\item{priors}{(optional) a list with each tag corresponding to a
 hyperparameter name and containing hyperprior details. Tags include
-\code{V.beta}, \code{nu.beta}, \code{nu.z} and \code{sigmaSq.xi}. Default value for \code{V.beta} is
-diagonal with each entry 100. Defaults for \code{nu.beta}, \code{nu.z} and
-\code{sigmaSq.xi} are 2.1, 2.1 and 1 respectively. \code{nu.beta} and \code{nu.z} must be
-at least 2.1.}
+\code{V.beta}, \code{nu.beta}, \code{nu.z} and \code{sigmaSq.xi}. Values of \code{nu.beta} and \code{nu.z}
+must be at least 2.1.}
 
-\item{spParams}{fixed value of spatial process parameters.}
+\item{spParams}{fixed values of spatial process parameters.}
 
-\item{boundary}{a real number greater than 0 and less than 1. Default is 0.5.}
+\item{boundary}{Specifies the boundary adjustment parameter. Must be a real
+number berween 0 and 1. Default is 0.5.}
 
 \item{n.samples}{number of posterior samples to be generated.}
 
@@ -58,27 +58,127 @@ densities, using method as given by \code{loopd.method}. Deafult is
 \code{FALSE}.}
 
 \item{loopd.method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
-valid inputs are \code{'exact'} and \code{'PSIS'}. The option \code{'exact'} corresponds to
-exact leave-one-out predictive densities which requires computation almost
-equivalent to fitting the model \eqn{n} times. The option \code{'PSIS'} is
-faster and finds approximate leave-one-out predictive densities using
-Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
+valid inputs are \code{'exact'}, \code{'CV'} and \code{'PSIS'}. The option \code{'exact'}
+corresponds to exact leave-one-out predictive densities which requires
+computation almost equivalent to fitting the model \eqn{n} times. The
+options \code{'CV'} and \code{'PSIS'} are faster and they implement \eqn{K}-fold
+cross validation and Pareto-smoothed importance sampling to find approximate
+leave-one-out predictive densities (Vehtari \emph{et al.} 2017).}
 
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
 \item{...}{currently no additional argument.}
 }
 \description{
-Fits a Bayesian spatial generalized linear model with spatial
-process parameters and some auxiliary model parameters fixed to a value
-supplied by the user. The output contains posterior samples of the fixed
-effects, variance parameter, spatial random effects and, if required,
-leave-one-out predictive densities.
+Fits a Bayesian spatial generalized linear model with fixed
+values of spatial process parameters and some auxiliary model parameters. The
+output contains posterior samples of the fixed effects, spatial random
+effects and, if required, finds leave-one-out predictive densities.
+}
+\details{
+With this function, we fit a Bayesian hierarchical spatial
+generalized linear model by sampling exactly from the joint posterior
+distribution utilizing the generalized conjugate multivariate distribution
+theory (Bradley and Clinch 2024). Suppose \eqn{\chi = (s_1, \ldots, s_n)}
+denotes the \eqn{n} spatial locations the response \eqn{y} is observed. Let
+\eqn{y(s)} be the outcome at location \eqn{s} endowed with a probability law
+from the natural exponential family, which we denote by
+\deqn{
+y(s) \sim \mathrm{EF}(x(s)^\top \beta + z(s); b, \psi)
+}
+for some positive parameter \eqn{b > 0} and unit log partition function
+\eqn{\psi}. We consider the following response models based on the input
+supplied to the argument \code{family}.
+\describe{
+\item{\code{'poisson'}}{It considers point-referenced Poisson responses
+\eqn{y(s) \sim \mathrm{Poisson}(e^{x(s)^\top \beta + z(s)})}. Here,
+\eqn{b = 1} and \eqn{\psi(t) = e^t}.}
+\item{\code{'binomial'}}{It considers point-referenced binomial counts
+\eqn{y(s) \sim \mathrm{Binomial}(m(s), \pi(s))} wehere, \eqn{m(s)} denotes
+the total number of trials and probability of success
+\eqn{\pi(s) = \mathrm{ilogit}(x(s)^\top \beta + z(s))} at location \eqn{s}.
+Here, \eqn{b = m(s)} and \eqn{\psi(t) = \log(1+e^t)}.}
+\item{\code{'binary'}}{It considers point-referenced binary data (0 or, 1) i.e.,
+\eqn{y(s) \sim \mathrm{Bernoulli}(\pi(s))}, where probability of success
+\eqn{\pi(s) = \mathrm{ilogit}(x(s)^\top \beta + z(s))} at location \eqn{s}.
+Here, \eqn{b = 1} and \eqn{\psi(t) = \log(1 + e^t)}.}
+}
+The hierarchical model is completed by
+\deqn{
+\begin{aligned}
+\xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
+\mathrm{GCM_c}(\cdots),\\
+\beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
+\sigma^2_\beta \sim \mathrm{IG}(\nu_\beta/2, \nu_\beta/2)\\
+z &\mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \phi, \nu)), \quad
+\sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),
+\end{aligned}
+}
+where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu} and the
+hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
+\eqn{\sigma^2_\xi}. The term \eqn{\xi} is known as the fine-scale variation
+term which is given a conditional generalized conjugate multivariate
+distribution as prior. For more details, see Pan \emph{et. al.} 2024. Default
+values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
+are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
+}
+\examples{
+\dontrun{
+# Example 1: Analyze spatial poisson count data
+data(simPoisson)
+dat <- simPoisson
+mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
+                   coords = as.matrix(dat[, c("s1", "s2")]),
+                   cor.fn = "matern",
+                   spParams = list(phi = 4, nu = 0.4),
+                   n.samples = 1000, verbose = TRUE)
+
+# summarize posterior samples
+post_beta <- mod1$samples$beta
+print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+
+# Example 2: Analyze spatial binomial count data
+data(simBinom)
+dat <- simBinom
+mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
+                   coords = as.matrix(dat[, c("s1", "s2")]),
+                   cor.fn = "matern",
+                   spParams = list(phi = 3, nu = 0.4),
+                   n.samples = 1000, verbose = TRUE)
+
+# summarize posterior samples
+post_beta <- mod2$samples$beta
+print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+
+# Example 3: Analyze spatial binary data
+data(simBinary)
+dat <- simBinary
+set.seed(1729)
+mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
+                   coords = as.matrix(dat[, c("s1", "s2")]),
+                   cor.fn = "matern",
+                   spParams = list(phi = 4, nu = 0.4),
+                   n.samples = 1000, verbose = TRUE)
+
+# summarize posterior samples
+post_beta <- mod3$samples$beta
+print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+}
 }
 \references{
-Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
-\strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+Bradley JR, Clinch M (2024). “Generating Independent Replicates
+Directly from the Posterior Distribution for a Class of Spatial Hierarchical
+Models.” \emph{Journal of Computational and Graphical Statistics}, \strong{0}(0), 1–17.
+\url{https://doi.org/10.1080/10618600.2024.2365728}. \emph{(in press)}
+
+Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
+Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+\url{https://doi.org/10.48550/arXiv.2406.04655}.
+
+Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
+Evaluation Using Leave-One-out Cross-Validation and WAIC.”
+\emph{Statistics and Computing}, \strong{27}(5), 1413–1432. ISSN 0960-3174.
+\url{https://doi.org/10.1007/s11222-016-9696-4}.
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}

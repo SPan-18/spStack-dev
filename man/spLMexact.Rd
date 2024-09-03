@@ -110,8 +110,8 @@ subsequently, we sample \eqn{z} conditioned on the posterior samples of
 \examples{
 \dontrun{
 # load data
-data(simLMdat)
-dat <- simLMdat[1:100, ]
+data(simGaussian)
+dat <- simGaussian[1:100, ]
 
 # setup prior list
 muBeta <- c(0, 0)
