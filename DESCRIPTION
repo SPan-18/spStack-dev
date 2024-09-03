@@ -2,7 +2,7 @@ Package: spStack
 Type: Package
 Version: 0.1.0
 Title: Bayesian Geostatistics Using Predictive Stacking
-Authors@R: c(person("Soumyakanti", "Pan", role=c("aut", "cre"), email="span18@ucla.edu"), person("Sudipto", "Banerjee", role="aut", email="sudipto@ucla.edu"))
+Authors@R: c(person("Soumyakanti", "Pan", role = c("aut", "cre"), email = "span18@ucla.edu", comment = c(ORCID = "0009-0005-9889-7112")), person("Sudipto", "Banerjee", role = "aut", email = "sudipto@ucla.edu"), comment = c(ORCID = "0000-0002-2239-208X"))
 Maintainer: Soumyakanti Pan <span18@ucla.edu>
 Author: Soumyakanti Pan [aut, cre],
   Sudipto Banerjee [aut]
