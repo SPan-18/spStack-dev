@@ -169,16 +169,16 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 Bradley JR, Clinch M (2024). “Generating Independent Replicates
 Directly from the Posterior Distribution for a Class of Spatial Hierarchical
 Models.” \emph{Journal of Computational and Graphical Statistics}, \strong{0}(0), 1–17.
-\url{https://doi.org/10.1080/10618600.2024.2365728}. \emph{(in press)}
+\doi{10.1080/10618600.2024.2365728}. \emph{(in press)}
 
 Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
-\url{https://doi.org/10.48550/arXiv.2406.04655}.
+\doi{10.48550/arXiv.2406.04655}.
 
 Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
 Evaluation Using Leave-One-out Cross-Validation and WAIC.”
 \emph{Statistics and Computing}, \strong{27}(5), 1413–1432. ISSN 0960-3174.
-\url{https://doi.org/10.1007/s11222-016-9696-4}.
+\doi{10.1007/s11222-016-9696-4}.
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}

@@ -31,5 +31,5 @@ each candidate model.
 \references{
 Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 Average Bayesian Predictive Distributions (with Discussion).” \emph{Bayesian
-Analysis}, \strong{13}(3), 917 – 1007. \url{https://doi.org/10.1214/17-BA1091}.
+Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
 }

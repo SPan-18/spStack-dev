@@ -72,7 +72,7 @@
 #' @seealso [spLMstack()]
 #' @references Banerjee S (2020). “Modeling massive spatial datasets using a
 #' conjugate Bayesian linear modeling framework.” *Spatial Statistics*, **37**,
-#' 100417. ISSN 2211-6753. \url{https://doi.org/10.1016/j.spasta.2020.100417}.
+#' 100417. ISSN 2211-6753. \doi{10.1016/j.spasta.2020.100417}.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

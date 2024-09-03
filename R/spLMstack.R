@@ -29,7 +29,7 @@
 #'  by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
 #'  set by the user using the function [future::plan()] only. Depending on the
 #'  parallel backend available, users may choose their own plan. More details
-#'  are available at \url{https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html}.
+#'  are available at \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #'  to obtain optimal stacking weights for each candidate model. Default is
 #'  \code{"ECOS"}. Users can use other solvers supported by the

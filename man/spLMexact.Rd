@@ -149,7 +149,7 @@ plot2
 \references{
 Banerjee S (2020). “Modeling massive spatial datasets using a
 conjugate Bayesian linear modeling framework.” \emph{Spatial Statistics}, \strong{37},
-100417. ISSN 2211-6753. \url{https://doi.org/10.1016/j.spasta.2020.100417}.
+100417. ISSN 2211-6753. \doi{10.1016/j.spasta.2020.100417}.
 
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},

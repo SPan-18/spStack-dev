@@ -88,14 +88,14 @@
 #' @references Bradley JR, Clinch M (2024). “Generating Independent Replicates
 #' Directly from the Posterior Distribution for a Class of Spatial Hierarchical
 #' Models.” *Journal of Computational and Graphical Statistics*, **0**(0), 1–17.
-#' \url{https://doi.org/10.1080/10618600.2024.2365728}. *(in press)*
+#' \doi{10.1080/10618600.2024.2365728}. *(in press)*
 #' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
-#' \url{https://doi.org/10.48550/arXiv.2406.04655}.
+#' \doi{10.48550/arXiv.2406.04655}.
 #' @references Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
 #' Evaluation Using Leave-One-out Cross-Validation and WAIC.”
 #' *Statistics and Computing*, **27**(5), 1413–1432. ISSN 0960-3174.
-#' \url{https://doi.org/10.1007/s11222-016-9696-4}.
+#' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
 #' \dontrun{
 #' # Example 1: Analyze spatial poisson count data
