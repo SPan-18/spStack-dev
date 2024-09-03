@@ -135,7 +135,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
     }  // End rank-one update for first row/column deletion
 
-  }else if(0 < del < n - 1){
+  }else if(0 < del && del < n - 1){
 
     int delPlusOne = del + 1;
     int indexL1 = 0;
