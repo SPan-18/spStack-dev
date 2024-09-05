@@ -17,9 +17,11 @@ a \code{data.frame} object.
 data(simBinom)
 }
 \description{
-Dataset of size 500, with spatial coordinates sampled uniformly
-from the unit square, one covariate and spatial correlation induced by a
-Matérn covariogram.
+Dataset of size 500, with a binomial response variable indexed
+by spatial coordinates sampled uniformly from the unit square. The model
+includes one covariate and spatial random effects induced by a Matérn
+covariogram. The number of trials at each location is sampled from a poisson
+distribution with mean 20.
 }
 \details{
 With \eqn{n = 500}, the count data is simulated using
@@ -76,5 +78,8 @@ plot2 <- ggplot(sim1, aes(x = s1, y = s2)) +
 }
 \seealso{
 \link{simGaussian}, \link{simPoisson}, \link{simBinary}
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
 }
 \keyword{datasets}

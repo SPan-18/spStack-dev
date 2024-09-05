@@ -13,7 +13,7 @@ data point for the \eqn{M}{M} candidate models.}
 
 \item{solver}{specifies the solver to use for obtaining optimal weights.
 Default is \code{"ECOS"}. Internally calls
-\code{\link[CVXR:psolve]{CVXR::solve()}}.}
+\code{\link[CVXR:psolve]{CVXR::psolve()}}.}
 }
 \value{
 A list of length 2.
@@ -32,4 +32,10 @@ each candidate model.
 Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 Average Bayesian Predictive Distributions (with Discussion).” \emph{Bayesian
 Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
+}
+\seealso{
+\code{\link[CVXR:psolve]{CVXR::psolve()}}
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
 }

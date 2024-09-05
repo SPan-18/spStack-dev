@@ -50,11 +50,12 @@ The option \code{'PSIS'} is faster, as it finds approximate leave-one-out
 predictive densities using Pareto-smoothed importance sampling
 (Gelman \emph{et al.} 2024).}
 
-\item{parallel}{logical. If \code{FALSE}, the parallelization plan, if set up
-by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
-set by the user using the function \code{\link[future:plan]{future::plan()}} only. Depending on the
-parallel backend available, users may choose their own plan. More details
-are available at \url{https://cran.R-project.org/package=future}.}
+\item{parallel}{logical. If \code{parallel=FALSE}, the parallelization plan,
+if set up by the user, is ignored. If \code{parallel=TRUE}, the function
+inherits the parallelization plan that is set by the user via the function
+\code{\link[future:plan]{future::plan()}} only. Depending on the parallel backend available, users
+may choose their own plan. More details are available at
+\url{https://cran.R-project.org/package=future}.}
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
 to obtain optimal stacking weights for each candidate model. Default is
@@ -109,6 +110,7 @@ solve the optimization problem
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
+\dontrun{
 # load data and work with first 100 rows
 data(simGaussian)
 dat <- simGaussian[1:100, ]
@@ -160,6 +162,7 @@ plot1 <- ggplot(data = z_combn, aes(x = z)) +
   theme(panel.background = element_blank(),
         aspect.ratio = 1)
 }
+}
 \references{
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
@@ -167,4 +170,8 @@ Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }

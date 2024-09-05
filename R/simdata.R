@@ -13,19 +13,21 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #'
 #' @param n Sample size
 #' @param beta \eqn{p}{p}-dimensional vector of fixed effects
-#' @param cor.fn Character string corresponding a correlation function, valid
-#' inputs are 'exponential' and 'matern'.
+#' @param cor.fn a quoted keyword that specifies the correlation function used
+#'  to model the spatial dependence structure among the observations. Supported
+#'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #' @param spParams Spatial process parameters
 #' @param spvar Fixed value of spatial variance
 #' @param deltasq Noise-to-spatial variance ratio
 #' @param family Specifies the distribution of the response as a member of the
-#'  exponential family. Valid inputs are `"gaussian"`, `"poisson"`, `"binary"`,
-#'  and `"binomial"`.
-#' @param n_binom Necessary only when `family = "binomial"`. Must be a numeric
+#'  exponential family. Valid inputs are `'gaussian'`, `'poisson'`, `'binary'`,
+#'  and `'binomial'`.
+#' @param n_binom Necessary only when `family = 'binomial'`. Must be a
 #'  vector of length `n` that will specify the number of trials for each
 #'  observation. If it is of length 1, then that value is considered to be the
 #'  common value for the number of trials for all `n` observations.
 #' @importFrom stats dist runif rpois rbinom
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

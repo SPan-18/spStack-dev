@@ -25,11 +25,12 @@
 #'  The option `'PSIS'` is faster, as it finds approximate leave-one-out
 #'  predictive densities using Pareto-smoothed importance sampling
 #'  (Gelman *et al.* 2024).
-#' @param parallel logical. If \code{FALSE}, the parallelization plan, if set up
-#'  by the user, is ignored. If \code{TRUE}, inherits the parallelization plan
-#'  set by the user using the function [future::plan()] only. Depending on the
-#'  parallel backend available, users may choose their own plan. More details
-#'  are available at \url{https://cran.R-project.org/package=future}.
+#' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
+#'  if set up by the user, is ignored. If \code{parallel=TRUE}, the function
+#'  inherits the parallelization plan that is set by the user via the function
+#'  [future::plan()] only. Depending on the parallel backend available, users
+#'  may choose their own plan. More details are available at
+#'  \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #'  to obtain optimal stacking weights for each candidate model. Default is
 #'  \code{"ECOS"}. Users can use other solvers supported by the
@@ -71,6 +72,8 @@
 #'  }
 #' to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 #' @seealso [spLMexact()]
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
@@ -79,6 +82,7 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
+#' \dontrun{
 #' # load data and work with first 100 rows
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
@@ -129,6 +133,7 @@
 #'   theme_bw() +
 #'   theme(panel.background = element_blank(),
 #'         aspect.ratio = 1)
+#' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,

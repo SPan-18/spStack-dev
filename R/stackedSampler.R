@@ -25,6 +25,7 @@
 #' }
 #' where \eqn{\mathcal{M} = \{M_1, \ldots, M_g\}} is the collection of candidate
 #' models.
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @seealso [spLMstack()]
 #' @examples
 #' \dontrun{

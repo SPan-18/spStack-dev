@@ -11,8 +11,9 @@ sim_spData(n, beta, cor.fn, spParams, spvar, deltasq, family, n_binom)
 
 \item{beta}{\eqn{p}{p}-dimensional vector of fixed effects}
 
-\item{cor.fn}{Character string corresponding a correlation function, valid
-inputs are 'exponential' and 'matern'.}
+\item{cor.fn}{a quoted keyword that specifies the correlation function used
+to model the spatial dependence structure among the observations. Supported
+covariance model key words are: \code{'exponential'} and \code{'matern'}.}
 
 \item{spParams}{Spatial process parameters}
 
@@ -21,10 +22,10 @@ inputs are 'exponential' and 'matern'.}
 \item{deltasq}{Noise-to-spatial variance ratio}
 
 \item{family}{Specifies the distribution of the response as a member of the
-exponential family. Valid inputs are \code{"gaussian"}, \code{"poisson"}, "binary",
-and "binomial".}
+exponential family. Valid inputs are \code{'gaussian'}, \code{'poisson'}, \code{'binary'},
+and \code{'binomial'}.}
 
-\item{n_binom}{Necessary only when \code{family = "binomial"}. Must be a numeric
+\item{n_binom}{Necessary only when \code{family = 'binomial'}. Must be a
 vector of length \code{n} that will specify the number of trials for each
 observation. If it is of length 1, then that value is considered to be the
 common value for the number of trials for all \code{n} observations.}
@@ -46,4 +47,7 @@ sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
                    spParams = spParams, spvar = spvar, deltasq = deltasq,
                    family = "gaussian")
 }
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
 }

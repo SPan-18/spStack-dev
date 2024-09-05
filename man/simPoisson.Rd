@@ -17,15 +17,19 @@ a \code{data.frame} object.
 data(simPoisson)
 }
 \description{
-Dataset of size 500, with spatial coordinates sampled uniformly
-from the unit square, one covariate and spatial correlation induced by a
-Matérn covariogram.
+Dataset of size 500, with a Poisson distributed response
+variable indexed by spatial coordinates sampled uniformly from the unit
+square. The model includes one covariate and spatial random effects induced
+by a Matérn covariogram.
 }
 \details{
 With \eqn{n = 500}, the count data is simulated using
 \deqn{
-y(s_i) \sim \mathrm{Poisson}(e^{x(s_i)^\top \beta + z(s_i)}),
-i = 1, \ldots, n,
+\begin{aligned}
+y(s_i) &\sim \mathrm{Poisson}(\lambda(s_i)),
+i = 1, \ldots, n,\\
+\log \lambda(s_i) &= x(s_i)^\top \beta + z(s_i)
+\end{aligned}
 }
 where the spatial efects \eqn{z \sim N(0, \sigma^2 R)} with \eqn{R} being a
 \eqn{n \times n} correlation matrix given by the Matérn covariogram

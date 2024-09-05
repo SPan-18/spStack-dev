@@ -69,6 +69,8 @@
 #'  \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
 #' The return object might include additional data used for subsequent
 #' prediction and/or model fit evaluation.
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spLMstack()]
 #' @references Banerjee S (2020). “Modeling massive spatial datasets using a
 #' conjugate Bayesian linear modeling framework.” *Spatial Statistics*, **37**,

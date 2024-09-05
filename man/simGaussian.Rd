@@ -17,12 +17,13 @@ a \code{data.frame} object.
 data(simGaussian)
 }
 \description{
-Dataset of size 500, simulated with spatial coordinates sampled
-uniformly from the unit square, one covariate and spatial correlation induced
-by a Matérn covariogram.
+Dataset of size 500 with a Gaussian response variable, simulated
+with spatial coordinates sampled uniformly from the unit square. The model
+includes one covariate and spatial random effects induced by a Matérn
+covariogram.
 }
 \details{
-The data is generated from the following linear model.
+The data is generated following the linear model below.
 \deqn{
 y = X \beta + z + \epsilon,
 }
@@ -74,5 +75,8 @@ plot2
 }
 \seealso{
 \link{simPoisson}, \link{simBinom}, \link{simBinary}
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
 }
 \keyword{datasets}

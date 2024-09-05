@@ -16,6 +16,7 @@ spGLMexact(
   n.samples,
   loopd = FALSE,
   loopd.method = "exact",
+  CV.K = 10,
   verbose = TRUE,
   ...
 )
@@ -42,7 +43,7 @@ covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
 
 \item{priors}{(optional) a list with each tag corresponding to a
-hyperparameter name and containing hyperprior details. Tags include
+hyperparameter name and containing hyperprior details. Valid tags include
 \code{V.beta}, \code{nu.beta}, \code{nu.z} and \code{sigmaSq.xi}. Values of \code{nu.beta} and \code{nu.z}
 must be at least 2.1.}
 
@@ -64,6 +65,9 @@ computation almost equivalent to fitting the model \eqn{n} times. The
 options \code{'CV'} and \code{'PSIS'} are faster and they implement \eqn{K}-fold
 cross validation and Pareto-smoothed importance sampling to find approximate
 leave-one-out predictive densities (Vehtari \emph{et al.} 2017).}
+
+\item{CV.K}{An integer between 10 and 20. Considered only if
+\code{loopd.method='CV'}. Default is 10 (as recommended in Vehtari \emph{et. al} 2017).}
 
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
@@ -103,9 +107,11 @@ Here, \eqn{b = m(s)} and \eqn{\psi(t) = \log(1+e^t)}.}
 \eqn{\pi(s) = \mathrm{ilogit}(x(s)^\top \beta + z(s))} at location \eqn{s}.
 Here, \eqn{b = 1} and \eqn{\psi(t) = \log(1 + e^t)}.}
 }
-The hierarchical model is completed by
+The hierarchical model is given as
 \deqn{
 \begin{aligned}
+y(s_i) &\mid \beta, z, \xi \sim EF(x(s_i)^\top \beta + z(s_i) +
+\xi_i - \mu_i), i = 1, \ldots, n\\
 \xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
 \mathrm{GCM_c}(\cdots),\\
 \beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
@@ -114,15 +120,17 @@ z &\mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \phi, \nu)), \quad
 \sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),
 \end{aligned}
 }
-where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu} and the
-hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
+where \eqn{\mu = (\mu_1, \ldots, \mu_n)^\top} denotes the discrepancy
+parameter. We fix the spatial process parameters \eqn{\phi} and \eqn{\nu} and
+the hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
 \eqn{\sigma^2_\xi}. The term \eqn{\xi} is known as the fine-scale variation
 term which is given a conditional generalized conjugate multivariate
-distribution as prior. For more details, see Pan \emph{et. al.} 2024. Default
+distribution as prior. For more details, see Pan \emph{et al.} 2024. Default
 values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 }
 \examples{
+\dontrun{
 # Example 1: Analyze spatial poisson count data
 data(simPoisson)
 dat <- simPoisson
@@ -163,6 +171,7 @@ mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
 post_beta <- mod3$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 }
+}
 \references{
 Bradley JR, Clinch M (2024). “Generating Independent Replicates
 Directly from the Posterior Distribution for a Class of Spatial Hierarchical
@@ -180,4 +189,7 @@ Evaluation Using Leave-One-out Cross-Validation and WAIC.”
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}
+}
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
 }

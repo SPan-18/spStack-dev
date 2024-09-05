@@ -76,3 +76,6 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 \seealso{
 \code{\link[=spLMstack]{spLMstack()}}
 }
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+}

@@ -158,3 +158,7 @@ Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \seealso{
 \code{\link[=spLMstack]{spLMstack()}}
 }
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
+}

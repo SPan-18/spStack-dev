@@ -1,8 +1,9 @@
 #' Synthetic point-referenced Gaussian data
 #'
-#' @description Dataset of size 500, simulated with spatial coordinates sampled
-#' uniformly from the unit square, one covariate and spatial correlation induced
-#' by a Matérn covariogram.
+#' @description Dataset of size 500 with a Gaussian response variable, simulated
+#' with spatial coordinates sampled uniformly from the unit square. The model
+#' includes one covariate and spatial random effects induced by a Matérn
+#' covariogram.
 #' @format a \code{data.frame} object.
 #' \describe{
 #'  \item{`s1, s2`}{2-D coordinates; latitude and longitude.}
@@ -11,7 +12,7 @@
 #'  \item{`z_true`}{true spatial random effects that generated the data.}
 #' }
 #' @usage data(simGaussian)
-#' @details The data is generated from the following linear model.
+#' @details The data is generated following the linear model below.
 #' \deqn{
 #' y = X \beta + z + \epsilon,
 #' }
@@ -29,6 +30,7 @@
 #' \eqn{\sigma^2 = 0.4}. This data can be generated with the code as given in
 #' the example.
 #' @seealso [simPoisson], [simBinom], [simBinary]
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

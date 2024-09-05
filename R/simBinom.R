@@ -1,8 +1,10 @@
 #' Synthetic point-referenced binomial count data
 #'
-#' @description Dataset of size 500, with spatial coordinates sampled uniformly
-#' from the unit square, one covariate and spatial correlation induced by a
-#' Matérn covariogram.
+#' @description Dataset of size 500, with a binomial response variable indexed
+#' by spatial coordinates sampled uniformly from the unit square. The model
+#' includes one covariate and spatial random effects induced by a Matérn
+#' covariogram. The number of trials at each location is sampled from a poisson
+#' distribution with mean 20.
 #' @format a \code{data.frame} object.
 #' \describe{
 #'  \item{`s1, s2`}{2-D coordinates; latitude and longitude.}
@@ -33,6 +35,7 @@
 #' \eqn{\sigma^2 = 0.4}. This data can be generated with the code as given in
 #' the example below.
 #' @seealso [simGaussian], [simPoisson], [simBinary]
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

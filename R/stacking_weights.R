@@ -7,7 +7,7 @@
 #'  data point for the \eqn{M}{M} candidate models.
 #' @param solver specifies the solver to use for obtaining optimal weights.
 #'  Default is \code{"ECOS"}. Internally calls
-#'  [CVXR::solve()].
+#'  [CVXR::psolve()].
 #' @return A list of length 2.
 #' \describe{
 #'   \item{\code{weights}}{optimal stacking weights as a numeric vecor of length
@@ -19,6 +19,8 @@
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion).” *Bayesian
 #' Analysis*, **13**(3), 917 – 1007. \doi{10.1214/17-BA1091}.
+#' @seealso [CVXR::psolve()]
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @export
 get_stacking_weights <- function(log_loopd, solver = "ECOS"){
 

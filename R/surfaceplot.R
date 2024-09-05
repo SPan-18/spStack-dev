@@ -30,6 +30,8 @@
 #'                      var_name = "z_true", col.pal = col.br.pal)
 #' plot2
 #' }
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
 surfaceplot <- function(tab, coords_name, var_name, h = 8,
                         col.pal, mark_points = FALSE){
