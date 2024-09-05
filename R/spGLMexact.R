@@ -31,9 +31,11 @@
 #' \eqn{\pi(s) = \mathrm{ilogit}(x(s)^\top \beta + z(s))} at location \eqn{s}.
 #' Here, \eqn{b = 1} and \eqn{\psi(t) = \log(1 + e^t)}.}
 #' }
-#' The hierarchical model is completed by
+#' The hierarchical model is given as
 #' \deqn{
 #' \begin{aligned}
+#' y(s_i) &\mid \beta, z, \xi \sim EF(x(s_i)^\top \beta + z(s_i) +
+#' \xi_i - \mu_i), i = 1, \ldots, n\\
 #' \xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
 #' \mathrm{GCM_c}(\cdots),\\
 #' \beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
@@ -42,11 +44,12 @@
 #' \sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),
 #' \end{aligned}
 #' }
-#' where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu} and the
-#' hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
+#' where \eqn{\mu = (\mu_1, \ldots, \mu_n)^\top} denotes the discrepancy
+#' parameter. We fix the spatial process parameters \eqn{\phi} and \eqn{\nu} and
+#' the hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
 #' \eqn{\sigma^2_\xi}. The term \eqn{\xi} is known as the fine-scale variation
 #' term which is given a conditional generalized conjugate multivariate
-#' distribution as prior. For more details, see Pan *et. al.* 2024. Default
+#' distribution as prior. For more details, see Pan *et al.* 2024. Default
 #' values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 #' are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 #' @param formula a symbolic description of the regression model to be fit.
@@ -65,7 +68,7 @@
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.
 #' @param priors (optional) a list with each tag corresponding to a
-#'  hyperparameter name and containing hyperprior details. Tags include
+#'  hyperparameter name and containing hyperprior details. Valid tags include
 #'  `V.beta`, `nu.beta`, `nu.z` and `sigmaSq.xi`. Values of `nu.beta` and `nu.z`
 #'  must be at least 2.1.
 #' @param spParams fixed values of spatial process parameters.
@@ -82,9 +85,12 @@
 #'  options `'CV'` and `'PSIS'` are faster and they implement \eqn{K}-fold
 #'  cross validation and Pareto-smoothed importance sampling to find approximate
 #'  leave-one-out predictive densities (Vehtari *et al.* 2017).
+#' @param CV.K An integer between 10 and 20. Considered only if
+#' `loopd.method='CV'`. Default is 10 (as recommended in Vehtari *et. al* 2017).
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
 #' @param ... currently no additional argument.
 #' @seealso [spLMexact()]
+#' @author Soumyakanti Pan <span18@ucla.edu>
 #' @references Bradley JR, Clinch M (2024). “Generating Independent Replicates
 #' Directly from the Posterior Distribution for a Class of Spatial Hierarchical
 #' Models.” *Journal of Computational and Graphical Statistics*, **0**(0), 1–17.
@@ -97,6 +103,7 @@
 #' *Statistics and Computing*, **27**(5), 1413–1432. ISSN 0960-3174.
 #' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
+#' \dontrun{
 #' # Example 1: Analyze spatial poisson count data
 #' data(simPoisson)
 #' dat <- simPoisson
@@ -136,11 +143,12 @@
 #' # summarize posterior samples
 #' post_beta <- mod3$samples$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#' }
 #' @export
 spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
                        spParams, boundary = 0.5, n.samples,
-                       loopd = FALSE, loopd.method = "exact",
+                       loopd = FALSE, loopd.method = "exact", CV.K = 10,
                        verbose = TRUE, ...){
 
   ##### check for unused args #####
@@ -380,13 +388,36 @@ spGLMexact <- function(formula, data = parent.frame(), family,
     }else{
       loopd.method <- tolower(loopd.method)
     }
-    if(!loopd.method %in% c("CV", "psis")){
+    if(!loopd.method %in% c("exact", "cv", "psis")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose
-           from c('CV', 'PSIS').")
+           from c('exact', 'CV', 'PSIS').")
+    }
+    if(loopd.method == "exact"){
+      CV.k <- as.integer(0)
+    }
+    if(loopd.method == "cv"){
+      if(n < 100){
+        warning("Sample size too low for CV. Finding exact LOO-PD.")
+        loopd.method <- "exact"
+        CV.k <- as.integer(0)
+      }else{
+        if(CV.k < 10){
+          warning("CV.k must be at least 10. Setting it to 10.")
+          CV.k <- 10
+        }else if(CV.k > 20){
+          warning("CV.k must be at most 20. Setting it to 20.")
+          CV.k <- 20
+        }
+        if(floor(CV.k) != CV.k){
+          warning("CV.k must be integer. Setting it to nearest integer.")
+        }
+      }
     }
   }else{
     loopd.method <- "none"
   }
+
+  storage.mode(CV.K) <- "integer"
 
   ##### sampling setup #####
 
@@ -401,7 +432,9 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
-    samps <- list(beta = 0, z = 0, xi = 0)
+    samps <- .Call("spGLMexactLOO", y, X, p, n, family, n.binom, coords.D,
+                   cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
+                   n.samples, loopd, loopd.method, CV.K, verbose)
   }else{
     samps <- .Call("spGLMexact", y, X, p, n, family, n.binom, coords.D, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
