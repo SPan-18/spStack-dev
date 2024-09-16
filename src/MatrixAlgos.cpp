@@ -424,10 +424,10 @@ void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_bet
   const double negone = -1.0;
   const double zero = 0.0;
   const int incOne = 1;
-  const double sigmaSqxiInv = 1.0 / sigmaSqxi;
+  const double sigmaxiInv = 1.0 / sqrt(sigmaSqxi);
 
   // Find components of t(H)*v, where (3n+p)x1 vector v = [v_eta, v_xi, v_beta, v_z]
-  F77_NAME(dscal)(&n, &sigmaSqxiInv, v_xi, &incOne);                                               // v_xi = v_xi/sigmasqxi
+  F77_NAME(dscal)(&n, &sigmaxiInv, v_xi, &incOne);                                               // v_xi = v_xi/sigmasqxi
   F77_NAME(daxpy)(&n, &one, v_eta, &incOne, v_xi, &incOne);                                        // v_xi = v_eta + v_xi/sigmasqxi
 
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, Lbeta, &p, v_beta, &incOne FCONE FCONE FCONE);          // v_beta = LbetatInv*v_beta
