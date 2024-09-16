@@ -17,6 +17,7 @@ spGLMexact(
   loopd = FALSE,
   loopd.method = "exact",
   CV.K = 10,
+  loopd.nMC = 500,
   verbose = TRUE,
   ...
 )
@@ -68,6 +69,10 @@ leave-one-out predictive densities (Vehtari \emph{et al.} 2017).}
 
 \item{CV.K}{An integer between 10 and 20. Considered only if
 \code{loopd.method='CV'}. Default is 10 (as recommended in Vehtari \emph{et. al} 2017).}
+
+\item{loopd.nMC}{Number of Monte Carlo samples to be used to evaluate
+leave-one-out predictive densities when \code{loopd.method} is set to either
+'exact' or 'CV'.}
 
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
