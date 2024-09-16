@@ -20,7 +20,7 @@ extern "C" {
                      SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                      SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                      SEXP epsilon_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                     SEXP CV_K_r, SEXP verbose_r){
+                     SEXP CV_K_r, SEXP loopd_nMC_r, SEXP verbose_r){
 
     /*****************************************
      Common variables
@@ -75,6 +75,11 @@ extern "C" {
     // sampling set-up
     int nSamples = INTEGER(nSamples_r)[0];
     int verbose = INTEGER(verbose_r)[0];
+
+    // Leave-one-out predictive density details
+    int loopd = INTEGER(loopd_r)[0];
+    std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
+    int CV_K = INTEGER(CV_K_r)[0];
 
     // print set-up if verbose TRUE
     if(verbose){
@@ -262,25 +267,196 @@ extern "C" {
     // make return object
     SEXP result_r, resultName_r;
 
-    // make return object for posterior samples and leave-one-out predictive densities
-    int nResultListObjs = 4;
+    if(loopd){
 
-    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      int n1 = n - 1;
+      int n1n1 = n1 * n1;
+      int n1p = n1 * p;
 
-    // samples of beta
-    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+      SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
-    // samples of z
-    SET_VECTOR_ELT(result_r, 1, samples_z_r);
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+      const char *exact_str = "exact";
+      const char *cv_str = "cv";
+      const char *psis_str = "psis";
 
-    // samples of z
-    SET_VECTOR_ELT(result_r, 2, samples_xi_r);
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+      // Exact leave-one-out predictive densities (LOO-PD) calculation
+      if(loopd_method == exact_str){
 
-    Rf_namesgets(result_r, resultName_r);
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("Exact"); Rprintf("\n\n");
+        }
+
+        // Set-up storage for pre-processing
+        double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
+        double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
+        double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
+        double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
+        double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
+        double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
+        double *DinvB_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(DinvB_n1n1, n1n1);               // allocate memory for n x n matrix
+        double *cholSchur_n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(cholSchur_n1, n1n1);           // allocate memory for Schur complement
+        double *cholSchur_p1 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p1, pp);               // allocate memory for Schur complement
+        double *D1invlooX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(D1invlooX, n1p);                   // allocate for preprocessing
+        double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
+        // // Get the Schur complement of top left n1xn1 submatrix of (HtH)
+        double *tmp_n1p = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p, n1p);                  // temporary n1 x p matrix
+        double *tmp_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(tmp_n1n1, n1n1);              // temporary n1 x n1 matrix
+
+        // Set-up storage for sampling for leave-one-out model fit
+        double *loo_v_eta = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_eta, n1);
+        double *loo_v_xi = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_xi, n1);
+        double *loo_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_v_beta, p);
+        double *loo_v_z = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_z, n1);
+        double *loo_tmp_n = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_tmp_n, n1);           // allocate memory for n1 x 1 vector
+        double *loo_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_tmp_p, p);             // allocate memory for p x 1 vector
+
+        int loo_index = 0;
+        int loo_i = 0;
+
+        for(loo_index = 0; loo_index < n; loo_index++){
+
+          // Pre-processing for projGLM on leave-one-out data
+          copyMatrixDelRow(X, n, p, looX, loo_index);                                                            // Row-deleted X
+          copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);                                            // Row-column deleted Vz
+          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);                                            // Row-deletion CHOL update Vz
+          cholRowDelUpdate(n, cholVzPlusI, loo_index, looCholVzPlusI, tmp_n11);                                  // Row-deletion CHOL update Vy
+          F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looXtX, &p FCONE FCONE); // XtX = t(X)*X
+          cholSchurGLM(looX, n1, p, sigmaSq_xi, looXtX, VbetaInv, looVz, looCholVzPlusI, tmp_n1n1, tmp_n1p,
+                       DinvB_pn1, DinvB_n1n1, cholSchur_p1, cholSchur_n1, D1invlooX);
+
+          for(loo_i = 0; loo_i < n1; loo_i++){
+            loo_v_eta[loo_i] = 1.0;
+            loo_v_xi[loo_i] = 1.0;
+            loo_v_z[loo_i] = 1.0;
+          }
+          for(j = 0; j < p; j++){
+            loo_v_beta[j] = 1.0;
+          }
+
+          // LOO projection step
+          projGLM(looX, n1, p, loo_v_eta, loo_v_xi, loo_v_beta, loo_v_z, cholSchur_p1, cholSchur_n1, sigmaSq_xi, Lbeta,
+                  looCholVz, looVz, looCholVzPlusI, D1invlooX, DinvB_pn1, DinvB_n1n1, loo_tmp_n, loo_tmp_p);
+
+          if(loo_index == 0){
+            printVec(loo_v_xi, n1); Rprintf("\n");
+            printVec(loo_v_beta, p); Rprintf("\n");
+            printVec(loo_v_z, n1); Rprintf("\n");
+          }
+
+          REAL(loopd_out_r)[loo_index] = 0.0;
+
+        }
+
+        // int loo_index = 0;
+        // for(loo_index = 0; loo_index < n; loo_index++){
+        //   REAL(loopd_out_r)[loo_index] = 0.0;
+        // }
+
+        R_chk_free(looX);
+        R_chk_free(looVz);
+        R_chk_free(looCholVz);
+        R_chk_free(looCholVzPlusI);
+        R_chk_free(looXtX);
+        R_chk_free(DinvB_pn1);
+        R_chk_free(DinvB_n1n1);
+        R_chk_free(cholSchur_n1);
+        R_chk_free(cholSchur_p1);
+        R_chk_free(D1invlooX);
+        R_chk_free(tmp_n11);
+        R_chk_free(tmp_n1p);
+        R_chk_free(tmp_n1n1);
+        R_chk_free(loo_v_eta);
+        R_chk_free(loo_v_xi);
+        R_chk_free(loo_v_beta);
+        R_chk_free(loo_v_z);
+        R_chk_free(loo_tmp_n);
+        R_chk_free(loo_tmp_p);
+
+      }
+
+      // K-fold cross-validation for LOO-PD calculation
+      if(loopd_method == cv_str){
+
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("K-fold cross validation, K = %i", CV_K); Rprintf("\n\n");
+        }
+
+        int loo_index = 0;
+
+        for(loo_index = 0; loo_index < n; loo_index++){
+          REAL(loopd_out_r)[loo_index] = 0.0;
+        }
+
+      }
+
+      // Pareto-smoothed Importance Sampling for LOO-PD calculation
+      if(loopd_method == psis_str){
+
+        if(verbose){
+          Rprintf("Method for LOOPD calculation: ");
+          Rprintf("Pareto-smoothed importance sampling"); Rprintf("\n\n");
+        }
+
+        int loo_index = 0;
+
+        for(loo_index = 0; loo_index < n; loo_index++){
+          REAL(loopd_out_r)[loo_index] = 0.0;
+        }
+
+      }
+
+      // make return object for posterior samples and leave-one-out predictive densities
+      int nResultListObjs = 4;
+
+      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+      // samples of beta
+      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 1, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 2, samples_xi_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+
+      // loo-pd
+      // leave-one-out predictive densities
+      SET_VECTOR_ELT(result_r, 3, loopd_out_r);
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
+
+      Rf_namesgets(result_r, resultName_r);
+
+    }else{
+
+      // make return object for posterior samples and leave-one-out predictive densities
+      int nResultListObjs = 3;
+
+      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+      // samples of beta
+      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 1, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+
+      // samples of xi
+      SET_VECTOR_ELT(result_r, 2, samples_xi_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+
+      Rf_namesgets(result_r, resultName_r);
+
+    }
+
+
 
     UNPROTECT(nProtect);
 

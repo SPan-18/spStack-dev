@@ -87,6 +87,9 @@
 #'  leave-one-out predictive densities (Vehtari *et al.* 2017).
 #' @param CV.K An integer between 10 and 20. Considered only if
 #' `loopd.method='CV'`. Default is 10 (as recommended in Vehtari *et. al* 2017).
+#' @param loopd.nMC Number of Monte Carlo samples to be used to evaluate
+#' leave-one-out predictive densities when `loopd.method` is set to either
+#' 'exact' or 'CV'.
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
 #' @param ... currently no additional argument.
 #' @seealso [spLMexact()]
@@ -149,7 +152,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
                        spParams, boundary = 0.5, n.samples,
                        loopd = FALSE, loopd.method = "exact", CV.K = 10,
-                       verbose = TRUE, ...){
+                       loopd.nMC = 500, verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -299,7 +302,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
     }
     if(!'sigmasq.xi' %in% names(priors)){
       missing.flag <- missing.flag + 1
-      sigmaSq.xi <- 1.0
+      sigmaSq.xi <- 0.1
     }else{
       sigmaSq.xi <- priors[['sigmasq.xi']]
       if(!is.numeric(sigmaSq.xi) || length(sigmaSq.xi) != 1){
@@ -413,11 +416,16 @@ spGLMexact <- function(formula, data = parent.frame(), family,
         }
       }
     }
+    if(loopd.nMC < 500){
+      warning("Number of Monte Carlo samples too low. Using defaults.")
+      loopd.nMC = 500
+    }
   }else{
     loopd.method <- "none"
   }
 
   storage.mode(CV.K) <- "integer"
+  storage.mode(loopd.nMC) <- "integer"
 
   ##### sampling setup #####
 
@@ -434,7 +442,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   if(loopd){
     samps <- .Call("spGLMexactLOO", y, X, p, n, family, n.binom, coords.D,
                    cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
-                   n.samples, loopd, loopd.method, CV.K, verbose)
+                   n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
   }else{
     samps <- .Call("spGLMexact", y, X, p, n, family, n.binom, coords.D, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,

@@ -354,6 +354,7 @@ extern "C" {
 
         R_chk_free(looX);
         R_chk_free(looVz);
+        R_chk_free(looCholVz);
         R_chk_free(looCholVy);
         R_chk_free(h1);
         R_chk_free(h2);
