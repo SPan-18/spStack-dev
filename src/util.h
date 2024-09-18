@@ -17,7 +17,11 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
 
 void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
 
+double inverse_logit(double x);
+
 double logit(double x);
+
+double logMeanExp(double *a, int n);
 
 void mkLT(double *A, int n);
 

@@ -46,7 +46,7 @@ See below for details.}
 \item{priors}{(optional) a list with each tag corresponding to a
 hyperparameter name and containing hyperprior details. Valid tags include
 \code{V.beta}, \code{nu.beta}, \code{nu.z} and \code{sigmaSq.xi}. Values of \code{nu.beta} and \code{nu.z}
-must be at least 2.1.}
+must be at least 2.1. If not supplied, uses defaults.}
 
 \item{spParams}{fixed values of spatial process parameters.}
 

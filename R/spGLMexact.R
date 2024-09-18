@@ -70,7 +70,7 @@
 #' @param priors (optional) a list with each tag corresponding to a
 #'  hyperparameter name and containing hyperprior details. Valid tags include
 #'  `V.beta`, `nu.beta`, `nu.z` and `sigmaSq.xi`. Values of `nu.beta` and `nu.z`
-#'  must be at least 2.1.
+#'  must be at least 2.1. If not supplied, uses defaults.
 #' @param spParams fixed values of spatial process parameters.
 #' @param boundary Specifies the boundary adjustment parameter. Must be a real
 #' number berween 0 and 1. Default is 0.5.

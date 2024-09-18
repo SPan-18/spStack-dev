@@ -129,9 +129,42 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
 
 }
 
+// Function to compute inverse-logit function
+double inverse_logit(double x){
+  return 1.0 / (1.0 + exp(-x));
+}
+
 // Function to compute log(x/(1-x)) for a given x
 double logit(double x){
   return log(x) - log(1.0 - x);
+}
+
+// Function to compute logMeanExp of a vector
+double logMeanExp(double *a, int n){
+
+  int i;
+
+  if(n == 0){
+    perror("Vector of log values have 0 length.");
+  }
+
+  // Find maximum value in input vector
+  double a_max = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] > a_max){
+      a_max = a[i];
+    }
+  }
+
+  // Find sum of adjusted exponentials; sum(exp(a_i - a_max))
+  double sum_adj = 0.0;
+  for(i = 0; i < n; i++){
+    sum_adj += exp(a[i] - a_max);
+  }
+
+  // Find log-mean-exp; log(sum(exp(a_i))) - log(n)
+  return a_max + log(sum_adj) - log(n);
+
 }
 
 // Convert a matrix to lower triangular
@@ -194,7 +227,7 @@ void printVec(double *m, int n){
 
   Rprintf("\t");
   for(int j = 0; j < n; j++){
-    Rprintf("%.3f\t", m[j]);
+    Rprintf("%.7f\t", m[j]);
   }
   Rprintf("\n");
 }
