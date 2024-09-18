@@ -167,6 +167,36 @@ double logMeanExp(double *a, int n){
 
 }
 
+// make partition for K-fold cross-validation, return partition start and end indices
+void mkCVpartition(int n, int K, int *start_vec, int *end_vec, int *size_vec){
+
+  int base_size = 0;             // Base-size of each partition
+  int remainder = 0;             // Remaining elements to distribute
+  int i, start = 0, end = 0;
+
+  base_size = n / K;
+  remainder = n % K;
+
+  for(i = 0; i < K; i++){
+
+    end = start + base_size - 1;
+
+    size_vec[i] = base_size;
+
+    if(remainder > 0){
+      end++;
+      remainder--;
+      size_vec[i]++;
+    }
+
+    start_vec[i] = start;
+    end_vec[i] = end;
+
+    start = end + 1;
+  }
+
+}
+
 // Convert a matrix to lower triangular
 void mkLT(double *A, int n){
   for (int i = 0; i < n; ++i){

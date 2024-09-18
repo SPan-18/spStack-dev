@@ -120,24 +120,19 @@ extern "C" {
       Rprintf("Number of posterior samples = %i.\n", nSamples);
 
       if(loopd){
-
         if(loopd_method == exact_str){
           Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
           Rprintf("method = %s, and, number of Monte Carlo samples = %i.\n", loopd_method.c_str(), loopd_nMC);
         }
-
         if(loopd_method == cv_str){
           Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
           Rprintf("method = %i-fold %s, and, number of Monte Carlo samples = %i.\n", CV_K, loopd_method.c_str(), loopd_nMC);
         }
-
         if(loopd_method == psis_str){
           Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
           Rprintf("method = %s, (Pareto-smoothed Importance Sampling)", loopd_method.c_str());
         }
-
       }
-
       Rprintf("----------------------------------------\n");
 
     }
@@ -145,20 +140,20 @@ extern "C" {
     /*****************************************
      Set-up preprocessing matrices etc.
      *****************************************/
-    double dtemp1, dtemp2, dtemp3;
+    double dtemp1 = 0.0, dtemp2 = 0.0, dtemp3 = 0.0;
 
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                       // correlation matrix
-    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz
-    double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);     // allocate memory for n x n matrix
-    double *cholSchur_n = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholSchur_n, nn);     // allocate memory for Schur complement
-    double *cholSchur_p = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p, pp);     // allocate memory for Schur complement
-    double *D1invX = (double *) R_chk_calloc(np, sizeof(double)); zeros(D1invX, np);               // allocate for preprocessing
-    double *DinvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DinvB_pn, np);           // allocate memory for p x n matrix
-    double *DinvB_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(DinvB_nn, nn);           // allocate memory for n x n matrix
-    double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);           // allocate VbetaInv
-    double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
-    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
-    double *thetasp = (double *) R_alloc(2, sizeof(double));                                  // spatial process parameters
+    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                          // correlation matrix
+    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);                  // Cholesky of Vz
+    double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);        // allocate memory for n x n matrix
+    double *cholSchur_n = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholSchur_n, nn);   // allocate memory for Schur complement
+    double *cholSchur_p = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p, pp);   // allocate memory for Schur complement
+    double *D1invX = (double *) R_chk_calloc(np, sizeof(double)); zeros(D1invX, np);             // allocate for preprocessing
+    double *DinvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DinvB_pn, np);         // allocate memory for p x n matrix
+    double *DinvB_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(DinvB_nn, nn);         // allocate memory for n x n matrix
+    double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);              // allocate VbetaInv
+    double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                    // Cholesky of Vbeta
+    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                        // Store XtX
+    double *thetasp = (double *) R_alloc(2, sizeof(double));                                     // spatial process parameters
 
     //construct covariance matrix (full)
     thetasp[0] = phi;
@@ -300,14 +295,14 @@ extern "C" {
 
     if(loopd){
 
-      int n1 = n - 1;
-      int n1n1 = n1 * n1;
-      int n1p = n1 * p;
-
       SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
       // Exact leave-one-out predictive densities (LOO-PD) calculation
       if(loopd_method == exact_str){
+
+        int n1 = n - 1;
+        int n1n1 = n1 * n1;
+        int n1p = n1 * p;
 
         // Set-up storage for pre-processing
         double *looY = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looY, n1);
@@ -336,7 +331,7 @@ extern "C" {
         double *loo_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_v_beta, p);
         double *loo_v_z = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_z, n1);
         double *loo_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_tmp_p, p);                       // temporary p x 1 vector
-        double z_tilde, z_tilde_var, z_tilde_mu;
+        double z_tilde = 0.0, z_tilde_var = 0.0, z_tilde_mu = 0.0;
 
         int loo_index = 0;
         int loo_i = 0;
@@ -495,11 +490,25 @@ extern "C" {
       // K-fold cross-validation for LOO-PD calculation
       if(loopd_method == cv_str){
 
+        int *startsCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(startsCV, CV_K);
+        int *endsCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(endsCV, CV_K);
+        int *sizesCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(sizesCV, CV_K);
+
+        mkCVpartition(n, CV_K, startsCV, endsCV, sizesCV);
+
+        printVec(startsCV, CV_K);
+        printVec(endsCV, CV_K);
+        printVec(sizesCV, CV_K);
+
         int loo_index = 0;
 
         for(loo_index = 0; loo_index < n; loo_index++){
           REAL(loopd_out_r)[loo_index] = 0.0;
         }
+
+        R_chk_free(startsCV);
+        R_chk_free(endsCV);
+        R_chk_free(sizesCV);
 
       }
 

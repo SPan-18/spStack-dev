@@ -23,6 +23,8 @@ double logit(double x);
 
 double logMeanExp(double *a, int n);
 
+void mkCVpartition(int n, int K, int *start_vec, int *end_vec, int *size_vec);
+
 void mkLT(double *A, int n);
 
 void mysolveLT(double *A, double *b, int n);

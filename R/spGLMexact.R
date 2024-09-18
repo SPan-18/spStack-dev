@@ -396,23 +396,23 @@ spGLMexact <- function(formula, data = parent.frame(), family,
            from c('exact', 'CV', 'PSIS').")
     }
     if(loopd.method == "exact"){
-      CV.k <- as.integer(0)
+      CV.K <- as.integer(0)
     }
     if(loopd.method == "cv"){
       if(n < 100){
         warning("Sample size too low for CV. Finding exact LOO-PD.")
         loopd.method <- "exact"
-        CV.k <- as.integer(0)
+        CV.K <- as.integer(0)
       }else{
-        if(CV.k < 10){
-          warning("CV.k must be at least 10. Setting it to 10.")
-          CV.k <- 10
-        }else if(CV.k > 20){
-          warning("CV.k must be at most 20. Setting it to 20.")
-          CV.k <- 20
+        if(CV.K < 10){
+          warning("CV.K must be at least 10. Setting it to 10.")
+          CV.K <- 10
+        }else if(CV.K > 20){
+          warning("CV.K must be at most 20. Setting it to 20.")
+          CV.K <- 20
         }
-        if(floor(CV.k) != CV.k){
-          warning("CV.k must be integer. Setting it to nearest integer.")
+        if(floor(CV.K) != CV.K){
+          warning("CV.K must be integer. Setting it to nearest integer.")
         }
       }
     }
