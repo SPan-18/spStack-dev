@@ -27,7 +27,7 @@
 #' K_\nu(\phi |s-s'|),
 #' }
 #' where \eqn{\phi} is the spatial decay parameter and \eqn{\nu} the spatial
-#' smoothness parameter. We have sampled the data with \eqn{\beta = (1, -0.5)},
+#' smoothness parameter. We have sampled the data with \eqn{\beta = (2, -0.5)},
 #' \eqn{\phi = 5}, \eqn{\nu = 0.5}, and \eqn{\sigma^2 = 0.4}. This data can be
 #' generated with the code as given in the example below.
 #' @seealso [simGaussian], [simBinom], [simBinary]
@@ -35,7 +35,7 @@
 #' \dontrun{
 #' set.seed(1729)
 #' n <- 500
-#' beta <- c(1, -0.5)
+#' beta <- c(2, -0.5)
 #' phi0 <- 5
 #' nu0 <- 0.5
 #' spParams <- c(phi0, nu0)

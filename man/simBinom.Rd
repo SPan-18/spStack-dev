@@ -10,6 +10,7 @@ a \code{data.frame} object.
 \item{\verb{s1, s2}}{2-D coordinates; latitude and longitude.}
 \item{\code{x1}}{a covariate sampled from the standard normal distribution.}
 \item{\code{y}}{response vector.}
+\item{\code{n_trials}}{Number of trials at that location.}
 \item{\code{z_true}}{true spatial random effects that generated the data.}
 }
 }
