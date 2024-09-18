@@ -1,0 +1,10 @@
+{
+    "editor.defaultFoldingRangeProvider": "REditorSupport.r",
+    "editor.defaultFormatter": "REditorSupport.r",
+    "editor.rulers": [80],
+    "files.exclude": {
+        "**/*.o": true,
+        "**/*.so": true
+    }
+
+}
