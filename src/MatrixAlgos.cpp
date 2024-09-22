@@ -203,9 +203,8 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
   int j, k;
   const int incOne = 1;
   int case_id = 0, nk = 0, nMnk = 0, nMnknMnk = 0;
-  int del = 0, delEndPlusOne = 0, indexL1 = 0;
+  int del = 0, delEndPlusOne = 0;
   double b = 0, gamma = 0, tmp1 = 0, tmp2 = 0;
-  int indexLjj = 0, indexLkj = 0;
 
   // Error handling
   if(del_start > del_end || del_start == del_end){
@@ -267,7 +266,7 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
             tmp1 = tmp1 + tmp2;                            // tmp1 = L[kj]/L[jj] + w[j]*w[k]/gamma
             tmp2 = tmp1 * L1[j*nMnk + j];                  // tmp1 = L'[jj]*L[kj]/L[jj] + L'[jj]*w[j]*w[k]/gamma
             L1[j*nMnk + k] = tmp2;                         // obtain L'[kj]
-            
+
           }
         }
 
