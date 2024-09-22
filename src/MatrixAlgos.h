@@ -6,6 +6,8 @@ void cholRankOneUpdate(int n, double *L1, double alpha, double beta,
 
 void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w);
 
+void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1, double *tmpL1, double *w);
+
 void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double *VbetaInv,
                   double *Vz, double *cholVzPlusI, double *tmp_nn, double *tmp_np,
                   double *tmp_pn, double *tmp_nn2, double *out_pp, double *out_nn, double *D1invB1);

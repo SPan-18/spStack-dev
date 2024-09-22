@@ -401,8 +401,8 @@ spGLMexact <- function(formula, data = parent.frame(), family,
     if(loopd.method == "cv"){
       if(n < 100){
         warning("Sample size too low for CV. Finding exact LOO-PD.")
-        loopd.method <- "exact"
-        CV.K <- as.integer(0)
+        # loopd.method <- "exact"
+        # CV.K <- as.integer(0)
       }else{
         if(CV.K < 10){
           warning("CV.K must be at least 10. Setting it to 10.")

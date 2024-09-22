@@ -1,11 +1,16 @@
 #include <string>
 #include <Rinternals.h>
 
-void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index);
-
 void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index);
 
+void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end);
+
 void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol);
+
+void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                              int delRow_start, int delRow_end, int delCol_start, int delCol_end);
+
+void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy_start, int copy_end);
 
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index);
 
@@ -15,7 +20,17 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
                 int startRowA, int startColA, int startRowB, int startColB,
                 int nRowCopy, int nColCopy);
 
+void copyVecBlock(double *v1, double *v2, int n, int copy_start, int copy_end);
+
+void copyVecExcludingBlock(double *v1, double *v2, int n, int exclude_start, int exclude_end);
+
+void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index);
+
 void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
+
+int findMax(int *a, int n);
+
+int findMin(int *a, int n);
 
 double inverse_logit(double x);
 

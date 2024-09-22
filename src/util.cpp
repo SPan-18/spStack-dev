@@ -12,22 +12,6 @@
 # define FCONE
 #endif
 
-// Copy a vector excluding the i-th entry
-void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index){
-
-  int i = 0, j = 0;
-
-  if(exclude_index < 0 || exclude_index > n){
-    perror("Index to delete is out of bounds.");
-  }else{
-    for(i = 0; i < n; i++){
-      if(i != exclude_index){
-        v2[j++] = v1[i];
-      }
-    }
-  }
-}
-
 // Copy a matrix excluding the i-th row
 void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index){
 
@@ -40,6 +24,28 @@ void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclud
       for(i = 0; i < nRowM1; i++){
         if(i == exclude_index) continue;
         M2[new_index++] = M1[j*nRowM1 + i];
+      }
+    }
+  }
+}
+
+// Copy a matrix excluding a row block
+void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(exclude_start > exclude_end || exclude_start == exclude_end){
+    perror("Start index must be at least 1 less than End index.");
+  }
+
+  if(exclude_start < 0 || exclude_end > nRowM1){
+    perror("Row index to exclude is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i < exclude_start || i > exclude_end){
+          M2[new_index++] = M1[j*nRowM1 + i];
+        }
       }
     }
   }
@@ -65,6 +71,60 @@ void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del
   }
 }
 
+// Copy a matrix deleting ith row and jth column
+void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                              int delRow_start, int delRow_end, int delCol_start, int delCol_end){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(delRow_start > delRow_end || delRow_start == delRow_end){
+    perror("Row Start index must be at least 1 less than End index.");
+  }
+
+    if(delCol_start > delCol_end || delCol_start == delCol_end){
+    perror("Column Start index must be at least 1 less than End index.");
+  }
+
+  if(delRow_start < 0 || delRow_end > nRowM1){
+    perror("Row indices to delete are out of bounds.");
+  }else if(delCol_start < 0 || delCol_end > nColM1){
+    perror("Column indices to delete is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      if(j < delCol_start || j > delCol_end){
+        for(i = 0; i < nRowM1; i++){
+          if(i < delRow_start || i > delRow_end){
+            M2[new_index++] = M1[j*nRowM1 + i];
+          }
+        }
+      }
+    }
+  }
+}
+
+// Copy a block of rows of a matrix to another matrix
+void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy_start, int copy_end){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(copy_start > copy_end || copy_start == copy_end){
+    perror("Start index must be at least 1 less than End index.");
+  }
+
+  if(copy_start < 0 || copy_end > nRowM1){
+    perror("Row indices to copy is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i > copy_start - 1 && i < copy_end + 1){
+          M2[new_index++] = M1[j*nRowM1 + i];
+        }
+      }
+    }
+  }
+
+}
+
 // Copy a row of a matrix to a vector
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
 
@@ -73,7 +133,7 @@ void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_i
   // if(copy_index < 0 || copy_index > nRowM){
   //   perror("Row index to copy is out of bounds.");
   // }else{
-  //
+
   // }
 
   for(j = 0; j < nColM; j++){
@@ -127,6 +187,88 @@ void copySubmat(double *A, int nRowA, int nColA, double *B, int nRowB, int nColB
     }
   }
 
+}
+
+// Copy a vector excluding a block with start and end indices
+void copyVecBlock(double *v1, double *v2, int n, int copy_start, int copy_end){
+
+  int i = 0, j = 0;
+
+  if(copy_start > copy_end || copy_start == copy_end){
+    perror("Start index must be at least 1 less than End index.");
+  }
+  if(copy_start < 0 || copy_end > n){
+    perror("Index to delete is out of bounds.");
+  }else{
+    for(i = 0; i < n; i++){
+      if(i > copy_start - 1 && i < copy_end + 1){
+        v2[j++] = v1[i];
+      }
+    }
+  }
+}
+
+// Copy a vector excluding a block with start and end indices
+void copyVecExcludingBlock(double *v1, double *v2, int n, int exclude_start, int exclude_end){
+
+  int i = 0, j = 0;
+
+  if(exclude_start > exclude_end || exclude_start == exclude_end){
+    perror("Start index must be at least 1 less than End index.");
+  }
+  if(exclude_start < 0 || exclude_end > n){
+    perror("Index to delete is out of bounds.");
+  }else{
+    for(i = 0; i < n; i++){
+      if(i < exclude_start || i > exclude_end){
+        v2[j++] = v1[i];
+      }
+    }
+  }
+}
+
+// Copy a vector excluding the i-th entry
+void copyVecExcludingOne(double *v1, double *v2, int n, int exclude_index){
+
+  int i = 0, j = 0;
+
+  if(exclude_index < 0 || exclude_index > n){
+    perror("Index to delete is out of bounds.");
+  }else{
+    for(i = 0; i < n; i++){
+      if(i != exclude_index){
+        v2[j++] = v1[i];
+      }
+    }
+  }
+}
+
+// Find maximum element in an integer vector
+int findMax(int *a, int n){
+
+  int i;
+  int a_max = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] > a_max){
+      a_max = a[i];
+    }
+  }
+
+  return a_max;
+}
+
+// Find minimum element in an integer vector
+int findMin(int *a, int n){
+
+  int i;
+  int a_min = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] < a_min){
+      a_min = a[i];
+    }
+  }
+
+  return a_min;
 }
 
 // Function to compute inverse-logit function

@@ -304,11 +304,13 @@ extern "C" {
         int n1n1 = n1 * n1;
         int n1p = n1 * p;
 
-        // Set-up storage for pre-processing
+        // Set-up storage for leave-one-out data
         double *looY = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looY, n1);
         double *loo_nBinom = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_nBinom, n1);
         double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
         double *X_tilde = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_tilde, p);
+
+        // Set-up storage for pre-processing
         double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
         double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
         double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
@@ -496,19 +498,106 @@ extern "C" {
 
         mkCVpartition(n, CV_K, startsCV, endsCV, sizesCV);
 
-        printVec(startsCV, CV_K);
-        printVec(endsCV, CV_K);
-        printVec(sizesCV, CV_K);
+        int nk = 0;         // nk = size of k-th partition
+        // int nknk = 0;       // nknk = nk x nk
+        int nnk = 0;        // nnk = (n - nk); size of k-th partition deleted data
+        // int nnknnk = 0;     // nnknnk = (n - nk) x (n - nk)
+        // int nkp = 0;        // nkp = (n - nk) x p
+        // int nnkp = 0;       // nnkp = (n - nk) x p
 
-        int loo_index = 0;
+        // printVec(startsCV, CV_K);
+        // printVec(endsCV, CV_K);
+        // printVec(sizesCV, CV_K);
 
-        for(loo_index = 0; loo_index < n; loo_index++){
-          REAL(loopd_out_r)[loo_index] = 0.0;
+        int nkmin = findMin(sizesCV, CV_K);
+        int nkmax = findMax(sizesCV, CV_K);
+        int nnkmax = n - nkmin;
+        int nnknnkmax = nnkmax * nnkmax;
+        int nkmaxp = nkmax * p;
+        int nnkmaxp = nnkmax * p;
+
+        // Set-up storage for cross-validation data
+        double *cvY = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cvY, nnkmax);                 // Store block-deleted Y
+        double *cv_nBinom = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_nBinom, nnkmax);     // Store block-deleted nBinom
+        double *cvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvX, nnkmaxp);               // Store block-deleted X
+
+        // Set-up storage for pre-processing
+        double *cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);                    // Store block-deleted Vz
+        double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);            // Store block-deleted Cholesky of Vz
+        // double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
+        // double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
+        // double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
+        // double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
+        // double *DinvB_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(DinvB_n1n1, n1n1);               // allocate memory for n x n matrix
+        // double *cholSchur_n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(cholSchur_n1, n1n1);           // allocate memory for Schur complement
+        // double *cholSchur_p1 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p1, pp);               // allocate memory for Schur complement
+        // double *D1invlooX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(D1invlooX, n1p);                   // allocate for preprocessing
+        double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);
+        double *tmp_nnkmax = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(tmp_nnkmax, nnkmax);
+
+        // Set-up storage for held-out
+        double *X_tilde = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(X_tilde, nkmaxp);         // Store held-out X
+        double *Y_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(Y_tilde, nkmax);           // Store held-out Y
+        double *nBinom_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(nBinom_tilde, nkmax); // Store held-out Y
+
+        int cv_index = 0;
+        int start_index = 0;
+        int end_index = 0;
+        int cv_i = 0;
+
+        cv_index = 0;
+        start_index = startsCV[cv_index];
+        end_index = endsCV[cv_index];
+        nk = sizesCV[cv_index];
+        nnk = n - nk;
+        copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);
+        cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
+        printMtrx(cvCholVz, nnk, nnk);
+
+        for(cv_index = 0; cv_index < CV_K; cv_index++){
+
+          nk = sizesCV[cv_index];
+          nnk = n - nk;
+          // nnkp = nnk * p;
+          start_index = startsCV[cv_index];
+          end_index = endsCV[cv_index];
+
+          // Block-deleted data
+          copyVecExcludingBlock(Y, cvY, n, start_index, end_index);                                                 // Block-deleted Y
+          copyVecExcludingBlock(nBinom, cv_nBinom, n, start_index, end_index);                                      // Block-deleted nBinom
+          copyMatrixDelRowBlock(X, n, p, cvX, start_index, end_index);                                              // Block-deleted X
+          copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);                 // Block-deleted Vz
+
+          // Held-out data
+          copyMatrixRowBlock(X, n, p, X_tilde, start_index, end_index);                                             // Held-out X = X_tilde
+          copyVecBlock(Y, Y_tilde, n, start_index, end_index);                                                      // Held-out Y = Y_tilde
+          copyVecBlock(nBinom, nBinom_tilde, n, start_index, end_index);                                            // Held-out nBinom = nBinom_tilde
+
+          // Pre-processing for projGLM() on block-deleted data
+
+
+          // if(cv_index == 0){
+          //   printMtrx(cvVz, nnk, nnk);
+          // }
+
+          for(cv_i = startsCV[cv_index]; cv_i < endsCV[cv_index] + 1; cv_i++){
+            REAL(loopd_out_r)[cv_i] = 0.0;
+          }
         }
 
         R_chk_free(startsCV);
         R_chk_free(endsCV);
         R_chk_free(sizesCV);
+        R_chk_free(cvY);
+        R_chk_free(cvX);
+        R_chk_free(cv_nBinom);
+        R_chk_free(X_tilde);
+        R_chk_free(Y_tilde);
+        R_chk_free(nBinom_tilde);
+        R_chk_free(cvVz);
+        R_chk_free(cvCholVz);
+        R_chk_free(tmp_nnkmax);
+        R_chk_free(tmp_nnknnkmax);
 
       }
 
