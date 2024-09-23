@@ -3,6 +3,9 @@
 
 void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index);
 
+void copyMatrixColDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                              int include_start, int include_end, int exclude_start, int exclude_end);
+
 void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end);
 
 void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol);
@@ -11,6 +14,9 @@ void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
                               int delRow_start, int delRow_end, int delCol_start, int delCol_end);
 
 void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy_start, int copy_end);
+
+void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                           int copyCol_start, int copyCol_end, int copyRow_start, int copyRow_end);
 
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index);
 

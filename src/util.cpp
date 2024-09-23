@@ -29,6 +29,37 @@ void copyMatrixDelRow(double *M1, int nRowM1, int nColM1, double *M2, int exclud
   }
 }
 
+// Copy a matrix columns (submatrix) excluding a row block
+void copyMatrixColDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                              int include_start, int include_end, int exclude_start, int exclude_end){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(exclude_start > exclude_end || exclude_start == exclude_end){
+    perror("Exclude Start index must be at least 1 less than End index.");
+  }
+
+  if(include_start > exclude_start || include_start == include_end){
+    perror("Copy Start index must be at least 1 less than End index.");
+  }
+
+  if(include_start < 0 || include_end > nColM1){
+    perror("Column index to include is out of bounds.");
+  }
+
+  if(exclude_start < 0 || exclude_end > nRowM1){
+    perror("Row index to exclude is out of bounds.");
+  }else{
+    for(j = include_start; j < include_end + 1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i < exclude_start || i > exclude_end){
+          M2[new_index++] = M1[j*nRowM1 + i];
+        }
+      }
+    }
+  }
+}
+
 // Copy a matrix excluding a row block
 void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end){
 
@@ -71,7 +102,8 @@ void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del
   }
 }
 
-// Copy a matrix deleting ith row and jth column
+
+// Copy a matrix deleting a row and column block
 void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
                               int delRow_start, int delRow_end, int delCol_start, int delCol_end){
 
@@ -118,6 +150,38 @@ void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy
       for(i = 0; i < nRowM1; i++){
         if(i > copy_start - 1 && i < copy_end + 1){
           M2[new_index++] = M1[j*nRowM1 + i];
+        }
+      }
+    }
+  }
+
+}
+
+// Copy a block (rows and columns) of a matrix to another matrix
+void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
+                           int copyCol_start, int copyCol_end, int copyRow_start, int copyRow_end){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(copyCol_start > copyCol_end || copyCol_start == copyCol_end){
+    perror("Column Start index must be at least 1 less than End index.");
+  }
+
+  if(copyRow_start > copyRow_end || copyRow_start == copyRow_end){
+    perror("Row Start index must be at least 1 less than End index.");
+  }
+
+  if(copyRow_start < 0 || copyRow_end > nRowM1){
+    perror("Row indices to copy is out of bounds.");
+  }else if(copyCol_start < 0 || copyCol_end > nColM1){
+    perror("Column indices to copy is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      if(j > copyCol_start - 1 && j < copyCol_end + 1){
+        for(i = 0; i < nRowM1; i++){
+          if(i > copyRow_start - 1 && i < copyRow_end + 1){
+            M2[new_index++] = M1[j*nRowM1 + i];
+          }
         }
       }
     }

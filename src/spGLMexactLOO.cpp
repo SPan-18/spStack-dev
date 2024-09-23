@@ -354,7 +354,7 @@ extern "C" {
 
           // Pre-processing for projGLM() on leave-one-out data
           cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);                                            // Row-deletion CHOL update Vz
-          cholRowDelUpdate(n, cholVzPlusI, loo_index, looCholVzPlusI, tmp_n11);                                  // Row-deletion CHOL update Vy
+          cholRowDelUpdate(n, cholVzPlusI, loo_index, looCholVzPlusI, tmp_n11);                                  // Row-deletion CHOL update Vz+I
           F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looXtX, &p FCONE FCONE); // XtX = t(X)*X
           cholSchurGLM(looX, n1, p, sigmaSq_xi, looXtX, VbetaInv, looVz, looCholVzPlusI, tmp_n1n1, tmp_n1p,
                        DinvB_pn1, DinvB_n1n1, cholSchur_p1, cholSchur_n1, D1invlooX);
@@ -505,14 +505,12 @@ extern "C" {
         // int nkp = 0;        // nkp = (n - nk) x p
         // int nnkp = 0;       // nnkp = (n - nk) x p
 
-        // printVec(startsCV, CV_K);
-        // printVec(endsCV, CV_K);
-        // printVec(sizesCV, CV_K);
-
         int nkmin = findMin(sizesCV, CV_K);
         int nkmax = findMax(sizesCV, CV_K);
+        int nknkmax = nkmax * nkmax;
         int nnkmax = n - nkmin;
         int nnknnkmax = nnkmax * nnkmax;
+        int nnkmaxnkmax = nnkmax * nkmax;
         int nkmaxp = nkmax * p;
         int nnkmaxp = nnkmax * p;
 
@@ -522,28 +520,41 @@ extern "C" {
         double *cvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvX, nnkmaxp);               // Store block-deleted X
 
         // Set-up storage for pre-processing
-        double *cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);                    // Store block-deleted Vz
-        double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);            // Store block-deleted Cholesky update of Vz
-        double *cvCholVzPlusI = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVzPlusI, nnknnkmax);  // Store block-deleted Chlesky update of Vz+I
-        // double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
-        // double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
-        // double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
-        // double *DinvB_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(DinvB_n1n1, n1n1);               // allocate memory for n x n matrix
-        // double *cholSchur_n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(cholSchur_n1, n1n1);           // allocate memory for Schur complement
-        // double *cholSchur_p1 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p1, pp);               // allocate memory for Schur complement
-        // double *D1invlooX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(D1invlooX, n1p);                   // allocate for preprocessing
-        double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);
-        double *tmp_nnkmax = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(tmp_nnkmax, nnkmax);
+        double *cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);                         // Store block-deleted Vz
+        double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);                 // Store block-deleted Cholesky update of Vz
+        double *cvCholVzPlusI = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVzPlusI, nnknnkmax);       // Store block-deleted Chlesky update of Vz+I
+        double *cvXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cvXtX, pp);                                     // Store XtX
+        double *DinvB_pnnkmax = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(DinvB_pnnkmax, nnkmaxp);           // allocate memory for p x max(n-nk) matrix
+        double *DinvB_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(DinvB_nnknnkmax, nnknnkmax);   // allocate memory for max(n-nk) x max(n-nk) matrix
+        double *cholSchur_p2 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p2, pp);                       // allocate memory for Schur complement
+        double *cholSchur_nnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cholSchur_nnkmax, nnknnkmax); // allocate memory for Schur complement
+        double *D1invcvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(D1invcvX, nnkmaxp);                     // allocate for preprocessing
+        double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);       // allocate for max(n-nk) x max(n-nk) matrix
+        double *tmp_nnkmaxp = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(tmp_nnkmaxp, nnkmaxp);               // allocate for max(n-nk) x p matrix
+        double *tmp_nnkmax = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(tmp_nnkmax, nnkmax);                   // allocate for max(n-nk) x 1 vector
+
+        // Set-up storage for sampling for block-deleted model
+        double *cv_v_eta = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_eta, nnkmax);
+        double *cv_v_xi = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_xi, nnkmax);
+        double *cv_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(cv_v_beta, p);
+        double *cv_v_z = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_z, nnkmax);
+        double *cv_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(cv_tmp_p, p);                       // temporary p x 1 vector
 
         // Set-up storage for held-out
         double *X_tilde = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(X_tilde, nkmaxp);         // Store held-out X
         double *Y_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(Y_tilde, nkmax);           // Store held-out Y
         double *nBinom_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(nBinom_tilde, nkmax); // Store held-out Y
 
+        // Set-up storage for prediction
+        double *cvCz = (double *) R_chk_calloc(nnkmaxnkmax, sizeof(double)); zeros(cvCz, nnkmaxnkmax);     // cross-covariance matrix max(n-nk)xmax(nk)
+        double *Vz_tilde = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(Vz_tilde, nknkmax);     // held-out covariance matrix max(nk)xmax(nk)
+
         int cv_index = 0;
         int start_index = 0;
         int end_index = 0;
         int cv_i = 0;
+        int sMC_CV = 0;
+        double *loopd_val_MC_CV = (double *) R_chk_calloc(loopd_nMC, sizeof(double)); zeros(loopd_val_MC_CV, loopd_nMC);
 
         for(cv_index = 0; cv_index < CV_K; cv_index++){
 
@@ -564,17 +575,85 @@ extern "C" {
           copyVecBlock(Y, Y_tilde, n, start_index, end_index);                                                      // Held-out Y = Y_tilde
           copyVecBlock(nBinom, nBinom_tilde, n, start_index, end_index);                                            // Held-out nBinom = nBinom_tilde
 
+          // Spatial process prediction
+          copyMatrixColDelRowBlock(Vz, n, n, cvCz, start_index, end_index, start_index, end_index);
+          copyMatrixRowColBlock(Vz, n, n, Vz_tilde, start_index, end_index, start_index, end_index);
+
           // Block-deleted Cholesky updates
           cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
           cholBlockDelUpdate(n, cholVzPlusI, start_index, end_index, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmax);
 
           // Pre-processing for projGLM() on block-deleted data
+          F77_NAME(dgemm)(ytran, ntran, &p, &p, &nnk, &one, cvX, &nnk, cvX, &nnk, &zero, cvXtX, &p FCONE FCONE);    // XtX = t(X)*X
+          cholSchurGLM(cvX, nnk, p, sigmaSq_xi, cvXtX, VbetaInv, cvVz, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmaxp,
+                       DinvB_pnnkmax, DinvB_nnknnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
 
+          // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
+          for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV++){
 
-          if(cv_index == 3){
-            printMtrx(cvCholVz, nnk, nnk);
-            printMtrx(cvCholVzPlusI, nnk, nnk);
+            if(family == family_poisson){
+              for(cv_i = 0; cv_i < nnk; cv_i++){
+                dtemp1 = cvY[cv_i] + epsilon;
+                dtemp2 = 1.0;
+                dtemp3 = rgamma(dtemp1, dtemp2);
+                cv_v_eta[cv_i] = log(dtemp3);
+              }
+            }
+
+            if(family == family_binomial){
+              for(cv_i = 0; cv_i < nnk; cv_i++){
+                dtemp1 = cvY[cv_i] + epsilon;
+                dtemp2 = cv_nBinom[cv_i];
+                dtemp2 += 2.0 * epsilon;
+                dtemp2 -= dtemp1;
+                dtemp3 = rbeta(dtemp1, dtemp2);
+                cv_v_eta[cv_i] = logit(dtemp3);
+              }
+            }
+
+            if(family == family_binary){
+              for(cv_i = 0; cv_i < nnk; cv_i++){
+                dtemp1 = cvY[cv_i] + epsilon;
+                dtemp2 = cv_nBinom[cv_i];
+                dtemp2 += 2.0 * epsilon;
+                dtemp2 -= dtemp1;
+                dtemp3 = rbeta(dtemp1, dtemp2);
+                cv_v_eta[cv_i] = logit(dtemp3);
+              }
+            }
+
+            dtemp1 = 0.5 * nu_beta;
+            dtemp2 = 1.0 / dtemp1;
+            dtemp3 = rgamma(dtemp1, dtemp2);
+            dtemp3 = 1.0 / dtemp3;
+            dtemp3 = sqrt(dtemp3);
+            for(j = 0; j < p; j++){
+              cv_v_beta[j] = rnorm(0.0, dtemp3);                                                  // loo_v_beta ~ N(0, 1)
+            }
+
+            dtemp1 = 0.5 * nu_z;
+            dtemp2 = 1.0 / dtemp1;
+            dtemp3 = rgamma(dtemp1, dtemp2);
+            dtemp3 = 1.0 / dtemp3;
+            dtemp3 = sqrt(dtemp3);
+            for(cv_i = 0; cv_i < nnk; cv_i++){
+              cv_v_xi[cv_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
+              cv_v_z[cv_i] = rnorm(0.0, dtemp3);                                                 // loo_v_z ~ N(0, 1)
+            }
+
+            // LOO projection step
+            projGLM(cvX, nnk, p, cv_v_eta, cv_v_xi, cv_v_beta, cv_v_z, cholSchur_p2, cholSchur_nnkmax, sigmaSq_xi, Lbeta,
+                    cvCholVz, cvVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, DinvB_nnknnkmax, tmp_nnkmax, cv_tmp_p);
+
+            // Prediction of spatial process at held-out locations
+            
+
           }
+
+          // if(cv_index == 3){
+          //   printMtrx(cvCholVz, nnk, nnk);
+          //   printMtrx(cvCholVzPlusI, nnk, nnk);
+          // }
 
           for(cv_i = startsCV[cv_index]; cv_i < endsCV[cv_index] + 1; cv_i++){
             REAL(loopd_out_r)[cv_i] = 0.0;
@@ -587,14 +666,29 @@ extern "C" {
         R_chk_free(cvY);
         R_chk_free(cvX);
         R_chk_free(cv_nBinom);
-        R_chk_free(X_tilde);
-        R_chk_free(Y_tilde);
-        R_chk_free(nBinom_tilde);
         R_chk_free(cvVz);
         R_chk_free(cvCholVz);
         R_chk_free(cvCholVzPlusI);
+        R_chk_free(cvXtX);
+        R_chk_free(DinvB_pnnkmax);
+        R_chk_free(DinvB_nnknnkmax);
+        R_chk_free(cholSchur_p2);
+        R_chk_free(cholSchur_nnkmax);
+        R_chk_free(D1invcvX);
         R_chk_free(tmp_nnkmax);
+        R_chk_free(tmp_nnkmaxp);
         R_chk_free(tmp_nnknnkmax);
+        R_chk_free(cv_v_eta);
+        R_chk_free(cv_v_xi);
+        R_chk_free(cv_v_beta);
+        R_chk_free(cv_v_z);
+        R_chk_free(cv_tmp_p);
+        R_chk_free(X_tilde);
+        R_chk_free(Y_tilde);
+        R_chk_free(nBinom_tilde);
+        R_chk_free(cvCz);
+        R_chk_free(Vz_tilde);
+        R_chk_free(loopd_val_MC_CV);
 
       }
 
