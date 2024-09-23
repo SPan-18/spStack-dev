@@ -523,8 +523,8 @@ extern "C" {
 
         // Set-up storage for pre-processing
         double *cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);                    // Store block-deleted Vz
-        double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);            // Store block-deleted Cholesky of Vz
-        // double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
+        double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);            // Store block-deleted Cholesky update of Vz
+        double *cvCholVzPlusI = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVzPlusI, nnknnkmax);  // Store block-deleted Chlesky update of Vz+I
         // double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
         // double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
         // double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
@@ -545,15 +545,6 @@ extern "C" {
         int end_index = 0;
         int cv_i = 0;
 
-        cv_index = 0;
-        start_index = startsCV[cv_index];
-        end_index = endsCV[cv_index];
-        nk = sizesCV[cv_index];
-        nnk = n - nk;
-        copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);
-        cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
-        printMtrx(cvCholVz, nnk, nnk);
-
         for(cv_index = 0; cv_index < CV_K; cv_index++){
 
           nk = sizesCV[cv_index];
@@ -573,12 +564,17 @@ extern "C" {
           copyVecBlock(Y, Y_tilde, n, start_index, end_index);                                                      // Held-out Y = Y_tilde
           copyVecBlock(nBinom, nBinom_tilde, n, start_index, end_index);                                            // Held-out nBinom = nBinom_tilde
 
+          // Block-deleted Cholesky updates
+          cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
+          cholBlockDelUpdate(n, cholVzPlusI, start_index, end_index, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmax);
+
           // Pre-processing for projGLM() on block-deleted data
 
 
-          // if(cv_index == 0){
-          //   printMtrx(cvVz, nnk, nnk);
-          // }
+          if(cv_index == 3){
+            printMtrx(cvCholVz, nnk, nnk);
+            printMtrx(cvCholVzPlusI, nnk, nnk);
+          }
 
           for(cv_i = startsCV[cv_index]; cv_i < endsCV[cv_index] + 1; cv_i++){
             REAL(loopd_out_r)[cv_i] = 0.0;
@@ -596,6 +592,7 @@ extern "C" {
         R_chk_free(nBinom_tilde);
         R_chk_free(cvVz);
         R_chk_free(cvCholVz);
+        R_chk_free(cvCholVzPlusI);
         R_chk_free(tmp_nnkmax);
         R_chk_free(tmp_nnknnkmax);
 

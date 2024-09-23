@@ -202,9 +202,10 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
 
   int j, k;
   const int incOne = 1;
-  int case_id = 0, nk = 0, nMnk = 0, nMnknMnk = 0;
+  int case_id = 0, nk = 0, nkk = 0, nMnk = 0, nMnknMnk = 0;
   int del = 0, delEndPlusOne = 0;
   double b = 0, gamma = 0, tmp1 = 0, tmp2 = 0;
+  int indexLjj = 0, indexLkj= 0;
 
   // Error handling
   if(del_start > del_end || del_start == del_end){
@@ -219,6 +220,8 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
     case_id = 1;                           // Lowest block deletion
   }else if(del_start == 0 && del_end < n - 1){
     case_id = 2;                           // First block deletion
+  }else{
+    case_id = 3;
   }
 
   if(case_id == 1){
@@ -282,6 +285,69 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
       }
 
     }
+
+    mkLT(L1, nMnk);
+
+  }else if(case_id == 3){
+
+    nk = del_end - del_start + 1;
+    nMnk = n - nk;
+    delEndPlusOne = del_end + 1;
+    nkk = n - delEndPlusOne;
+
+    copySubmat(L, n, n, tmpL1, nMnk, nMnk, delEndPlusOne, delEndPlusOne, del_start, del_start, nkk, nkk);
+
+    for(del = del_start; del < delEndPlusOne; del++){
+
+      F77_NAME(dcopy)(&nkk, &L[del*n + delEndPlusOne], &incOne, w, &incOne);
+
+      b = 1.0;
+
+      for(j = 0; j < nkk; j++){
+
+        indexLjj = mapIndex(j, j, nkk, nkk, del_start, del_start, nMnk);
+        tmp1 = pow(tmpL1[indexLjj], 2);    // tmp1 = L[jj]^2
+        gamma = tmp1 * b;                  // gamma = L[jj]^2*b
+        tmp2 = pow(w[j], 2);               // tmp2 = w[j]^2
+        gamma = gamma + tmp2;              // gamma = L[jj]^2*b + w[j]^2
+        tmp2 = tmp2 / b;                   // tmp2 = w[j]^2/b
+        tmp1 = tmp1 + tmp2;                // tmp1 = L[jj]^2 + w[j]^2/b
+        tmp2 = sqrt(tmp1);                 // tmp2 = sqrt(L[jj]^2 + w[j]^2/b)
+        L1[indexLjj] = tmp2;               // obtain L'[jj]
+
+        if(j < nkk - 1){
+          for(k = j + 1; k < nkk; k++){
+
+            indexLkj = mapIndex(k, j, nkk, nkk, del_start, del_start, nMnk);
+            tmp1 = tmpL1[indexLkj] / tmpL1[indexLjj];      // tmp1 = L[kj]/L[jj]
+            tmp2 = tmp1 * w[j];                            // tmp2 = w[j]*L[kj]/L[jj]
+            w[k] = w[k] - tmp2;                            // w[k] = w[k] - w[j]*L[kj]/L[jj]
+
+            tmp2 = w[j] * w[k];                            // tmp2 = w[j]*w[k]
+            tmp2 = tmp2 / gamma;                           // tmp2 = w[j]*w[k]/gamma
+            tmp1 = tmp1 + tmp2;                            // tmp1 = L[kj]/L[jj] + w[j]*w[k]/gamma
+            tmp2 = tmp1 * L1[indexLjj];                    // tmp1 = L'[jj]*L[kj]/L[jj] + L'[jj]*w[j]*w[k]/gamma
+            L1[indexLkj] = tmp2;                           // obtain L'[kj]
+
+          }
+        }
+
+        tmp1 = pow(w[j], 2);                 // tmp1 = w[j]^2
+        tmp2 = pow(tmpL1[indexLjj], 2);      // tmp2 = L[jj]^2
+        tmp1 = tmp1 / tmp2;                  // tmp1 = w[j]^2/L[jj]^2
+        b = b + tmp1;                        // b = b + w[j]^2/L[jj]^2
+
+      }
+
+      if(del < del_end){
+        copySubmat(L1, nMnk, nMnk, tmpL1, nMnk, nMnk, del_start, del_start, del_start, del_start, nkk, nkk);
+      }
+
+    }
+
+    copySubmat(L, n, n, L1, nMnk, nMnk, 0, 0, 0, 0, del_start, del_start);
+    copySubmat(L, n, n, L1, nMnk, nMnk, delEndPlusOne, 0, del_start, 0, nkk, del_start);
+    mkLT(L1, nMnk);
 
   }else{
     perror("cholBlockDelUpdate error: Invalid case.");
