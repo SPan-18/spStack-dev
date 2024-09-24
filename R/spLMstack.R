@@ -38,20 +38,22 @@
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #'  stacking weights.
 #' @param ... currently no additional argument.
-#' @return An object of class \code{spLMstack}, which is a list with the
+#' @return An object of class \code{spLMstack}, which is a list including the
 #'  following tags -
-#' \item{samples}{a list of length equal to total number of candidate models
-#'  with each entry corresponding to a list of length 4, containing posterior
+#' \item{`samples`}{a list of length equal to total number of candidate models
+#'  with each entry corresponding to a list of length 3, containing posterior
 #'  samples of fixed effects (\code{beta}), variance parameter
-#'  (\code{sigmaSq}), spatial effects (\code{z}), and, leave-one-out predictive
-#'  densities (\code{loopd}) for that particular model.}
-#' \item{n.models}{number of candidate models that are fit.}
-#' \item{candidate.models}{a matrix with \code{n_model} rows with each row
+#'  (\code{sigmaSq}), spatial effects (\code{z}) for that particular model.}
+#' \item{`loopd`}{a list of length equal to total number of candidate models with
+#' each entry containing leave-one-out predictive densities under that
+#' particular model.}
+#' \item{`n.models`}{number of candidate models that are fit.}
+#' \item{`candidate.models`}{a matrix with \code{n_model} rows with each row
 #'  containing details of the model parameters and its optimal weight.}
-#' \item{stacking.weights}{a numeric vector of length equal to the number of
+#' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #'  candidate models storing the optimal stacking weights.}
-#' \item{run.time}{a \code{proc_time} object with runtime details.}
-#' \item{solver.status}{solver status as returned by the optimization routine.}
+#' \item{`run.time`}{a \code{proc_time} object with runtime details.}
+#' \item{`solver.status`}{solver status as returned by the optimization routine.}
 #' The return object might include additional data used for subsequent
 #' prediction and/or model fit evaluation.
 #' @details Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -71,7 +73,7 @@
 #'  \end{aligned}
 #'  }
 #' to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
-#' @seealso [spLMexact()]
+#' @seealso [spLMexact()], [spGLMstack()]
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto

@@ -7,7 +7,7 @@
 stackedSampler(mod_out, n.samples)
 }
 \arguments{
-\item{mod_out}{output object from \code{\link[=spLMstack]{spLMstack()}}.}
+\item{mod_out}{an object of class \code{'spLMstack'} or \code{'spGLMstack'}.}
 
 \item{n.samples}{(optional) If missing, inherits the number
 of posterior samples from the originial output. Otherwise, it specifies
@@ -28,7 +28,7 @@ posterior.}
 \description{
 A helper function to sample from the stacked posterior
 distribution to obtain final posterior samples for analysis. This function
-applies on outputs of functions like \code{\link[=spLMstack]{spLMstack()}}.
+applies on outputs of functions like \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}.
 }
 \details{
 After obtaining the optimal stacking weights
@@ -74,7 +74,7 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 }
 }
 \seealso{
-\code{\link[=spLMstack]{spLMstack()}}
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
