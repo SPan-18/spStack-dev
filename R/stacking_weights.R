@@ -12,15 +12,16 @@
 #' \describe{
 #'   \item{\code{weights}}{optimal stacking weights as a numeric vecor of length
 #'   \eqn{M}{M}}
-#'   \item{\code{status}}{solver status. \code{optimal} if solver succeeded,
-#'   otherwise throws an error.}
+#'   \item{\code{status}}{solver status, returns \code{"optimal"} if solver
+#'   succeeded.}
 #' }
 #' @importFrom CVXR Maximize Problem Variable psolve log_sum_exp Parameter
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion).” *Bayesian
 #' Analysis*, **13**(3), 917 – 1007. \doi{10.1214/17-BA1091}.
 #' @seealso [CVXR::psolve()]
-#' @author Soumyakanti Pan <span18@ucla.edu>
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
 get_stacking_weights <- function(log_loopd, solver = "ECOS"){
 

@@ -32,7 +32,8 @@
 #' \eqn{\sigma^2 = 0.4}. This data can be generated with the code as given in
 #' the example below.
 #' @seealso [simGaussian], [simPoisson], [simBinom]
-#' @author Soumyakanti Pan <span18@ucla.edu>
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

@@ -2,12 +2,12 @@
 % Please edit documentation in R/stackedSampler.R
 \name{stackedSampler}
 \alias{stackedSampler}
-\title{Sample from the \emph{stacked posterior} distribution}
+\title{Sample from the \emph{stacked} posterior distribution}
 \usage{
 stackedSampler(mod_out, n.samples)
 }
 \arguments{
-\item{mod_out}{an object of class \code{'spLMstack'} or \code{'spGLMstack'}.}
+\item{mod_out}{an object of class \code{spLMstack} or \code{spGLMstack}.}
 
 \item{n.samples}{(optional) If missing, inherits the number
 of posterior samples from the originial output. Otherwise, it specifies
@@ -17,18 +17,23 @@ is thrown and the samples are obtained by resampling. It is recommended, to
 run the original function with enough samples.}
 }
 \value{
-An object of class \code{stacked_posterior}, which is a list with the
-following tags -
+An object of class \code{stacked_posterior}, which is a list that
+includes the following tags -
 \item{beta}{samples of the fixed effect from the stacked joint posterior.}
-\item{sigmaSq}{samples of the variance parameter from the stacked joint
-posterior.}
 \item{z}{samples of the spatial random effects from the stacked joint
 posterior.}
+In case of model output of class \code{spLMstack}, the list additionally contains
+\code{sigmaSq} which are the samples of the variance parameter from the stacked
+joint posterior of the spatial linear model. For model output of class
+\code{spGLMstack}, the list also contains \code{xi} which are the samples of the
+fine-scale variation term from the stacked joint posterior of the spatial
+generalized linear model.
 }
 \description{
 A helper function to sample from the stacked posterior
-distribution to obtain final posterior samples for analysis. This function
-applies on outputs of functions like \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}.
+distribution to obtain final posterior samples that can be used for
+subsequent analysis. This function applies on outputs of functions
+\code{\link[=spLMstack]{spLMstack()}} and \code{\link[=spGLMstack]{spGLMstack()}}.
 }
 \details{
 After obtaining the optimal stacking weights
@@ -77,5 +82,6 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \author{
-Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }

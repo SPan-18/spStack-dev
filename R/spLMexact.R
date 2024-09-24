@@ -1,4 +1,4 @@
-#' Univariate spatial linear model
+#' Univariate Bayesian spatial linear model
 #'
 #' @description Fits a Bayesian spatial linear model with spatial process
 #'  parameters and the noise-to-spatial variance ratio fixed to a value supplied

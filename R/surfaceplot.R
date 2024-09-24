@@ -74,6 +74,8 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 
 #' Make two side-by-side surface plots
 #'
+#' @description Make two side-by-side surface plots, particularly useful towards
+#' a comparative study of two spatial surfaces.
 #' @param tab a data-frame containing spatial co-ordinates and the variables to
 #' plot
 #' @param coords_name name of the two columns that contains the co-ordinates of

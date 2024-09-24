@@ -2,7 +2,7 @@
 % Please edit documentation in R/spLMstack.R
 \name{spLMstack}
 \alias{spLMstack}
-\title{Univariate spatial linear model using Bayesian predictive stacking}
+\title{Bayesian spatial linear model using predictive stacking}
 \usage{
 spLMstack(
   formula,
@@ -83,14 +83,16 @@ containing details of the model parameters and its optimal weight.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
-\item{\code{solver.status}}{solver status as returned by the optimization routine.}
-The return object might include additional data used for subsequent
-prediction and/or model fit evaluation.
+\item{\code{solver.status}}{solver status as returned by the optimization
+routine.}
+The return object might include additional data that is useful for subsequent
+prediction, model fit evaluation and other utilities.
 }
 \description{
-Fits Bayesian spatial linear model on several candidate models
-specified by user via candidate values of some model parameters and
-subsequently combines inference by stacking predictive densities.
+Fits Bayesian spatial linear model on a collection of candidate
+models constructed based on some candidate values of some model parameters
+specified by the user and subsequently combines inference by stacking
+predictive densities. See Zhang, Tang and Banerjee (2024) for more details.
 }
 \details{
 Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -169,6 +171,9 @@ plot1 <- ggplot(data = z_combn, aes(x = z)) +
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+
+Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
+Predictive Stacking.” \doi{10.48550/arXiv.2304.12414}.
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}

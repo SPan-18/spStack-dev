@@ -7,31 +7,36 @@
 sim_spData(n, beta, cor.fn, spParams, spvar, deltasq, family, n_binom)
 }
 \arguments{
-\item{n}{Sample size}
+\item{n}{sample size.}
 
-\item{beta}{\eqn{p}{p}-dimensional vector of fixed effects}
+\item{beta}{a \eqn{p}{p}-dimensional vector of fixed effects.}
 
 \item{cor.fn}{a quoted keyword that specifies the correlation function used
 to model the spatial dependence structure among the observations. Supported
 covariance model key words are: \code{'exponential'} and \code{'matern'}.}
 
-\item{spParams}{Spatial process parameters}
+\item{spParams}{a numeric vector containing spatial process parameters -
+e.g., spatial decay and smoothness.}
 
-\item{spvar}{Fixed value of spatial variance}
+\item{spvar}{value of spatial variance parameter.}
 
-\item{deltasq}{Noise-to-spatial variance ratio}
+\item{deltasq}{value of noise-to-spatial variance ratio.}
 
-\item{family}{Specifies the distribution of the response as a member of the
-exponential family. Valid inputs are \code{'gaussian'}, \code{'poisson'}, \code{'binary'},
-and \code{'binomial'}.}
+\item{family}{a character specifying the distribution of the response as a
+member of the exponential family. Valid inputs are \code{'gaussian'}, \code{'poisson'},
+\code{'binary'}, and \code{'binomial'}.}
 
-\item{n_binom}{Necessary only when \code{family = 'binomial'}. Must be a
+\item{n_binom}{necessary only when \code{family = 'binomial'}. Must be a
 vector of length \code{n} that will specify the number of trials for each
 observation. If it is of length 1, then that value is considered to be the
 common value for the number of trials for all \code{n} observations.}
 }
 \description{
-Simulate spatial data on unit square
+Generates synthetic spatial data of different types where the
+spatial co-ordinates are sampled uniformly on an unit square. Different types
+include point-referenced Gaussian, Poisson, binomial and binary data. The
+design includes an intercept and fixed covariates sampled from a standard
+normal distribution.
 }
 \examples{
 \dontrun{
@@ -49,5 +54,6 @@ sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
 }
 }
 \author{
-Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }

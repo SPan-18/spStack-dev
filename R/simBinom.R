@@ -3,7 +3,7 @@
 #' @description Dataset of size 500, with a binomial response variable indexed
 #' by spatial coordinates sampled uniformly from the unit square. The model
 #' includes one covariate and spatial random effects induced by a Matérn
-#' covariogram. The number of trials at each location is sampled from a poisson
+#' covariogram. The number of trials at each location is sampled from a Poisson
 #' distribution with mean 20.
 #' @format a \code{data.frame} object.
 #' \describe{
@@ -36,7 +36,8 @@
 #' \eqn{\sigma^2 = 0.4}. This data can be generated with the code as given in
 #' the example below.
 #' @seealso [simGaussian], [simPoisson], [simBinary]
-#' @author Soumyakanti Pan <span18@ucla.edu>
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

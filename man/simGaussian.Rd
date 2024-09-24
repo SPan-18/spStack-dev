@@ -23,7 +23,7 @@ includes one covariate and spatial random effects induced by a Matérn
 covariogram.
 }
 \details{
-The data is generated following the linear model below.
+The data is generated using the model
 \deqn{
 y = X \beta + z + \epsilon,
 }

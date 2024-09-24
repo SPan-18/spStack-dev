@@ -11,23 +11,30 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 
 #' Simulate spatial data on unit square
 #'
-#' @param n Sample size
-#' @param beta \eqn{p}{p}-dimensional vector of fixed effects
+#' @description Generates synthetic spatial data of different types where the
+#' spatial co-ordinates are sampled uniformly on an unit square. Different types
+#' include point-referenced Gaussian, Poisson, binomial and binary data. The
+#' design includes an intercept and fixed covariates sampled from a standard
+#' normal distribution.
+#' @param n sample size.
+#' @param beta a \eqn{p}{p}-dimensional vector of fixed effects.
 #' @param cor.fn a quoted keyword that specifies the correlation function used
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
-#' @param spParams Spatial process parameters
-#' @param spvar Fixed value of spatial variance
-#' @param deltasq Noise-to-spatial variance ratio
-#' @param family Specifies the distribution of the response as a member of the
-#'  exponential family. Valid inputs are `'gaussian'`, `'poisson'`, `'binary'`,
-#'  and `'binomial'`.
-#' @param n_binom Necessary only when `family = 'binomial'`. Must be a
+#' @param spParams a numeric vector containing spatial process parameters -
+#' e.g., spatial decay and smoothness.
+#' @param spvar value of spatial variance parameter.
+#' @param deltasq value of noise-to-spatial variance ratio.
+#' @param family a character specifying the distribution of the response as a
+#' member of the exponential family. Valid inputs are `'gaussian'`, `'poisson'`,
+#' `'binary'`, and `'binomial'`.
+#' @param n_binom necessary only when `family = 'binomial'`. Must be a
 #'  vector of length `n` that will specify the number of trials for each
 #'  observation. If it is of length 1, then that value is considered to be the
 #'  common value for the number of trials for all `n` observations.
 #' @importFrom stats dist runif rpois rbinom
-#' @author Soumyakanti Pan <span18@ucla.edu>
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
 #' \dontrun{
 #' set.seed(1729)

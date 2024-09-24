@@ -1,22 +1,27 @@
-#' Sample from the *stacked posterior* distribution
+#' Sample from the *stacked* posterior distribution
 #'
 #' @description A helper function to sample from the stacked posterior
-#' distribution to obtain final posterior samples for analysis. This function
-#' applies on outputs of functions like [spLMstack()], [spGLMstack()].
-#' @param mod_out an object of class `'spLMstack'` or `'spGLMstack'`.
+#' distribution to obtain final posterior samples that can be used for
+#' subsequent analysis. This function applies on outputs of functions
+#' [spLMstack()] and [spGLMstack()].
+#' @param mod_out an object of class `spLMstack` or `spGLMstack`.
 #' @param n.samples (optional) If missing, inherits the number
 #' of posterior samples from the originial output. Otherwise, it specifies
 #' number of posterior samples to draw from the stacked posterior. If it exceeds
 #' the number of posterior draws used in the original function, then a warning
 #' is thrown and the samples are obtained by resampling. It is recommended, to
 #' run the original function with enough samples.
-#' @return An object of class \code{stacked_posterior}, which is a list with the
-#' following tags -
+#' @return An object of class \code{stacked_posterior}, which is a list that
+#' includes the following tags -
 #' \item{beta}{samples of the fixed effect from the stacked joint posterior.}
-#' \item{sigmaSq}{samples of the variance parameter from the stacked joint
-#' posterior.}
 #' \item{z}{samples of the spatial random effects from the stacked joint
 #' posterior.}
+#' In case of model output of class `spLMstack`, the list additionally contains
+#' `sigmaSq` which are the samples of the variance parameter from the stacked
+#' joint posterior of the spatial linear model. For model output of class
+#' `spGLMstack`, the list also contains `xi` which are the samples of the
+#' fine-scale variation term from the stacked joint posterior of the spatial
+#' generalized linear model.
 #' @details After obtaining the optimal stacking weights
 #' \eqn{\hat{w}_1, \ldots, \hat{w}_G}, posterior inference of quantities of
 #' interest subsequently proceed from the *stacked posterior*,
@@ -25,7 +30,8 @@
 #' }
 #' where \eqn{\mathcal{M} = \{M_1, \ldots, M_g\}} is the collection of candidate
 #' models.
-#' @author Soumyakanti Pan <span18@ucla.edu>
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spLMstack()], [spGLMstack()]
 #' @examples
 #' \dontrun{

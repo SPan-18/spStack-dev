@@ -1,8 +1,9 @@
-#' Univariate spatial linear model using Bayesian predictive stacking
+#' Bayesian spatial linear model using predictive stacking
 #'
-#' @description Fits Bayesian spatial linear model on several candidate models
-#'  specified by user via candidate values of some model parameters and
-#'  subsequently combines inference by stacking predictive densities.
+#' @description Fits Bayesian spatial linear model on a collection of candidate
+#' models constructed based on some candidate values of some model parameters
+#' specified by the user and subsequently combines inference by stacking
+#' predictive densities. See Zhang, Tang and Banerjee (2024) for more details.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -53,9 +54,10 @@
 #' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #'  candidate models storing the optimal stacking weights.}
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
-#' \item{`solver.status`}{solver status as returned by the optimization routine.}
-#' The return object might include additional data used for subsequent
-#' prediction and/or model fit evaluation.
+#' \item{`solver.status`}{solver status as returned by the optimization
+#' routine.}
+#' The return object might include additional data that is useful for subsequent
+#' prediction, model fit evaluation and other utilities.
 #' @details Instead of assigning a prior on the process parameters \eqn{\phi}
 #'  and \eqn{\nu}, noise-to-spatial variance ratio \eqn{\delta^2}, we consider
 #'  a set of candidate models based on some candidate values of these parameters
@@ -79,6 +81,8 @@
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+#' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
+#' Predictive Stacking.” \doi{10.48550/arXiv.2304.12414}.
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan

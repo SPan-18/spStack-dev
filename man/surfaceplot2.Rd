@@ -40,7 +40,8 @@ Default is \code{FALSE}.}
 a list containing two \code{ggplot} objects
 }
 \description{
-Make two side-by-side surface plots
+Make two side-by-side surface plots, particularly useful towards
+a comparative study of two spatial surfaces.
 }
 \examples{
 \dontrun{

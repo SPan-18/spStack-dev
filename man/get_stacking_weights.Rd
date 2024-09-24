@@ -20,8 +20,8 @@ A list of length 2.
 \describe{
 \item{\code{weights}}{optimal stacking weights as a numeric vecor of length
 \eqn{M}{M}}
-\item{\code{status}}{solver status. \code{optimal} if solver succeeded,
-otherwise throws an error.}
+\item{\code{status}}{solver status, returns \code{"optimal"} if solver
+succeeded.}
 }
 }
 \description{
@@ -37,5 +37,6 @@ Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
 \code{\link[CVXR:psolve]{CVXR::psolve()}}
 }
 \author{
-Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }

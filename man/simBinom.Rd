@@ -21,7 +21,7 @@ data(simBinom)
 Dataset of size 500, with a binomial response variable indexed
 by spatial coordinates sampled uniformly from the unit square. The model
 includes one covariate and spatial random effects induced by a Matérn
-covariogram. The number of trials at each location is sampled from a poisson
+covariogram. The number of trials at each location is sampled from a Poisson
 distribution with mean 20.
 }
 \details{
@@ -81,6 +81,7 @@ plot2 <- ggplot(sim1, aes(x = s1, y = s2)) +
 \link{simGaussian}, \link{simPoisson}, \link{simBinary}
 }
 \author{
-Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }
 \keyword{datasets}

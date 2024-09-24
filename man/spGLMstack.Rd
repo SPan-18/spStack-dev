@@ -2,8 +2,7 @@
 % Please edit documentation in R/spGLMstack.R
 \name{spGLMstack}
 \alias{spGLMstack}
-\title{Univariate spatial generalized linear model using Bayesian predictive
-stacking}
+\title{Bayesian spatial generalized linear model using predictive stacking}
 \usage{
 spGLMstack(
   formula,
@@ -55,9 +54,9 @@ parameters for the \code{cor.fn} used, and, the boundary parameter.}
 densities (LOO-PD) are to be calculated. Valid tags include \code{method}, \code{CV.K}
 and \code{nMC}. The tag \code{method} can be either \code{'exact'} or \code{'CV'}. If sample size
 is more than 100, then the default is \code{'CV'} with \code{CV.K} equal to its default
-value if 10. The tag \code{nMC} decides how mane Monte Carlo samples will be used
-to evaluate the leave-one-out predictive densities, which must be at least
-the default value, 500 (Gelman \emph{et al.} 2024).}
+value 10 (Gelman \emph{et al.} 2024). The tag \code{nMC} decides how many Monte Carlo
+samples will be used to evaluate the leave-one-out predictive densities,
+which must be at least 500 (default).}
 
 \item{parallel}{logical. If \code{parallel=FALSE}, the parallelization plan,
 if set up by the user, is ignored. If \code{parallel=TRUE}, the function
@@ -68,7 +67,7 @@ may choose their own plan. More details are available at
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
 to obtain optimal stacking weights for each candidate model. Default is
-\code{"ECOS"}. Users can use other solvers supported by the
+\code{'ECOS'}. Users can use other solvers supported by the
 \link[CVXR]{CVXR-package} package.}
 
 \item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
@@ -92,15 +91,17 @@ containing details of the model parameters and its optimal weight.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
-\item{\code{solver.status}}{solver status as returned by the optimization routine.}
-The return object might include additional data used for subsequent
-prediction and/or model fit evaluation.
+\item{\code{solver.status}}{solver status as returned by the optimization
+routine.}
+The return object might include additional data that is useful for subsequent
+prediction, model fit evaluation and other utilities.
 }
 \description{
-Fits Bayesian spatial generalized linear model (GLM) on several
-candidate models specified by user via candidate values of some model
-parameters and subsequently combines inference by stacking of predictive
-densities.
+Fits Bayesian spatial generalized linear model on a collection
+of candidate models constructed based on some candidate values of some model
+parameters specified by the user and subsequently combines inference by
+stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2024)
+for more details.
 }
 \details{
 Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -122,6 +123,10 @@ w_g p(y_i \mid y_{-i}, M_g) \\
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \references{
+Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
+Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+\doi{10.48550/arXiv.2406.04655}.
+
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

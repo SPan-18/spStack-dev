@@ -75,6 +75,7 @@ plot2 <- ggplot(sim1, aes(x = s1, y = s2)) +
 \link{simGaussian}, \link{simPoisson}, \link{simBinom}
 }
 \author{
-Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu}
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
 }
 \keyword{datasets}

@@ -1,10 +1,10 @@
-#' Univariate spatial generalized linear model using Bayesian predictive
-#' stacking
+#' Bayesian spatial generalized linear model using predictive stacking
 #'
-#' @description Fits Bayesian spatial generalized linear model (GLM) on several
-#' candidate models specified by user via candidate values of some model
-#' parameters and subsequently combines inference by stacking of predictive
-#' densities.
+#' @description Fits Bayesian spatial generalized linear model on a collection
+#' of candidate models constructed based on some candidate values of some model
+#' parameters specified by the user and subsequently combines inference by
+#' stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2024)
+#' for more details.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -30,9 +30,9 @@
 #' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`
 #' and `nMC`. The tag `method` can be either `'exact'` or `'CV'`. If sample size
 #' is more than 100, then the default is `'CV'` with `CV.K` equal to its default
-#' value if 10. The tag `nMC` decides how mane Monte Carlo samples will be used
-#' to evaluate the leave-one-out predictive densities, which must be at least
-#' the default value, 500 (Gelman *et al.* 2024).
+#' value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many Monte Carlo
+#' samples will be used to evaluate the leave-one-out predictive densities,
+#' which must be at least 500 (default).
 #' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
 #'  if set up by the user, is ignored. If \code{parallel=TRUE}, the function
 #'  inherits the parallelization plan that is set by the user via the function
@@ -41,7 +41,7 @@
 #'  \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #' to obtain optimal stacking weights for each candidate model. Default is
-#' \code{"ECOS"}. Users can use other solvers supported by the
+#' \code{'ECOS'}. Users can use other solvers supported by the
 #' \link[CVXR]{CVXR-package} package.
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #' stacking weights.
@@ -61,9 +61,10 @@
 #' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #'  candidate models storing the optimal stacking weights.}
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
-#' \item{`solver.status`}{solver status as returned by the optimization routine.}
-#' The return object might include additional data used for subsequent
-#' prediction and/or model fit evaluation.
+#' \item{`solver.status`}{solver status as returned by the optimization
+#' routine.}
+#' The return object might include additional data that is useful for subsequent
+#' prediction, model fit evaluation and other utilities.
 #' @details Instead of assigning a prior on the process parameters \eqn{\phi}
 #' and \eqn{\nu}, the boundary adjustment parameter \eqn{\epsilon}, we consider
 #' a set of candidate models based on some candidate values of these parameters
@@ -84,6 +85,9 @@
 #' @seealso [spGLMexact()], [spLMstack()]
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
+#' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+#' \doi{10.48550/arXiv.2406.04655}.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

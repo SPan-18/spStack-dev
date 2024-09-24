@@ -12,7 +12,7 @@
 #'  \item{`z_true`}{true spatial random effects that generated the data.}
 #' }
 #' @usage data(simGaussian)
-#' @details The data is generated following the linear model below.
+#' @details The data is generated using the model
 #' \deqn{
 #' y = X \beta + z + \epsilon,
 #' }
