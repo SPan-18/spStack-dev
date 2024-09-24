@@ -27,10 +27,12 @@ extern "C" {
      *****************************************/
     int i, j, s, info, nProtect = 0;
     char const *lower = "L";
+    char const *lside = "L";
     char const *ntran = "N";
     char const *ytran = "T";
-    char const *nUnit = "N";
+    char const *nunit = "N";
     const double one = 1.0;
+    const double negone = -1.0;
     const double zero = 0.0;
     const int incOne = 1;
 
@@ -314,7 +316,6 @@ extern "C" {
         double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
         double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
         double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
-        double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
         double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
         double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
         double *DinvB_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(DinvB_n1n1, n1n1);               // allocate memory for n x n matrix
@@ -333,7 +334,10 @@ extern "C" {
         double *loo_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_v_beta, p);
         double *loo_v_z = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_z, n1);
         double *loo_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_tmp_p, p);                       // temporary p x 1 vector
-        double z_tilde = 0.0, z_tilde_var = 0.0, z_tilde_mu = 0.0;
+
+        // Set-up storage for spatial prediction
+        double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
+        double z_tilde = 0.0, z_tilde_var = 0.0, z_tilde_mu = 0.0, Mdist = 0.0;
 
         int loo_index = 0;
         int loo_i = 0;
@@ -350,11 +354,17 @@ extern "C" {
           copyMatrixDelRow(X, n, p, looX, loo_index);                                                            // Row-deleted X
           copyMatrixRowToVec(X, n, p, X_tilde, loo_index);                                                       // Copy left out X into Xtilde
           copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);                                            // Row-column deleted Vz
-          copyVecExcludingOne(&Vz[loo_index*n], looCz, n, loo_index);                                            // looCz = Vz[-i,i]
 
           // Pre-processing for projGLM() on leave-one-out data
           cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);                                            // Row-deletion CHOL update Vz
           cholRowDelUpdate(n, cholVzPlusI, loo_index, looCholVzPlusI, tmp_n11);                                  // Row-deletion CHOL update Vz+I
+
+          // Spatial prediction variance term
+          copyVecExcludingOne(&Vz[loo_index*n], looCz, n, loo_index);                                            // looCz = Vz[-i,i]
+          F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholVz, &n1, looCz, &incOne FCONE FCONE FCONE);           // looCz = LzInv * Cz
+          dtemp1 = pow(F77_NAME(dnrm2)(&n1, looCz, &incOne), 2);                                                 // dtemp1 = Czt*VzInv*Cz
+          z_tilde_var = Vz[loo_index*n + loo_index] - dtemp1;                                                    // z_tilde_var = Vz_tilde - Czt*VzInv*Cz
+
           F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looXtX, &p FCONE FCONE); // XtX = t(X)*X
           cholSchurGLM(looX, n1, p, sigmaSq_xi, looXtX, VbetaInv, looVz, looCholVzPlusI, tmp_n1n1, tmp_n1p,
                        DinvB_pn1, DinvB_n1n1, cholSchur_p1, cholSchur_n1, D1invlooX);
@@ -395,20 +405,20 @@ extern "C" {
             dtemp1 = 0.5 * nu_beta;
             dtemp2 = 1.0 / dtemp1;
             dtemp3 = rgamma(dtemp1, dtemp2);
-            dtemp3 = 1.0 / dtemp3;
-            dtemp3 = sqrt(dtemp3);
+            dtemp1 = 1.0 / dtemp3;
+            dtemp2 = sqrt(dtemp1);
             for(j = 0; j < p; j++){
-              loo_v_beta[j] = rnorm(0.0, dtemp3);                                                  // loo_v_beta ~ N(0, 1)
+              loo_v_beta[j] = rnorm(0.0, dtemp2);                                                  // loo_v_beta ~ t_nu_beta(0, 1)
             }
 
             dtemp1 = 0.5 * nu_z;
             dtemp2 = 1.0 / dtemp1;
             dtemp3 = rgamma(dtemp1, dtemp2);
-            dtemp3 = 1.0 / dtemp3;
-            dtemp3 = sqrt(dtemp3);
+            dtemp1 = 1.0 / dtemp3;
+            dtemp2 = sqrt(dtemp1);
             for(loo_i = 0; loo_i < n1; loo_i++){
               loo_v_xi[loo_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
-              loo_v_z[loo_i] = rnorm(0.0, dtemp3);                                                 // loo_v_z ~ N(0, 1)
+              loo_v_z[loo_i] = rnorm(0.0, dtemp2);                                                 // loo_v_z ~ t_nu_z(0, 1)
             }
 
             // LOO projection step
@@ -416,27 +426,20 @@ extern "C" {
                     looCholVz, looVz, looCholVzPlusI, D1invlooX, DinvB_pn1, DinvB_n1n1, tmp_n11, loo_tmp_p);
 
             // predict z at the loo_index location
-            F77_NAME(dcopy)(&n1, looCz, &incOne, tmp_n11, &incOne);
-            F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVz, &n1, tmp_n11, &incOne FCONE FCONE FCONE);    // tmp_n11 = LzInv * Cz
-            F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVz, &n1, loo_v_z, &incOne FCONE FCONE FCONE);    // loo_v_z = LzInv * v_z
-            z_tilde_var = Vz[loo_index*n + loo_index];
-            dtemp1 = pow(F77_NAME(dnrm2)(&n1, tmp_n11, &incOne), 2);                                          // dtemp1 = Czt*VzInv*Cz
-            z_tilde_var -= dtemp1;                                                                            // z_tilde_var = VzTilde - Czt*VzInv*Cz
-            dtemp1 = pow(F77_NAME(dnrm2)(&n1, loo_v_z, &incOne), 2);                                          // dtemp1 = v_zt*VzInv*v_z
-            dtemp1 += nu_z;                                                                                   // dtemp1 = nu_z + v_zt*VzInv*v_z
-            dtemp2 = dtemp1 / (nu_z + n1);                                                                    // dtemp2 = (nu_z+v_zt*VzInv*v_z)/(nu_z+n1)
-            dtemp3 = dtemp2 * z_tilde_var;
-            z_tilde_var = dtemp3;                                                                             // z_tilde_var = dtemp2*(VzTilde - Czt*VzInv*Cz)
-            z_tilde_mu = F77_CALL(ddot)(&p, tmp_n11, &incOne, loo_v_z, &incOne);                              // z_tilde_mu = Czt*VzInv*v_z
+            F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholVz, &n1, loo_v_z, &incOne FCONE FCONE FCONE);    // loo_v_z = LzInv * v_z
+            z_tilde_mu = F77_CALL(ddot)(&n1, looCz, &incOne, loo_v_z, &incOne);                               // z_tilde_mu = Czt*VzInv*v_z
+            Mdist = pow(F77_NAME(dnrm2)(&n1, loo_v_z, &incOne), 2);                                           // Mdist = v_zt*VzInv*v_z
 
             // sample z_tilde
             dtemp1 = 0.5 * (nu_z + n1);
             dtemp2 = 1.0 / dtemp1;
             dtemp3 = rgamma(dtemp1, dtemp2);
-            dtemp3 = 1.0 / dtemp3;
-            dtemp1 = dtemp3 * z_tilde_var;
-            dtemp2 = sqrt(dtemp1);
-            z_tilde = rnorm(z_tilde_mu, dtemp2);
+            dtemp1 = 1.0 / dtemp3;
+            dtemp2 = dtemp1 * (Mdist + nu_z) / (nu_z + n1);
+            dtemp3 = sqrt(dtemp2);
+            z_tilde = rnorm(0.0, dtemp3);
+            z_tilde = z_tilde * sqrt(z_tilde_var);
+            z_tilde = z_tilde + z_tilde_mu;
 
             dtemp1 = F77_CALL(ddot)(&p, X_tilde, &incOne, loo_v_beta, &incOne);
             dtemp2 = dtemp1 + z_tilde;                                                                        // dtemp2 = X_tilde*beta + z_tilde
@@ -499,8 +502,10 @@ extern "C" {
         mkCVpartition(n, CV_K, startsCV, endsCV, sizesCV);
 
         int nk = 0;         // nk = size of k-th partition
+        int nknk = 0;
         // int nknk = 0;       // nknk = nk x nk
         int nnk = 0;        // nnk = (n - nk); size of k-th partition deleted data
+        // int nnknk = 0;
         // int nnknnk = 0;     // nnknnk = (n - nk) x (n - nk)
         // int nkp = 0;        // nkp = (n - nk) x p
         // int nnkp = 0;       // nnkp = (n - nk) x p
@@ -545,20 +550,27 @@ extern "C" {
         double *Y_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(Y_tilde, nkmax);           // Store held-out Y
         double *nBinom_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(nBinom_tilde, nkmax); // Store held-out Y
 
-        // Set-up storage for prediction
-        double *cvCz = (double *) R_chk_calloc(nnkmaxnkmax, sizeof(double)); zeros(cvCz, nnkmaxnkmax);     // cross-covariance matrix max(n-nk)xmax(nk)
-        double *Vz_tilde = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(Vz_tilde, nknkmax);     // held-out covariance matrix max(nk)xmax(nk)
+        // Set-up storage for spatial prediction
+        double *LzInvCz_cv = (double *) R_chk_calloc(nnkmaxnkmax, sizeof(double)); zeros(LzInvCz_cv, nnkmaxnkmax);  // cross-covariance matrix max(n-nk)xmax(nk)
+        double *z_tilde_cov = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(z_tilde_cov, nknkmax);              // held-out covariance matrix max(nk)xmax(nk)
+        double *tmp_nknkmax = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(tmp_nknkmax, nknkmax);        // allocate for max(nk) x max(nk) matrix
+        double *z_tilde_mu = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(z_tilde_mu, nkmax);
+        double *z_tilde = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(z_tilde, nkmax);
+        double *tmp_nkmax = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(tmp_nkmax, nkmax);
+        double PCMdist = 0.0;
 
         int cv_index = 0;
         int start_index = 0;
         int end_index = 0;
         int cv_i = 0;
         int sMC_CV = 0;
-        double *loopd_val_MC_CV = (double *) R_chk_calloc(loopd_nMC, sizeof(double)); zeros(loopd_val_MC_CV, loopd_nMC);
+        int loopd_nMC_nkmax = loopd_nMC * nkmax;
+        double *loopd_val_MC_CV = (double *) R_chk_calloc(loopd_nMC_nkmax, sizeof(double)); zeros(loopd_val_MC_CV, loopd_nMC_nkmax);
 
         for(cv_index = 0; cv_index < CV_K; cv_index++){
 
           nk = sizesCV[cv_index];
+          nknk = nk * nk;
           nnk = n - nk;
           // nnkp = nnk * p;
           start_index = startsCV[cv_index];
@@ -575,13 +587,18 @@ extern "C" {
           copyVecBlock(Y, Y_tilde, n, start_index, end_index);                                                      // Held-out Y = Y_tilde
           copyVecBlock(nBinom, nBinom_tilde, n, start_index, end_index);                                            // Held-out nBinom = nBinom_tilde
 
-          // Spatial process prediction
-          copyMatrixColDelRowBlock(Vz, n, n, cvCz, start_index, end_index, start_index, end_index);
-          copyMatrixRowColBlock(Vz, n, n, Vz_tilde, start_index, end_index, start_index, end_index);
-
           // Block-deleted Cholesky updates
           cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
           cholBlockDelUpdate(n, cholVzPlusI, start_index, end_index, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmax);
+
+          // Spatial process prediction
+          copyMatrixRowColBlock(Vz, n, n, z_tilde_cov, start_index, end_index, start_index, end_index);                                 // z_tilde_cov = Vz[ids, ids]
+          copyMatrixColDelRowBlock(Vz, n, n, LzInvCz_cv, start_index, end_index, start_index, end_index);                               // LzInvCz_cv = Vz[-ids, ids]
+          F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nk, &one, cvCholVz, &nnk, LzInvCz_cv, &nnk FCONE FCONE FCONE FCONE);       // LzInvCz_cv = inv(Lz)*Cz
+          F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, LzInvCz_cv, &nnk, LzInvCz_cv, &nnk, &zero, tmp_nknkmax, &nk FCONE FCONE); // tmp_nknkmax = t(Cz)*inv(Vz)*Cz
+          F77_NAME(daxpy)(&nknk, &negone, tmp_nknkmax, &incOne, z_tilde_cov, &incOne);                                                  // z_tilde_cov = VzTilde - t(Cz)*inv(Vz)*Cz
+          F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_tilde_schur dpotrf failed\n");}
+          mkLT(z_tilde_cov, nk);
 
           // Pre-processing for projGLM() on block-deleted data
           F77_NAME(dgemm)(ytran, ntran, &p, &p, &nnk, &one, cvX, &nnk, cvX, &nnk, &zero, cvXtX, &p FCONE FCONE);    // XtX = t(X)*X
@@ -646,17 +663,55 @@ extern "C" {
                     cvCholVz, cvVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, DinvB_nnknnkmax, tmp_nnkmax, cv_tmp_p);
 
             // Prediction of spatial process at held-out locations
-            
+            F77_NAME(dtrsv)(lower, ntran, nunit, &nnk, cvCholVz, &nnk, cv_v_z, &incOne FCONE FCONE FCONE);                // cv_v_z = LzInv * v_z
+            F77_NAME(dgemv)(ytran, &nnk, &nk, &one, LzInvCz_cv, &nnk, cv_v_z, &incOne, &zero, z_tilde_mu, &incOne FCONE); // z_tilde_mu = t(Cz)*inv(Vz)*v_z
+            PCMdist = pow(F77_NAME(dnrm2)(&nnk, cv_v_z, &incOne), 2);                                                     // Mahalanobis distance t(v_z)&inv(Vz)*v_z
+
+            // sample z_tilde
+            dtemp1 = 0.5 * (nu_z + nnk);
+            dtemp2 = 1.0 / dtemp1;
+            dtemp3 = rgamma(dtemp1, dtemp2);
+            dtemp2 = 1.0 / dtemp3;
+            dtemp1 = (PCMdist + nu_z) / (nu_z + nnk);
+            dtemp3 = dtemp1 * dtemp2;
+            dtemp1 = sqrt(dtemp3);
+            for(cv_i = 0; cv_i < nk; cv_i++){
+              z_tilde[cv_i] = rnorm(0.0, dtemp1);
+            }
+            F77_NAME(dgemv)(ntran, &nk, &nk, &one, z_tilde_cov, &nk, z_tilde, &incOne, &zero, tmp_nkmax, &incOne FCONE);
+            F77_NAME(daxpy)(&nk, &one, z_tilde_mu, &incOne, tmp_nkmax, &incOne);
+            F77_NAME(dcopy)(&nk, tmp_nkmax, &incOne, z_tilde, &incOne);
+
+            // Find canonical parameter (X_tilde*v_beta + z_tilde)
+            F77_NAME(dgemv)(ntran, &nk, &p, &one, X_tilde, &nk, cv_v_beta, &incOne, &zero, tmp_nkmax, &incOne FCONE);
+            F77_NAME(daxpy)(&nk, &one, z_tilde, &incOne, tmp_nkmax, &incOne);
+
+            // Find CV-LOO-PD
+            if(family == family_poisson){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = exp(tmp_nkmax[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dpois(Y_tilde[cv_i], dtemp1, 1);
+              }
+            }
+
+            if(family == family_binomial){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_tilde[cv_i], nBinom_tilde[cv_i], dtemp1, 1);
+              }
+            }
+
+            if(family == family_binary){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_tilde[cv_i], 1.0, dtemp1, 1);
+              }
+            }
 
           }
 
-          // if(cv_index == 3){
-          //   printMtrx(cvCholVz, nnk, nnk);
-          //   printMtrx(cvCholVzPlusI, nnk, nnk);
-          // }
-
-          for(cv_i = startsCV[cv_index]; cv_i < endsCV[cv_index] + 1; cv_i++){
-            REAL(loopd_out_r)[cv_i] = 0.0;
+          for(cv_i = 0; cv_i < nk; cv_i++){
+            REAL(loopd_out_r)[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
           }
         }
 
@@ -686,8 +741,12 @@ extern "C" {
         R_chk_free(X_tilde);
         R_chk_free(Y_tilde);
         R_chk_free(nBinom_tilde);
-        R_chk_free(cvCz);
-        R_chk_free(Vz_tilde);
+        R_chk_free(LzInvCz_cv);
+        R_chk_free(z_tilde_cov);
+        R_chk_free(tmp_nknkmax);
+        R_chk_free(z_tilde_mu);
+        R_chk_free(z_tilde);
+        R_chk_free(tmp_nkmax);
         R_chk_free(loopd_val_MC_CV);
 
       }

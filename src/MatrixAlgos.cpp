@@ -133,6 +133,8 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
       }
 
+      mkLT(L1, n1);
+
     }  // End rank-one update for first row/column deletion
 
   }else if(0 < del && del < n - 1){
@@ -189,6 +191,7 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w){
 
     }
 
+    mkLT(L1, n1);
 
   }else{
     perror("Row/column deletion index out of bounds.");
