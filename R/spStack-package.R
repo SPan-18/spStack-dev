@@ -21,7 +21,7 @@
 #' posterior samples of the regression coefficients and the latent spatial
 #' random effects. Posterior inference or prediction of any quantity of interest
 #' proceed from these samples. Main functions are - \cr [spLMexact()]\cr
-#' [spLMstack()]\cr [spGLMexact()]\cr \code{[spGLMstack()]}
+#' [spLMstack()]\cr [spGLMexact()]\cr [spGLMstack()]
 #'
 #' @name spStack-package
 #' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
