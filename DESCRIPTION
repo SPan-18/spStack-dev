@@ -2,26 +2,30 @@ Package: spStack
 Type: Package
 Version: 0.1.0
 Title: Bayesian Geostatistics Using Predictive Stacking
-Authors@R: c(person("Soumyakanti", "Pan", role = c("aut", "cre"),
-                    email = "span18@ucla.edu"),
-            person("Sudipto", "Banerjee", role = "aut",
-                   email = "sudipto@ucla.edu"))
-Author: Soumyakanti Pan [aut, cre], Sudipto Banerjee [aut]
-Maintainer: Soumyakanti Pan <span18@ucla.edu>
+Authors@R: c(
+    person("Soumyakanti", "Pan", role = c("aut", "cre"),
+    email = "span18@ucla.edu", comment = c(ORCID = "0009-0005-9889-7112")),
+    person("Sudipto", "Banerjee", role = "aut", email = "sudipto@ucla.edu"))
 Description: Fits Bayesian hierarchical spatial process models for
-             point-referenced Gaussian, Poisson, binomial, and binary data using
-             stacking of predictive densities. Our algorithm is highly
-             parallelised and hence, much faster than Markov chain Monte Carlo
-             algorithms, and, delivers competitive predictive performance. See
-             Zhang, Tang, and Banerjee (2024) <doi:10.48550/arXiv.2304.12414>,
-             and, Pan, Zhang, Bradley, and Banerjee (2024)
-             <doi:10.48550/arXiv.2406.04655> for details.
-Imports: CVXR, future, future.apply, ggplot2, MBA, rstudioapi
+    point-referenced Gaussian, Poisson, binomial, and binary data using stacking
+    of predictive densities. The implemented algorithm is highly parallelised
+    and hence, much faster than Markov chain Monte Carlo algorithms, and,
+    delivers competitive predictive performance. See Zhang, Tang, and Banerjee
+    (2024) <doi:10.48550/arXiv.2304.12414>, and, Pan, Zhang, Bradley, and
+    Banerjee (2024) <doi:10.48550/arXiv.2406.04655> for details.
+Imports:
+    CVXR,
+    future,
+    future.apply,
+    ggplot2,
+    MBA,
+    rstudioapi
 NeedsCompilation: yes
 License: GPL-3
 Encoding: UTF-8
 LazyData: true
-Suggests: testthat (>= 3.0.0)
+Suggests:
+    testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.1

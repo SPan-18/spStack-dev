@@ -2,7 +2,7 @@
 % Please edit documentation in R/stackedSampler.R
 \name{stackedSampler}
 \alias{stackedSampler}
-\title{Sample from the \emph{stacked} posterior distribution}
+\title{Sample from the stacked posterior distribution}
 \usage{
 stackedSampler(mod_out, n.samples)
 }
@@ -38,7 +38,7 @@ subsequent analysis. This function applies on outputs of functions
 \details{
 After obtaining the optimal stacking weights
 \eqn{\hat{w}_1, \ldots, \hat{w}_G}, posterior inference of quantities of
-interest subsequently proceed from the \emph{stacked posterior},
+interest subsequently proceed from the \emph{stacked} posterior,
 \deqn{
 \tilde{p}(\cdot \mid y) = \sum_{g = 1}^G \hat{w}_g p(\cdot \mid y, M_g),
 }

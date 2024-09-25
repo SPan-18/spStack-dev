@@ -1,4 +1,4 @@
-#' Univariate spatial generalized linear model
+#' Univariate Bayesian spatial generalized linear model
 #'
 #' @description Fits a Bayesian spatial generalized linear model with fixed
 #' values of spatial process parameters and some auxiliary model parameters. The

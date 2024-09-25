@@ -2,7 +2,7 @@
 % Please edit documentation in R/spGLMexact.R
 \name{spGLMexact}
 \alias{spGLMexact}
-\title{Univariate spatial generalized linear model}
+\title{Univariate Bayesian spatial generalized linear model}
 \usage{
 spGLMexact(
   formula,

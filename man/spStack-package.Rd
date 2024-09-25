@@ -8,7 +8,7 @@
 \description{
 This package delivers Bayesian inference for point-referenced
 Gaussian, Poisson, binomial, and binary data using stacking of predictive
-densities (Tao \emph{et. al} 2018). Our algorithm is highly parallelisable and
+densities (Yao \emph{et. al} 2018). Our algorithm is highly parallelisable and
 hence, much faster than Markov chain Monte Carlo algorithms, while delivering
 competitive predictive performance. See Zhang, Tang, and Banerjee (2024), and
 Pan, Zhang, Bradley, and Banerjee (2024) for details on the methodology for
@@ -30,11 +30,12 @@ accompanied by candidate values of spatial process parameters, and returns
 posterior samples of the regression coefficients and the latent spatial
 random effects. Posterior inference or prediction of any quantity of interest
 proceed from these samples. Main functions are - \cr \code{\link[=spLMexact]{spLMexact()}}\cr
-\code{\link[=spLMstack]{spLMstack()}}\cr \code{\link[=spGLMexact]{spGLMexact()}}\cr \code{[spGLMstack()]}
+\code{\link[=spLMstack]{spLMstack()}}\cr \code{\link[=spGLMexact]{spGLMexact()}}\cr \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \references{
 Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
-Predictive Stacking.” \doi{10.48550/arXiv.2304.12414}.
+Predictive Stacking.” \cr
+\doi{10.48550/arXiv.2304.12414}.
 
 Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
@@ -45,7 +46,7 @@ Average Bayesian Predictive Distributions (with Discussion).” \emph{Bayesian
 Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
 }
 \author{
-\strong{Maintainer}: Soumyakanti Pan \email{span18@ucla.edu}
+\strong{Maintainer}: Soumyakanti Pan \email{span18@ucla.edu} (\href{https://orcid.org/0009-0005-9889-7112}{ORCID})
 
 Authors:
 \itemize{

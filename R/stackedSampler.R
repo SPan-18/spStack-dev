@@ -1,4 +1,4 @@
-#' Sample from the *stacked* posterior distribution
+#' Sample from the stacked posterior distribution
 #'
 #' @description A helper function to sample from the stacked posterior
 #' distribution to obtain final posterior samples that can be used for
@@ -24,7 +24,7 @@
 #' generalized linear model.
 #' @details After obtaining the optimal stacking weights
 #' \eqn{\hat{w}_1, \ldots, \hat{w}_G}, posterior inference of quantities of
-#' interest subsequently proceed from the *stacked posterior*,
+#' interest subsequently proceed from the *stacked* posterior,
 #' \deqn{
 #' \tilde{p}(\cdot \mid y) = \sum_{g = 1}^G \hat{w}_g p(\cdot \mid y, M_g),
 #' }

@@ -1,6 +1,6 @@
 #' @description This package delivers Bayesian inference for point-referenced
 #' Gaussian, Poisson, binomial, and binary data using stacking of predictive
-#' densities (Tao *et. al* 2018). Our algorithm is highly parallelisable and
+#' densities (Yao *et. al* 2018). Our algorithm is highly parallelisable and
 #' hence, much faster than Markov chain Monte Carlo algorithms, while delivering
 #' competitive predictive performance. See Zhang, Tang, and Banerjee (2024), and
 #' Pan, Zhang, Bradley, and Banerjee (2024) for details on the methodology for
@@ -25,7 +25,8 @@
 #'
 #' @name spStack-package
 #' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
-#' Predictive Stacking.” \doi{10.48550/arXiv.2304.12414}.
+#' Predictive Stacking.” \cr
+#' \doi{10.48550/arXiv.2304.12414}.
 #' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
 #' \doi{10.48550/arXiv.2406.04655}.

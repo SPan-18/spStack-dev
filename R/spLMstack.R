@@ -44,7 +44,7 @@
 #' \item{`samples`}{a list of length equal to total number of candidate models
 #'  with each entry corresponding to a list of length 3, containing posterior
 #'  samples of fixed effects (\code{beta}), variance parameter
-#'  (\code{sigmaSq}), spatial effects (\code{z}) for that particular model.}
+#'  (\code{sigmaSq}), spatial effects (\code{z}) for that model.}
 #' \item{`loopd`}{a list of length equal to total number of candidate models with
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
@@ -82,7 +82,8 @@
 #'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
 #'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 #' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
-#' Predictive Stacking.” \doi{10.48550/arXiv.2304.12414}.
+#' Predictive Stacking.” \cr
+#' \doi{10.48550/arXiv.2304.12414}.
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
