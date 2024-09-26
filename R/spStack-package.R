@@ -1,18 +1,17 @@
-#' @description This package delivers Bayesian inference for point-referenced
-#' Gaussian, Poisson, binomial, and binary data using stacking of predictive
-#' densities (Yao *et. al* 2018). Our algorithm is highly parallelisable and
-#' hence, much faster than Markov chain Monte Carlo algorithms, while delivering
-#' competitive predictive performance. See Zhang, Tang, and Banerjee (2024), and
-#' Pan, Zhang, Bradley, and Banerjee (2024) for details on the methodology for
-#' the cases of Gaussian data and non-Gaussian data respectively.
-#'
-#' The algorithm involves obtaining inference for a collection of
-#' candidate models specified by a grid of values of spatial process parameters
-#' and some auxiliary model parameters. Inference of these individual models
-#' proceed by sampling exactly from its joint posterior distribution in case of
-#' both Gaussian and non-Gaussian data by utilizing the conjugate Bayesian
-#' linear modelling framework and the generalized conjugate multivariate
-#' distribution theory respectively.
+#' @keywords internal
+"_PACKAGE"
+
+#' @description In context of inference for spatial point-referenced data,
+#' Bayesian hierarchical models involve latent spatial processes characterised
+#' by spatial process parameters, which besides lacking substantive relevance in
+#' scientific contexts, are also weakly identified and hence, impedes
+#' convergence of MCMC algorithms. This motivates us to build methodology that
+#' involves fast sampling from posterior distributions conditioned on a grid of
+#' the weakly identified model parameters and combine the inference by stacking
+#' of predictive densities (Yao *et. al* 2018). We exploit the Bayesian
+#' conjugate linear modeling framework for the Gaussian case and the generalized
+#' conjugate multivariate distribution theory to analytically derive the
+#' individual posterior distributions.
 #'
 #' @details \tabular{ll}{ Package: \tab spStack\cr Type: \tab Package\cr
 #' Version: \tab 0.1.0\cr Date: \tab 2024-09-03\cr License: \tab GPL-3\cr }
@@ -21,7 +20,7 @@
 #' posterior samples of the regression coefficients and the latent spatial
 #' random effects. Posterior inference or prediction of any quantity of interest
 #' proceed from these samples. Main functions are - \cr [spLMexact()]\cr
-#' [spLMstack()]\cr [spGLMexact()]\cr [spGLMstack()]
+#' [spGLMexact()]\cr [spLMstack()]\cr [spGLMstack()]
 #'
 #' @name spStack-package
 #' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
@@ -33,5 +32,4 @@
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion).” *Bayesian
 #' Analysis*, **13**(3), 917 – 1007. \doi{10.1214/17-BA1091}.
-#' @keywords models spatial geostatistics Bayesian regression package
-"_PACKAGE"
+NULL

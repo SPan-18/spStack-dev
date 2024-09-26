@@ -95,6 +95,45 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
+#' @examples
+#' data("simPoisson")
+#' dat <- simPoisson[1:10,]
+#' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+#'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+#'                   params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
+#'                                      boundary = c(0.5, 0.6)),
+#'                   n.samples = 1000,
+#'                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
+#'                   parallel = TRUE, solver = "ECOS", verbose = TRUE)
+#'
+#' # print(mod1$solver.status)
+#' # print(mod1$run.time)
+#'
+#' post_samps <- stackedSampler(mod1)
+#' post_beta <- post_samps$beta
+#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#'
+#' post_z <- post_samps$z
+#' post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+#'
+#'z_combn <- data.frame(z = dat$z_true,
+#'                      zL = post_z_summ[, 1],
+#'                      zM = post_z_summ[, 2],
+#'                      zU = post_z_summ[, 3])
+#'
+#' library(ggplot2)
+#' plot_z <- ggplot(data = z_combn, aes(x = z)) +
+#'  geom_errorbar(aes(ymin = zL, ymax = zU),
+#'                width = 0.05, alpha = 0.15,
+#'                color = "skyblue") +
+#'  geom_point(aes(y = zM), size = 0.25,
+#'             color = "darkblue", alpha = 0.5) +
+#'  geom_abline(slope = 1, intercept = 0,
+#'              color = "red", linetype = "solid") +
+#'  xlab("True z") + ylab("Posterior of z") +
+#'  theme_bw() +
+#'  theme(panel.background = element_blank(),
+#'        aspect.ratio = 1)
 #' @export
 spGLMstack <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,

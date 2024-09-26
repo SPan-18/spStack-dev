@@ -6,21 +6,19 @@
 \alias{spStack-package}
 \title{spStack: Bayesian Geostatistics Using Predictive Stacking}
 \description{
-This package delivers Bayesian inference for point-referenced
-Gaussian, Poisson, binomial, and binary data using stacking of predictive
-densities (Yao \emph{et. al} 2018). Our algorithm is highly parallelisable and
-hence, much faster than Markov chain Monte Carlo algorithms, while delivering
-competitive predictive performance. See Zhang, Tang, and Banerjee (2024), and
-Pan, Zhang, Bradley, and Banerjee (2024) for details on the methodology for
-the cases of Gaussian data and non-Gaussian data respectively.
+Fits Bayesian hierarchical spatial process models for point-referenced Gaussian, Poisson, binomial, and binary data using stacking of predictive densities. It involves sampling from analytically available posterior distributions conditional upon some candidate values of the spatial process parameters and, subsequently assimilate inference from these individual posterior distributions using Bayesian predictive stacking. Our algorithm is highly parallelised and hence, much faster than traditional Markov chain Monte Carlo algorithms while delivering competitive predictive performance. See Zhang, Tang, and Banerjee (2024) \doi{10.48550/arXiv.2304.12414}, and, Pan, Zhang, Bradley, and Banerjee (2024) \doi{10.48550/arXiv.2406.04655} for details.
 
-The algorithm involves obtaining inference for a collection of
-candidate models specified by a grid of values of spatial process parameters
-and some auxiliary model parameters. Inference of these individual models
-proceed by sampling exactly from its joint posterior distribution in case of
-both Gaussian and non-Gaussian data by utilizing the conjugate Bayesian
-linear modelling framework and the generalized conjugate multivariate
-distribution theory respectively.
+In context of inference for spatial point-referenced data,
+Bayesian hierarchical models involve latent spatial processes characterised
+by spatial process parameters, which besides lacking substantive relevance in
+scientific contexts, are also weakly identified and hence, impedes
+convergence of MCMC algorithms. This motivates us to build methodology that
+involves fast sampling from posterior distributions conditioned on a grid of
+the weakly identified model parameters and combine the inference by stacking
+of predictive densities (Yao \emph{et. al} 2018). We exploit the Bayesian
+conjugate linear modeling framework for the Gaussian case and the generalized
+conjugate multivariate distribution theory to analytically derive the
+individual posterior distributions.
 }
 \details{
 \tabular{ll}{ Package: \tab spStack\cr Type: \tab Package\cr
@@ -30,7 +28,7 @@ accompanied by candidate values of spatial process parameters, and returns
 posterior samples of the regression coefficients and the latent spatial
 random effects. Posterior inference or prediction of any quantity of interest
 proceed from these samples. Main functions are - \cr \code{\link[=spLMexact]{spLMexact()}}\cr
-\code{\link[=spLMstack]{spLMstack()}}\cr \code{\link[=spGLMexact]{spGLMexact()}}\cr \code{\link[=spGLMstack]{spGLMstack()}}
+\code{\link[=spGLMexact]{spGLMexact()}}\cr \code{\link[=spLMstack]{spLMstack()}}\cr \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \references{
 Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
@@ -54,9 +52,4 @@ Authors:
 }
 
 }
-\keyword{Bayesian}
-\keyword{geostatistics}
-\keyword{models}
-\keyword{package}
-\keyword{regression}
-\keyword{spatial}
+\keyword{internal}
