@@ -78,6 +78,8 @@ extern "C" {
     // Leave-one-out predictive density details
     int loopd = INTEGER(loopd_r)[0];
     std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
+    const char *exact_str = "exact";
+    const char *psis_str = "psis";
 
     int nSamples = INTEGER(nSamples_r)[0];
     int verbose = INTEGER(verbose_r)[0];
@@ -115,6 +117,13 @@ extern "C" {
       Rprintf("\tNoise-to-spatial variance ratio = %.5f\n\n", deltasq);
 
       Rprintf("Number of posterior samples = %i.\n\n", nSamples);
+
+      if(loopd){
+        Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
+        Rprintf("method = %s.\n", loopd_method.c_str());
+      }
+
+      Rprintf("----------------------------------------\n");
 
     }
 
@@ -273,10 +282,6 @@ extern "C" {
 
       // Exact leave-one-out predictive densities calculation
       if(loopd_method == exact_str){
-        if(verbose){
-          Rprintf("Method for LOOPD calculation: ");
-          Rprintf("Exact"); Rprintf("\n\n");
-        }
 
         double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
         double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
@@ -340,6 +345,7 @@ extern "C" {
           b_star *= 0.5;
           b_star += sigmaSqIGb;
 
+          scale += deltasq;
           scale = (b_star / a_star) * scale;
           scale = sqrt(scale);
 
@@ -368,10 +374,6 @@ extern "C" {
       }
 
       if(loopd_method == psis_str){
-        if(verbose){
-          Rprintf("Method for LOOPD calculation: ");
-          Rprintf("Pareto smoothed importance sampling"); Rprintf("\n\n");
-        }
 
         int loo_index = 0;
         for(loo_index = 0; loo_index < n; loo_index++){
