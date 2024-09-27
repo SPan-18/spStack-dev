@@ -597,7 +597,6 @@ void sort_with_order(double *vec, int n, double *sorted_vec, int *order) {
   IndexedValue *arr = (IndexedValue *)malloc(n * sizeof(IndexedValue));
   if(arr == NULL){
     perror("Memory allocation failed");
-    exit(EXIT_FAILURE);
   }
 
   // Populate the arr with the values and their original indices
