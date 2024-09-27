@@ -18,6 +18,8 @@ void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy
 void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
                            int copyCol_start, int copyCol_end, int copyRow_start, int copyRow_end);
 
+void copyMatrixColToVec(double *M, int nRowM, int nColM, double *vec, int copy_index);
+
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index);
 
 void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP);
@@ -65,3 +67,7 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C);
 void zeros(double *x, int length);
 
 void zeros(int *x, int length);
+
+void sort_with_order(double *vec, int n, double *sorted_vec, int *order);
+
+void ParetoSmoothedIR(double *raw_IR, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR);

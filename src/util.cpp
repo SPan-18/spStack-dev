@@ -189,6 +189,21 @@ void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
 
 }
 
+// Copy a column of a matrix to a vector
+void copyMatrixColToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
+
+  int i = 0;
+
+  if(copy_index < 0 || copy_index > nColM){
+    perror("Column index to copy is out of bounds.");
+  }else{
+    for(i = 0; i < nRowM; i++){
+      vec[i] = M[nRowM*copy_index + i];
+    }
+  }
+
+}
+
 // Copy a row of a matrix to a vector
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
 
@@ -548,4 +563,76 @@ void zeros(double *x, int length){
 void zeros(int *x, int length){
   for(int i = 0; i < length; i++)
     x[i] = 0;
+}
+
+// Structure to hold both value and original index
+typedef struct{
+  double value;
+  int index;
+} IndexedValue;
+
+// // Comparator function for qsort
+// int compare(const void *a, const void *b){
+//   double diff = ((IndexedValue *)a)->value - ((IndexedValue *)b)->value;
+//   if(diff < 0) return -1;
+//   if(diff > 0) return 1;
+//   return 0;
+// }
+
+// Comparator function for qsort
+int compare(const void *a, const void *b) {
+    // Cast the pointers to IndexedValue and compare the values
+    IndexedValue *ia = (IndexedValue *)a;
+    IndexedValue *ib = (IndexedValue *)b;
+
+    if (ia->value < ib->value) return -1;   // Return -1 if first value is smaller
+    if (ia->value > ib->value) return 1;    // Return 1 if first value is larger
+    return 0;                               // Return 0 if both are equal
+}
+
+// Pure C function to sort a vector and return the order (indices)
+void sort_with_order(double *vec, int n, double *sorted_vec, int *order) {
+
+  // Create an array of IndexedValue to hold both values and their original indices
+  IndexedValue *arr = (IndexedValue *)malloc(n * sizeof(IndexedValue));
+  if(arr == NULL){
+    perror("Memory allocation failed");
+    exit(EXIT_FAILURE);
+  }
+
+  // Populate the arr with the values and their original indices
+  for(int i = 0; i < n; i++){
+    arr[i].value = vec[i];
+    arr[i].index = i;  // Store original index
+  }
+
+  // Sort the arr based on the value
+  qsort(arr, n, sizeof(IndexedValue), compare);
+
+  // After sorting, store the indices (order) in the output array
+  for(int i = 0; i < n; i++){
+    sorted_vec[i] = arr[i].value;
+    order[i] = arr[i].index;  // Store the original indices
+  }
+
+  // Free the allocated memory
+  free(arr);
+
+}
+
+
+// Fit generalized Pareto on raw importance ratios and return stabilized weights
+void ParetoSmoothedIR(double *raw_IR, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR){
+
+  int i = 0, ind = 0;
+
+  // Sort raw importance ratios and store original indices
+  zeros(order_ind, n_samples);
+  sort_with_order(raw_IR, n_samples, sorted_IR, order_ind);
+
+  for(i = 0; i < n_samples; i++){
+    ind = order_ind[i];
+    stable_IR[ind] = sorted_IR[i];
+  }
+
 }

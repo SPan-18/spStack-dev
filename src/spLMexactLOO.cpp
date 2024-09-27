@@ -277,9 +277,6 @@ extern "C" {
 
       SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
-      const char *exact_str = "exact";
-      const char *psis_str = "psis";
-
       // Exact leave-one-out predictive densities calculation
       if(loopd_method == exact_str){
 
@@ -375,10 +372,53 @@ extern "C" {
 
       if(loopd_method == psis_str){
 
-        int loo_index = 0;
+        int loo_index = 0, s = 0;
+        double theta_i = 0.0, z_s = 0.0, sigmaSq_s = 0.0, sd = 0.0;
+
+        double *z_samp = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(z_samp, nSamples);
+        double *X_i = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_i, p);
+        double *beta_s = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta_s, p);
+        double *rawIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(rawIR, nSamples);
+        double *sortedIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(sortedIR, nSamples);
+        double *stableIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(stableIR, nSamples);
+        int *orderIR = (int *) R_chk_calloc(nSamples, sizeof(int)); zeros(orderIR, nSamples);
+
+        double *pointer_beta = REAL(samples_beta_r);
+        double *pointer_z = REAL(samples_z_r);
+        double *pointer_sigmaSq = REAL(samples_sigmaSq_r);
+
+        for(loo_index = 0; loo_index < n; loo_index++){
+
+          copyMatrixRowToVec(X, n, p, X_i, loo_index);                          // X_i = X[i,1:p]
+
+          for(s = 0; s < nSamples; s++){
+
+            copyMatrixColToVec(pointer_beta, p, nSamples, beta_s, s);           // beta_s = beta[s], s-th sample
+            z_s = pointer_z[n*s + loo_index];                                   // z_s = z_i[s], s-th sample of i-th spatial effect
+            sigmaSq_s = pointer_sigmaSq[s];
+            theta_i = F77_CALL(ddot)(&p, X_i, &incOne, beta_s, &incOne);        // theta_i = X_i * beta_s
+            theta_i += z_s;                                                     // theta_i = X_i*beta_s + zi_s
+            sd = sqrt(deltasq * sigmaSq_s);
+            rawIR[s] = - Rf_dnorm4(Y[loo_index], theta_i, sd, 1);
+
+          }
+
+          printVec(rawIR, nSamples);
+          ParetoSmoothedIR(rawIR, nSamples, sortedIR, orderIR, stableIR);
+          // sort_with_order(rawIR, nSamples, stableIR, orderIR);
+          printVec(stableIR, nSamples);
+          printVec(sortedIR, nSamples);
+
+        }
         for(loo_index = 0; loo_index < n; loo_index++){
           REAL(loopd_out_r)[loo_index] = 0.0;
         }
+
+        R_chk_free(z_samp);
+        R_chk_free(X_i);
+        R_chk_free(beta_s);
+        R_chk_free(rawIR);
+        R_chk_free(orderIR);
 
       }
 
