@@ -87,22 +87,23 @@ extern "C" {
 
       Rprintf("Priors:\n");
 
-      Rprintf("\tbeta normal:\n");
+      Rprintf("\tbeta: Gaussian\n");
       Rprintf("\tmu:"); printVec(betaMu, p);
       Rprintf("\tcov:\n"); printMtrx(betaV, p, p);
       Rprintf("\n");
 
-      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2), nu.beta = %.2f\n", nu_beta);
-      Rprintf("\tsigmaSq.z ~ IG(nu.z/2, nu.z/2),\tnu.z = %.2f\n", nu_z);
-      Rprintf("\tsigmaSq.xi = %.2f\n", sigmaSq_xi);
-      Rprintf("\tBoundary adjustment parameter = %.2f\n\n", epsilon);
+      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)\n");
+      Rprintf("\tsigmaSq.z ~ IG(nu.z/2, nu.z/2)\n");
+      Rprintf("\tnu.beta = %.2f, nu.z = %.2f.\n", nu_beta, nu_z);
+      Rprintf("\tsigmaSq.xi = %.2f.\n", sigmaSq_xi);
+      Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
 
       Rprintf("Spatial process parameters:\n");
 
       if(corfn == "matern"){
-        Rprintf("\tphi = %.3f, and, nu = %.3f\n\n", phi, nu);
+        Rprintf("\tphi = %.2f, and, nu = %.2f.\n\n", phi, nu);
       }else{
-        Rprintf("\tphi = %.3f\n\n", phi);
+        Rprintf("\tphi = %.2f.\n\n", phi);
       }
 
       Rprintf("Number of posterior samples = %i.\n", nSamples);

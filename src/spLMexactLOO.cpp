@@ -98,29 +98,28 @@ extern "C" {
       if(betaPrior == "flat"){
         Rprintf("\tbeta flat.\n");
       }else{
-        Rprintf("\tbeta normal:\n");
+        Rprintf("\tbeta: Gaussian\n");
         Rprintf("\tmu:"); printVec(betaMu, p);
         Rprintf("\tcov:\n"); printMtrx(betaV, p, p);
         Rprintf("\n");
       }
 
-      Rprintf("\tsigma.sq IG hyperpriors shape = %.5f and scale = %.5f\n\n",
+      Rprintf("\tsigma.sq: Inverse-Gamma\n\tshape = %.2f, scale = %.2f.\n\n",
               sigmaSqIGa, sigmaSqIGb);
 
       Rprintf("Spatial process parameters:\n");
 
       if(corfn == "matern"){
-        Rprintf("\tphi = %.5f, and, nu = %.5f\n", phi, nu);
+        Rprintf("\tphi = %.2f, and, nu = %.2f.\n", phi, nu);
       }else{
-        Rprintf("\tphi = %.5f\n", phi);
+        Rprintf("\tphi = %.2f.\n", phi);
       }
-      Rprintf("\tNoise-to-spatial variance ratio = %.5f\n\n", deltasq);
+      Rprintf("Noise-to-spatial variance ratio = %.2f.\n\n", deltasq);
 
       Rprintf("Number of posterior samples = %i.\n\n", nSamples);
 
       if(loopd){
-        Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
-        Rprintf("method = %s.\n", loopd_method.c_str());
+        Rprintf("LOO-PD calculation method = %s.\n", loopd_method.c_str());
       }
 
       Rprintf("----------------------------------------\n");
@@ -423,7 +422,7 @@ extern "C" {
           REAL(loopd_out_r)[loo_index] = logWeightedSumExp(dens_i, stableIR, nSamples);
 
         }
-        
+
         R_chk_free(X_i);
         R_chk_free(beta_s);
         R_chk_free(dens_i);

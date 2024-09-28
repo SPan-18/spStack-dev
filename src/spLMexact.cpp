@@ -90,24 +90,26 @@ extern "C" {
       if(betaPrior == "flat"){
         Rprintf("\tbeta flat.\n");
       }else{
-        Rprintf("\tbeta normal:\n");
+        Rprintf("\tbeta: Gaussian\n");
         Rprintf("\tmu:"); printVec(betaMu, p);
         Rprintf("\tcov:\n"); printMtrx(betaV, p, p);
         Rprintf("\n");
       }
 
-      Rprintf("\tsigma.sq IG hyperpriors shape = %.5f and scale = %.5f\n\n", sigmaSqIGa, sigmaSqIGb);
+      Rprintf("\tsigma.sq: Inverse-Gamma\n\tshape = %.2f, scale = %.2f.\n\n", sigmaSqIGa, sigmaSqIGb);
 
       Rprintf("Spatial process parameters:\n");
 
       if(corfn == "matern"){
-        Rprintf("\tphi = %.5f, and, nu = %.5f\n", phi, nu);
+        Rprintf("\tphi = %.2f, and, nu = %.2f.\n", phi, nu);
       }else{
-        Rprintf("\tphi = %.5f\n", phi);
+        Rprintf("\tphi = %.2f.\n", phi);
       }
-      Rprintf("\tNoise-to-spatial variance ratio = %.5f\n\n", deltasq);
+      Rprintf("Noise-to-spatial variance ratio = %.2f.\n\n", deltasq);
 
       Rprintf("Number of posterior samples = %i.\n", nSamples);
+
+      Rprintf("----------------------------------------\n");
 
     }
 

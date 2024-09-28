@@ -101,38 +101,36 @@ extern "C" {
 
       Rprintf("Priors:\n");
 
-      Rprintf("\tbeta normal:\n");
+      Rprintf("\tbeta: Gaussian\n");
       Rprintf("\tmu:"); printVec(betaMu, p);
       Rprintf("\tcov:\n"); printMtrx(betaV, p, p);
       Rprintf("\n");
 
-      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2), nu.beta = %.2f\n", nu_beta);
-      Rprintf("\tsigmaSq.z ~ IG(nu.z/2, nu.z/2),\tnu.z = %.2f\n", nu_z);
-      Rprintf("\tsigmaSq.xi = %.2f\n", sigmaSq_xi);
-      Rprintf("\tBoundary adjustment parameter = %.2f\n\n", epsilon);
+      Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)\n");
+      Rprintf("\tsigmaSq.z ~ IG(nu.z/2, nu.z/2)\n");
+      Rprintf("\tnu.beta = %.2f, nu.z = %.2f.\n", nu_beta, nu_z);
+      Rprintf("\tsigmaSq.xi = %.2f.\n", sigmaSq_xi);
+      Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
 
       Rprintf("Spatial process parameters:\n");
 
       if(corfn == "matern"){
-        Rprintf("\tphi = %.3f, and, nu = %.3f\n\n", phi, nu);
+        Rprintf("\tphi = %.2f, and, nu = %.2f.\n\n", phi, nu);
       }else{
-        Rprintf("\tphi = %.3f\n\n", phi);
+        Rprintf("\tphi = %.2f.\n\n", phi);
       }
 
       Rprintf("Number of posterior samples = %i.\n", nSamples);
 
       if(loopd){
         if(loopd_method == exact_str){
-          Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
-          Rprintf("method = %s, and, number of Monte Carlo samples = %i.\n", loopd_method.c_str(), loopd_nMC);
+          Rprintf("LOO-PD calculation method = %s\nNumber of Monte Carlo samples = %i.\n", loopd_method.c_str(), loopd_nMC);
         }
         if(loopd_method == cv_str){
-          Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
-          Rprintf("method = %i-fold %s, and, number of Monte Carlo samples = %i.\n", CV_K, loopd_method.c_str(), loopd_nMC);
+          Rprintf("LOO-PD calculation method = %i-fold %s\nNumber of Monte Carlo samples = %i.\n", CV_K, loopd_method.c_str(), loopd_nMC);
         }
         if(loopd_method == psis_str){
-          Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
-          Rprintf("method = %s (Pareto-smoothed Importance Sampling)\n", loopd_method.c_str());
+          Rprintf("LOO-PD calculation method = %s\n", loopd_method.c_str());
         }
       }
       Rprintf("----------------------------------------\n");
@@ -813,7 +811,6 @@ extern "C" {
             }
 
           }
-          printVec(rawIR, nSamples);
 
           ParetoSmoothedIR(rawIR, M, nSamples, sortedIR, orderIR, stableIR, ksigma, tmp_M1, tmp_M2, tmp_M3);
 

@@ -96,8 +96,9 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
+#' \dontrun{
 #' data("simPoisson")
-#' dat <- simPoisson[1:10,]
+#' dat <- simPoisson[1:100,]
 #' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
 #'                   params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
@@ -134,6 +135,7 @@
 #'  theme_bw() +
 #'  theme(panel.background = element_blank(),
 #'        aspect.ratio = 1)
+#' }
 #' @export
 spGLMstack <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
@@ -372,8 +374,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     loopd.method <- loopd.controls[["method"]]
     loopd.method <- tolower(loopd.method)
     if(!loopd.method %in% c("exact", "cv")){
-      stop("method = '", loopd.method, "' is not a valid option; choose
-           from c('exact', 'CV').")
+      stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
     }
     if(loopd.method == "exact"){
       CV.K <- as.integer(0)

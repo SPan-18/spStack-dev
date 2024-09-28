@@ -123,8 +123,9 @@ w_g p(y_i \mid y_{-i}, M_g) \\
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
+\dontrun{
 data("simPoisson")
-dat <- simPoisson[1:10,]
+dat <- simPoisson[1:100,]
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                   params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
@@ -161,6 +162,7 @@ plot_z <- ggplot(data = z_combn, aes(x = z)) +
  theme_bw() +
  theme(panel.background = element_blank(),
        aspect.ratio = 1)
+}
 }
 \references{
 Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian

@@ -391,9 +391,8 @@ spGLMexact <- function(formula, data = parent.frame(), family,
     }else{
       loopd.method <- tolower(loopd.method)
     }
-    if(!loopd.method %in% c("exact", "cv", "psis")){
-      stop("loopd.method = '", loopd.method, "' is not a valid option; choose
-           from c('exact', 'CV', 'PSIS').")
+    if(!loopd.method %in% c("exact", "cv")){
+      stop("loopd.method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
     }
     if(loopd.method == "exact"){
       CV.K <- as.integer(0)
