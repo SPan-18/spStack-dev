@@ -132,7 +132,7 @@ extern "C" {
         }
         if(loopd_method == psis_str){
           Rprintf("Finding leave-one-out predictive densities (LOO-PD) using\n");
-          Rprintf("method = %s, (Pareto-smoothed Importance Sampling)", loopd_method.c_str());
+          Rprintf("method = %s (Pareto-smoothed Importance Sampling)\n", loopd_method.c_str());
         }
       }
       Rprintf("----------------------------------------\n");
@@ -754,11 +754,84 @@ extern "C" {
       // Pareto-smoothed Importance Sampling for LOO-PD calculation
       if(loopd_method == psis_str){
 
-        int loo_index = 0;
+        int loo_index = 0, s = 0;
+        double theta_i = 0.0, z_s = 0.0;
+        double dtemp_psis;
+
+        double *X_i = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_i, p);
+        double *beta_s = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta_s, p);
+
+        double *dens_i = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(dens_i, nSamples);
+        double *rawIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(rawIR, nSamples);
+        double *sortedIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(sortedIR, nSamples);
+        double *stableIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(stableIR, nSamples);
+        int *orderIR = (int *) R_chk_calloc(nSamples, sizeof(int)); zeros(orderIR, nSamples);
+
+        // find M = floor(min(0.2*S, 3*sqrt(S)))
+        double val1 = 0.0, val2 = 0.0, min_val = 0.0;
+        int M = 0;
+        val1 = 0.2 * nSamples;
+        val2 = 3 * sqrt(nSamples);
+        min_val = fmin2(val1, val2);
+        M = (int)floor(min_val);
+
+        double *tmp_M1 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M1, M);
+        double *tmp_M2 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M2, M);
+        double *tmp_M3 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M3, M);
+        double *ksigma = (double *) R_chk_calloc(2, sizeof(double)); zeros(ksigma, 2);
+
+        double *pointer_beta = REAL(samples_beta_r);
+        double *pointer_z = REAL(samples_z_r);
 
         for(loo_index = 0; loo_index < n; loo_index++){
-          REAL(loopd_out_r)[loo_index] = 0.0;
+
+          copyMatrixRowToVec(X, n, p, X_i, loo_index);                          // X_i = X[i,1:p]
+
+          for(s = 0; s < nSamples; s++){
+
+            copyMatrixColToVec(pointer_beta, p, nSamples, beta_s, s);           // beta_s = beta[s], s-th sample
+            z_s = pointer_z[n*s + loo_index];                                   // z_s = z_i[s], s-th sample of i-th spatial effect
+            theta_i = F77_CALL(ddot)(&p, X_i, &incOne, beta_s, &incOne);        // theta_i = X_i * beta_s
+            theta_i += z_s;                                                     // theta_i = X_i*beta_s + zi_s
+
+            if(family == family_poisson){
+              dtemp_psis = exp(theta_i);
+              dens_i[s] = dpois(Y[loo_index], dtemp_psis, 1);
+              rawIR[s] = - dens_i[s];
+            }
+
+            if(family == family_binomial){
+              dtemp_psis = inverse_logit(theta_i);
+              dens_i[s] = dbinom(Y[loo_index], nBinom[loo_index], dtemp_psis, 1);
+              rawIR[s] = - dens_i[s];
+            }
+
+            if(family == family_binary){
+              dtemp_psis = inverse_logit(theta_i);
+              dens_i[s] = dbinom(Y[loo_index], 1.0, dtemp_psis, 1);
+              rawIR[s] = - dens_i[s];
+            }
+
+          }
+          printVec(rawIR, nSamples);
+
+          ParetoSmoothedIR(rawIR, M, nSamples, sortedIR, orderIR, stableIR, ksigma, tmp_M1, tmp_M2, tmp_M3);
+
+          REAL(loopd_out_r)[loo_index] = logWeightedSumExp(dens_i, rawIR, nSamples);
+
         }
+
+        R_chk_free(X_i);
+        R_chk_free(beta_s);
+        R_chk_free(dens_i);
+        R_chk_free(rawIR);
+        R_chk_free(sortedIR);
+        R_chk_free(stableIR);
+        R_chk_free(orderIR);
+        R_chk_free(tmp_M1);
+        R_chk_free(tmp_M2);
+        R_chk_free(tmp_M3);
+        R_chk_free(ksigma);
 
       }
 

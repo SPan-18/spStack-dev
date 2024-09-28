@@ -336,6 +336,20 @@ int findMax(int *a, int n){
   return a_max;
 }
 
+// Find maximum element in an double vector
+double findMax(double *a, int n){
+
+  int i;
+  double a_max = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] > a_max){
+      a_max = a[i];
+    }
+  }
+
+  return a_max;
+}
+
 // Find minimum element in an integer vector
 int findMin(int *a, int n){
 
@@ -385,6 +399,66 @@ double logMeanExp(double *a, int n){
 
   // Find log-mean-exp; log(sum(exp(a_i))) - log(n)
   return a_max + log(sum_adj) - log(n);
+
+}
+
+// Function to compute logSumExp of a vector
+double logSumExp(double *a, int n){
+
+  int i;
+
+  if(n == 0){
+    perror("Vector of log values have 0 length.");
+  }
+
+  // Find maximum value in input vector
+  double a_max = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] > a_max){
+      a_max = a[i];
+    }
+  }
+
+  // Find sum of adjusted exponentials; sum(exp(a_i - a_max))
+  double sum_adj = 0.0;
+  for(i = 0; i < n; i++){
+    sum_adj += exp(a[i] - a_max);
+  }
+
+  // Find log-sum-exp; log(sum(exp(a_i)))
+  return a_max + log(sum_adj);
+
+}
+
+// Function to compute log-Weighted-Sum-Exp of a vector, weights in log-scale
+double logWeightedSumExp(double *a, double *log_w, int n){
+
+  int i;
+  double log_num = 0, log_den = 0;
+
+  if(n == 0){
+    perror("Vector of log values have 0 length.");
+  }
+
+  // Find maximum value in input vector
+  double a_max = a[0];
+  for(i = 1; i < n; i++){
+    if(a[i] > a_max){
+      a_max = a[i];
+    }
+  }
+
+  // Find sum of adjusted exponentials; sum(exp(a_i - a_max))
+  double sum_adj = 0.0;
+  for(i = 0; i < n; i++){
+    sum_adj += exp(log_w[i] + (a[i] - a_max));
+  }
+
+  log_num = a_max + log(sum_adj);
+  log_den = logSumExp(log_w, n);
+
+  // Find log-sum-exp; log(sum(exp(a_i)))
+  return log_num - log_den;
 
 }
 
@@ -478,7 +552,7 @@ void printVec(double *m, int n){
 
   Rprintf("\t");
   for(int j = 0; j < n; j++){
-    Rprintf("%.7f\t", m[j]);
+    Rprintf("%.4f\t", m[j]);
   }
   Rprintf("\n");
 }
@@ -621,17 +695,154 @@ void sort_with_order(double *vec, int n, double *sorted_vec, int *order) {
 
 
 // Fit generalized Pareto on raw importance ratios and return stabilized weights
-void ParetoSmoothedIR(double *raw_IR, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR){
+void ParetoSmoothedIR(double *raw_IR, int M, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR,
+                      double *results, double *tailIR, double *exp_tail, double *stable_tail){
 
   int i = 0, ind = 0;
+  double cutoff = 0.0, exp_cutoff = 0.0, tmp = 0.0;
+  double max_raw_IR = 0.0;
+  double k_hat = 0.0, sigma_hat = 0.0, p_tail = 0.0;
+
+  max_raw_IR = findMax(raw_IR, n_samples);
+  // Shift raw importance ratios for safe exponentiation
+  for(i = 0; i < n_samples; i++){
+    raw_IR[i] = raw_IR[i] - max_raw_IR;
+  }
 
   // Sort raw importance ratios and store original indices
   zeros(order_ind, n_samples);
   sort_with_order(raw_IR, n_samples, sorted_IR, order_ind);
 
+  for(i = 0; i < M; i++){
+    tailIR[i] = sorted_IR[n_samples - M + i];
+  }
+
+  cutoff = sorted_IR[n_samples - M - 1];
+  exp_cutoff = exp(cutoff);
+
+  for(i = 0; i < M; i++){
+    exp_tail[i] = exp(tailIR[i]) - exp_cutoff;
+  }
+
+  if(M > 5){
+
+    fitGeneralParetoDist(exp_tail, M, 1, 30, results);
+    k_hat = results[0];
+    sigma_hat = results[1];
+
+    for(i = 0; i < M; i++){
+      p_tail = (i + 1 - 0.5) / M;
+      tmp = qGPD(p_tail, k_hat, sigma_hat);
+      exp_tail[i] = tmp + exp_cutoff;
+      tmp = log(exp_tail[i]);
+      stable_tail[i] = tmp;
+    }
+
+  }
+
+  for(i = 0; i < M; i++){
+    sorted_IR[n_samples - M + i] = tailIR[i];
+  }
+
   for(i = 0; i < n_samples; i++){
     ind = order_ind[i];
     stable_IR[ind] = sorted_IR[i];
   }
+
+  // truncate at max of raw wts (i.e., 0 since max has been subtracted)
+  for(i = 0; i < n_samples; i++){
+    if(stable_IR[i] > 0){
+      stable_IR = 0;
+    }
+  }
+
+  // shift back log-weights
+  for(i = 0; i < n_samples; i++){
+    stable_IR[i] += max_raw_IR;
+  }
+
+}
+
+// Fit generalized Pareto distribution on a sorted sample
+// Algorithm is based on Zhang, J., and Stephens, M. A. (2009). A new and efficient
+// estimation method for the generalized Pareto distribution. Technometrics 51, 316-325.
+// Closely follows gpdfit function of the R package "loo".
+void fitGeneralParetoDist(double *x, int n, int wip, int min_grid_pts, double *result){
+
+  int i = 0;
+  int sqrt_n = 0, first_quart = 0;
+  int m = 0;
+  double xstar = 0.0, theta_hat = 0.0;
+  double n_d = 0.0, m_d = 0.0;
+  double prior = 3;
+  const int incOne = 1;
+  double k_hat = 0.0, sigma_hat = 0.0;
+
+  n_d = n;
+  sqrt_n = sqrt(n);
+  m = min_grid_pts + sqrt_n;
+  m_d = m;
+
+  first_quart = 0.5 + (n_d / 4);
+  xstar = x[first_quart - 1];
+
+  double *theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(theta, m);
+  double *l_theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(l_theta, m);
+  double *w_theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(w_theta, m);
+
+  for(i = 0; i < m; i++){
+    theta[i] = (1.0 / x[n-1]) + ((1 - sqrt(m_d / (i + 1 - 0.5))) / (prior * xstar));
+    l_theta[i] = n * lx(theta[i], x, n);
+  }
+
+  for(i = 0; i < m; i++){
+    w_theta[i] = exp(l_theta[i] - logSumExp(l_theta, m));
+  }
+
+  theta_hat = F77_CALL(ddot)(&m, theta, &incOne, w_theta, &incOne);
+
+  for(i = 0; i < n; i++){
+    k_hat += log1p(- theta_hat * x[i]);
+  }
+  k_hat = k_hat / n;
+  sigma_hat = - k_hat / theta_hat;
+
+  if(wip){
+    k_hat = (k_hat * n) / (n + 10) + (0.5 * 10) / (n + 10);
+  }
+
+  result[0] = k_hat;
+  // Rprintf("%.7f\n", k_hat);
+  result[1] = sigma_hat;
+
+  R_chk_free(theta);
+  R_chk_free(l_theta);
+  R_chk_free(w_theta);
+
+}
+
+// Function to evaluate profile log-likelihood of generalized Pareto
+double lx(double b, double *x, int n){
+
+  int i = 0;
+  double sum = 0.0, k = 0.0;
+
+  for(i = 0; i < n; i++){
+    sum += log1p(- b * x[i]);
+  }
+  k = - sum / n;
+
+  return log(b / k) + k - 1;
+
+}
+
+// Function to find quantiles of generalized pareto
+double qGPD(double p, double k, double sigma){
+
+  double out = 0.0;
+
+  out = sigma * expm1(- k * log1p(- p)) / k;
+
+  return out;
 
 }

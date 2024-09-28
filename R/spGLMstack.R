@@ -371,9 +371,9 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     }
     loopd.method <- loopd.controls[["method"]]
     loopd.method <- tolower(loopd.method)
-    if(!loopd.method %in% c("exact", "cv", "psis")){
+    if(!loopd.method %in% c("exact", "cv")){
       stop("method = '", loopd.method, "' is not a valid option; choose
-           from c('exact', 'CV', 'PSIS').")
+           from c('exact', 'CV').")
     }
     if(loopd.method == "exact"){
       CV.K <- as.integer(0)

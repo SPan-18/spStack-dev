@@ -38,6 +38,8 @@ void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP);
 
 int findMax(int *a, int n);
 
+double findMax(double *a, int n);
+
 int findMin(int *a, int n);
 
 double inverse_logit(double x);
@@ -45,6 +47,10 @@ double inverse_logit(double x);
 double logit(double x);
 
 double logMeanExp(double *a, int n);
+
+double logSumExp(double *a, int n);
+
+double logWeightedSumExp(double *a, double *log_w, int n);
 
 void mkCVpartition(int n, int K, int *start_vec, int *end_vec, int *size_vec);
 
@@ -70,4 +76,11 @@ void zeros(int *x, int length);
 
 void sort_with_order(double *vec, int n, double *sorted_vec, int *order);
 
-void ParetoSmoothedIR(double *raw_IR, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR);
+void ParetoSmoothedIR(double *raw_IR, int M, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR,
+                      double *results, double *tailIR, double *exp_tail, double *stable_tail);
+
+void fitGeneralParetoDist(double *x, int n, int wip, int min_grid_pts, double *result);
+
+double lx(double b, double *x, int n);
+
+double qGPD(double p, double k, double sigma);
