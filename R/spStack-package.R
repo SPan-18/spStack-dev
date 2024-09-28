@@ -23,6 +23,7 @@
 #' [spGLMexact()]\cr [spLMstack()]\cr [spGLMstack()]
 #'
 #' @name spStack-package
+#' @useDynLib spStack, .registration = TRUE
 #' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
 #' Predictive Stacking.” \cr
 #' \doi{10.48550/arXiv.2304.12414}.
