@@ -12,7 +12,7 @@ Description: Fits Bayesian hierarchical spatial process models for
     posterior distributions conditional upon some candidate values of the
     spatial process parameters and, subsequently assimilate inference from these
     individual posterior distributions using Bayesian predictive stacking. Our
-    algorithm is highly parallelised and hence, much faster than traditional
+    algorithm is highly parallelizable and hence, much faster than traditional
     Markov chain Monte Carlo algorithms while delivering competitive predictive
     performance. See Zhang, Tang, and Banerjee (2024)
     <doi:10.48550/arXiv.2304.12414>, and, Pan, Zhang, Bradley, and Banerjee
@@ -32,6 +32,7 @@ Suggests:
     ggpubr,
     knitr,
     rmarkdown,
+    spelling,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
@@ -41,3 +42,4 @@ Depends:
 VignetteBuilder: knitr
 URL: https://github.com/SPan-18/spStack-dev
 BugReports: https://github.com/SPan-18/spStack-dev/issues
+Language: en-US

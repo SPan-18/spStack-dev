@@ -20,7 +20,7 @@
 #' \end{aligned}
 #' }
 #' where the function \eqn{\mathrm{ilogit}} refers to the inverse-logit
-#' function, the spatial efects \eqn{z \sim N(0, \sigma^2 R)} with \eqn{R} being
+#' function, the spatial effects \eqn{z \sim N(0, \sigma^2 R)} with \eqn{R} being
 #' a \eqn{n \times n} correlation matrix given by the Matérn covariogram
 #' \deqn{
 #' R(s, s') = \frac{(\phi |s-s'|)^\nu}{\Gamma(\nu) 2^{\nu - 1}}

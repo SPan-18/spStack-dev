@@ -22,7 +22,7 @@
 #' \eqn{y(s) \sim \mathrm{Poisson}(e^{x(s)^\top \beta + z(s)})}. Here,
 #' \eqn{b = 1} and \eqn{\psi(t) = e^t}.}
 #' \item{`'binomial'`}{It considers point-referenced binomial counts
-#' \eqn{y(s) \sim \mathrm{Binomial}(m(s), \pi(s))} wehere, \eqn{m(s)} denotes
+#' \eqn{y(s) \sim \mathrm{Binomial}(m(s), \pi(s))} where, \eqn{m(s)} denotes
 #' the total number of trials and probability of success
 #' \eqn{\pi(s) = \mathrm{ilogit}(x(s)^\top \beta + z(s))} at location \eqn{s}.
 #' Here, \eqn{b = m(s)} and \eqn{\psi(t) = \log(1+e^t)}.}
@@ -73,7 +73,7 @@
 #'  must be at least 2.1. If not supplied, uses defaults.
 #' @param spParams fixed values of spatial process parameters.
 #' @param boundary Specifies the boundary adjustment parameter. Must be a real
-#' number berween 0 and 1. Default is 0.5.
+#' number between 0 and 1. Default is 0.5.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd logical. If `loopd=TRUE`, returns leave-one-out predictive
 #'  densities, using method as given by \code{loopd.method}. Deafult is

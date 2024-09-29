@@ -6,7 +6,7 @@
 #' [spLMstack()] and [spGLMstack()].
 #' @param mod_out an object of class `spLMstack` or `spGLMstack`.
 #' @param n.samples (optional) If missing, inherits the number
-#' of posterior samples from the originial output. Otherwise, it specifies
+#' of posterior samples from the original output. Otherwise, it specifies
 #' number of posterior samples to draw from the stacked posterior. If it exceeds
 #' the number of posterior draws used in the original function, then a warning
 #' is thrown and the samples are obtained by resampling. It is recommended, to

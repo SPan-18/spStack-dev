@@ -32,7 +32,7 @@ We introduce the R package `spStack` that implements Bayesian inference for a cl
 
 Technical details surrounding the methodology can be found in the articles @zhang2024stacking which discuss the case where the distribution of the point-referenced outcomes are Gaussian, and, in @pan2024stacking where the case of non-Gaussian outcomes is explored. The code for this package is written primarily in C/C++ with additional calls to FORTRAN routines for optimized linear algebra operations. We leverage the `F77_NAME` macro to interface with legacy FORTRAN functions in conjunction with efficient matrix computation libraries such as [BLAS](https://netlib.org/blas/) (Basic Linear Algebra Subprograms) and [LAPACK](https://netlib.org/lapack/) (Linear Algebra Package) to implement our stacking algorithm. 
 
-The remainder of the vignette evolves as follows - the next two sections discuss Bayesian hierarchical spatial models for Gaussian and non-Gaussian outcomes, which is followed by a section providing bried details on predictive stacking and a section dedicated for illustration of functions in the package.
+The remainder of the vignette evolves as follows - the next two sections discuss Bayesian hierarchical spatial models for Gaussian and non-Gaussian outcomes, which is followed by a section providing brief details on predictive stacking and a section dedicated for illustration of functions in the package.
 
 ## Bayesian Gaussian spatial regression models
 Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial locations yielding measurements $y = (y_1, \ldots, y_n)^\T$ with known values of predictors at these locations collected in the $n \times p$ full rank matrix $X = [x(s_1), \ldots, x(s_n)]^\T$. A customary geostatistical model is 

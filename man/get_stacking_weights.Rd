@@ -18,8 +18,8 @@ Default is \code{"ECOS"}. Internally calls
 \value{
 A list of length 2.
 \describe{
-\item{\code{weights}}{optimal stacking weights as a numeric vecor of length
-\eqn{M}{M}}
+\item{\code{weights}}{optimal stacking weights as a numeric vector of
+length \eqn{M}{M}}
 \item{\code{status}}{solver status, returns \code{"optimal"} if solver
 succeeded.}
 }

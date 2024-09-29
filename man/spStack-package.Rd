@@ -13,7 +13,7 @@ analytically available posterior distributions conditional upon some
 candidate values of the spatial process parameters for both Gaussian response
 model as well as non-Gaussian responses, and, subsequently assimilate
 inference from these individual posterior distributions using Bayesian
-predictive stacking. Our algorithm is highly parallelised and hence, much
+predictive stacking. Our algorithm is highly parallelizable and hence, much
 faster than traditional Markov chain Monte Carlo algorithms while
 delivering competitive predictive performance.
 

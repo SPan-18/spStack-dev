@@ -16,7 +16,7 @@
 #' \deqn{
 #' y = X \beta + z + \epsilon,
 #' }
-#' where the spatial efects \eqn{z \sim N(0, \sigma^2 R)} is independent of the
+#' where the spatial effects \eqn{z \sim N(0, \sigma^2 R)} is independent of the
 #' measurement error \eqn{\epsilon \sim N(0, \delta^2 \sigma^2 I_n)} with
 #' \eqn{\delta^2} being the noise-to-spatial variance ratio and \eqn{R} being a
 #' \eqn{n \times n} correlation matrix given by the Matérn covariogram
