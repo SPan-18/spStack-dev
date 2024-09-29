@@ -24,8 +24,9 @@ extern "C" {
     double beta = REAL(beta_r)[0];
     int lower = INTEGER(lower_r)[0];
 
+    int nn = n * n;
     SEXP L1 = PROTECT(Rf_allocMatrix(REALSXP, n, n));
-    double *L1_pointer = REAL(L1);
+    double *L1_pointer = REAL(L1); zeros(L1_pointer, nn);
 
     double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);
 
@@ -50,8 +51,9 @@ extern "C" {
     int lower = INTEGER(lower_r)[0];
 
     int nMinusOne = n - 1;
+    int n1n1 = nMinusOne * nMinusOne;
     SEXP L1 = PROTECT(Rf_allocMatrix(REALSXP, nMinusOne, nMinusOne));
-    double *L1_pointer = REAL(L1);
+    double *L1_pointer = REAL(L1); zeros(L1_pointer, n1n1);
 
     double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);
 
@@ -82,7 +84,7 @@ extern "C" {
     int nk = n - del_end + del_start - 1;
     int nknk = nk * nk;
     SEXP L1 = PROTECT(Rf_allocMatrix(REALSXP, nk, nk));
-    double *L1_pointer = REAL(L1);
+    double *L1_pointer = REAL(L1); zeros(L1_pointer, nknk);
 
     // match index value with R indexing system
     del_start -= 1;
