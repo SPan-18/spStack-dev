@@ -53,6 +53,14 @@ Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
 Average Bayesian Predictive Distributions (with Discussion).” \emph{Bayesian
 Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/SPan-18/spStack-dev}
+  \item Report bugs at \url{https://github.com/SPan-18/spStack-dev/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Soumyakanti Pan \email{span18@ucla.edu} (\href{https://orcid.org/0009-0005-9889-7112}{ORCID})
 
