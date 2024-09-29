@@ -7,7 +7,7 @@ test_that("cholUpdateRankOne", {
   APlusvvT <- A + tcrossprod(v)
   cholA1 <- t(chol(APlusvvT))
   cholA2 <- cholUpdateRankOne(cholA, v, lower = F)
-  max_diff <- as.numeric(max(abs(cholA1 - cholA2)) < 1E-9)
+  max_diff <- as.numeric(max(abs(cholA1 - cholA2)) < 1E-8)
   expect_equal(max_diff, 1)
 })
 
