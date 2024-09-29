@@ -30,3 +30,5 @@ void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_bet
              double *tmp_n, double *tmp_p);
 
 void transpose_matrix(double *M, int nrow, int ncol, double *Mt);
+
+void upperTri_lowerTri(double *M, int n);

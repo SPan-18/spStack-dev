@@ -10,6 +10,8 @@
 #' @param ... currently no additional arguments.
 #' @returns The \eqn{n\times n}{nxn} or \eqn{n\times m}{nxm} inter-site
 #' Euclidean distance matrix.
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
 #' \dontrun{
 #' n <- 10

@@ -646,3 +646,17 @@ void transpose_matrix(double *M, int nrow, int ncol, double *Mt){
   }
 
 }
+
+// Function to transpose a matrix in column-major form from upper-tri to lower-tri
+void upperTri_lowerTri(double *M, int n){
+
+  int i = 0, j = 0;
+
+  for(j = 0; j < n; j++){
+    for(i = 0; i < n; i++){
+      if(i < j){
+        M[i*n + j] = M[j*n + i];
+      }
+    }
+  }
+}

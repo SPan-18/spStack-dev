@@ -34,4 +34,8 @@ p2 <- cbind(runif(m),runif(m))
 D <- iDist(p1, p2)
 }
 }
+\author{
+Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
+Sudipto Banerjee \href{mailto:sudipto@ucla.edu}{sudipto@ucla.edu}
+}
 \keyword{utilities}
