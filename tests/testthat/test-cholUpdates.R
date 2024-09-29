@@ -8,7 +8,7 @@ test_that("cholUpdateRankOne", {
   APlusvvT <- A + tcrossprod(v)
   cholA1 <- t(chol(APlusvvT))
   cholA2 <- cholUpdateRankOne(cholA, v, lower = F)
-  expect_equal(cholA1, cholA2, tolerance = 1e-6)
+  expect_equal(cholA1, cholA2, tolerance = 1e-9)
 })
 
 test_that("cholUpdateDel", {
@@ -21,7 +21,7 @@ test_that("cholUpdateDel", {
   A1 <- A[-ind, -ind]
   cholA1 <- t(chol(A1))
   cholA2 <- cholUpdateDel(cholA, del.index = ind, lower = F)
-  expect_equal(cholA1, cholA2, tolerance = 1e-6)
+  expect_equal(cholA1, cholA2, tolerance = 1e-9)
 })
 
 test_that("cholUpdateDelBlock", {
@@ -36,5 +36,5 @@ test_that("cholUpdateDelBlock", {
   A1 <- A[-del_ind, -del_ind]
   cholA1 <- t(chol(A1))
   cholA2 <- cholUpdateDelBlock(cholA, start_ind, end_ind, lower = F)
-  expect_equal(cholA1, cholA2, tolerance = 1e-6)
+  expect_equal(cholA1, cholA2, tolerance = 1e-9)
 })
