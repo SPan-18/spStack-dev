@@ -29,6 +29,7 @@ License: GPL-3
 Encoding: UTF-8
 LazyData: true
 Suggests:
+    ggpubr,
     knitr,
     rmarkdown,
     testthat (>= 3.0.0)

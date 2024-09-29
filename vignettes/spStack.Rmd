@@ -32,6 +32,8 @@ We introduce the R package `spStack` that implements Bayesian inference for a cl
 
 Technical details surrounding the methodology can be found in the articles @zhang2024stacking which discuss the case where the distribution of the point-referenced outcomes are Gaussian, and, in @pan2024stacking where the case of non-Gaussian outcomes is explored. The code for this package is written primarily in C/C++ with additional calls to FORTRAN routines for optimized linear algebra operations. We leverage the `F77_NAME` macro to interface with legacy FORTRAN functions in conjunction with efficient matrix computation libraries such as [BLAS](https://netlib.org/blas/) (Basic Linear Algebra Subprograms) and [LAPACK](https://netlib.org/lapack/) (Linear Algebra Package) to implement our stacking algorithm. 
 
+The remainder of the vignette evolves as follows - the next two sections discuss Bayesian hierarchical spatial models for Gaussian and non-Gaussian outcomes, which is followed by a section providing bried details on predictive stacking and a section dedicated for illustration of functions in the package.
+
 ## Bayesian Gaussian spatial regression models
 Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial locations yielding measurements $y = (y_1, \ldots, y_n)^\T$ with known values of predictors at these locations collected in the $n \times p$ full rank matrix $X = [x(s_1), \ldots, x(s_n)]^\T$. A customary geostatistical model is 
 \begin{equation}
@@ -105,7 +107,7 @@ term which is given a conditional generalized conjugate multivariate
 distribution ($\mathrm{GCM_c}$) as prior. For details, see @pan2024stacking.
 
 ## Predictive stacking
-To implement our stacking algorithm, we consider a set of candidate models based on a grid of values of the parameters in $\{ \thetasp, \delta^2 \}$ for the Gaussian case, and $\{ \thetasp, \epsilon \}$ for the non-Gaussian case, as will be supplied by the user. We build a set of candidate models based on the Cartesian product of the collection of values for each individual parameter as $\mathcal{M} = \{M_1, \ldots, M_G\}$. Then, for each $g = 1, \ldots, G$, we sample from the posterior distribution $p(\sigma^2, \beta, z \mid y, M_g)$ under the model $M_g$ and find
+Following @yao2018stacking, we consider a set of candidate models based on a grid of values of the parameters in $\{ \thetasp, \delta^2 \}$ for the Gaussian case, and $\{ \thetasp, \epsilon \}$ for the non-Gaussian case, as will be supplied by the user. We build a set of candidate models based on the Cartesian product of the collection of values for each individual parameter as $\mathcal{M} = \{M_1, \ldots, M_G\}$. Then, for each $g = 1, \ldots, G$, we sample from the posterior distribution $p(\sigma^2, \beta, z \mid y, M_g)$ under the model $M_g$ and find
 leave-one-out predictive densities $p(y_i \mid y_{-i}, M_g)$. Then we
 solve the optimization problem
 \begin{aligned}
@@ -119,11 +121,275 @@ to find the optimal stacking weights $\hat{w}_1, \ldots, \hat{w}_G$. After obtai
 \end{equation}
 
 ## Illustrations
-In this section, we thoroughly illustrate our method on synthetic Gaussian as well as non-Gaussian spatial data and provide code to analyze the output of our functions.
+In this section, we thoroughly illustrate our method on synthetic Gaussian as well as non-Gaussian spatial data and provide code to analyze the output of our functions. We start by loading the package.
 ```{r setup}
 library(spStack)
 ```
+Some synthetic spatial data are lazyloaded which includes synthetic spatial Gaussian data `simGaussian`, Poisson data `simPoisson`, binomial data `simBinom` and binary data `simBinary`. One can use the function `sim_spData()` to simulate spatial data. We will be applying our functions on these datasets.
 
+### Analysis of spatial Gaussian data
+We first load the data `simGaussian` and set up the priors. Supplying the priors is optional. See the documentation of `spLMexact()` to learn more about the default priors. Besides, setting the priors, we also fix the values of the spatial process parameters and the noise-to-spatial variance ratio.
+```{r}
+data("simGaussian")
+dat <- simGaussian[1:200, ] # work with first 200 rows
+
+muBeta <- c(0, 0)
+VBeta <- cbind(c(10.0, 0.0), c(0.0, 10.0))
+sigmaSqIGa <- 2
+sigmaSqIGb <- 2
+phi0 <- 2
+nu0 <- 0.5
+noise_sp_ratio <- 0.8
+prior_list <- list(beta.norm = list(muBeta, VBeta),
+                   sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
+nSamples <- 2000
+```
+
+We then pass these parameters into the main function. 
+```{r spLMexactLOO_exact}
+set.seed(1729)
+mod1 <- spLMexact(y ~ x1, data = dat,
+                  coords = as.matrix(dat[, c("s1", "s2")]),
+                  cor.fn = "matern",
+                  priors = prior_list,
+                  spParams = list(phi = phi0, nu = nu0),
+                  noise_sp_ratio = noise_sp_ratio, n.samples = nSamples,
+                  loopd = TRUE, loopd.method = "exact",
+                  verbose = TRUE)
+```
+
+Next, we can summarize the posterior samples of the fixed effects as follows.
+```{r}
+post_beta <- mod1$samples$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod1$X.names
+print(summary_beta)
+```
+
+If interested in finding leave-one-out predictive densities (LOO-PD) for this model, set `loopd` to `TRUE` and provide a `loopd.method`. Valid inputs for `loopd.method` are `"exact"` and `"PSIS"` which finds exact LOO-PD using closed form expressions and approximate LOO-PD using Pareto smoothed importance sampling [@LOOCV_vehtari17].
+```{r spLMexactLOO_PSIS}
+mod2 <- spLMexact(y ~ x1, data = dat,
+                  coords = as.matrix(dat[, c("s1", "s2")]),
+                  cor.fn = "matern",
+                  priors = prior_list,
+                  spParams = list(phi = phi0, nu = nu0),
+                  noise_sp_ratio = noise_sp_ratio, n.samples = nSamples,
+                  loopd = TRUE, loopd.method = "PSIS",
+                  verbose = FALSE)
+```
+
+Out of curiosity, we compare the LOO-PD obtained by the two methods.
+```{r fig.align='center'}
+loopd_exact <- mod1$loopd
+loopd_psis <- mod2$loopd
+loopd_df <- data.frame(exact = loopd_exact, psis = loopd_psis)
+
+library(ggplot2)
+plot1 <- ggplot(data = loopd_df, aes(x = exact)) +
+  geom_point(aes(y = psis), size = 0.5, alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  xlab("Exact") + ylab("PSIS") + theme_bw() +
+  theme(panel.background = element_blank(), aspect.ratio = 1)
+plot1
+```
+
+Next, we move on to the Bayesian spatial stacking algorithm for Gaussian data. We supply the same prior list and provide some candidate values of spatial process parameters and noise-to-spatial variance ratio.
+```{r spLMstack}
+mod3 <- spLMstack(y ~ x1, data = dat,
+                  coords = as.matrix(dat[, c("s1", "s2")]),
+                  cor.fn = "matern",
+                  priors = prior_list,
+                  params.list = list(phi = c(1.5, 3, 5),
+                                     nu = c(0.5, 1, 1.5),
+                                     noise_sp_ratio = c(0.5, 1.5)),
+                  n.samples = 1000, loopd.method = "exact",
+                  parallel = FALSE, solver = "ECOS", verbose = TRUE)
+```
+
+The user can check the solver status and runtime by issuing the following.
+```{r}
+print(mod3$solver.status)
+print(mod3$run.time)
+```
+
+To sample from the stacked posterior, the package provides a helper function called `stackedSampler()`. Subsequent inference proceeds from these samples obtained from the stacked posterior.
+```{r}
+post_samps <- stackedSampler(mod3)
+```
+
+We then collect the samples of the fixed effects and summarize them as follows.
+```{r}
+post_beta <- post_samps$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod3$X.names
+print(summary_beta)
+```
+
+Here, we compare the posterior samples of the spatial random effects with their corresponding true values.
+```{r fig.align='center'}
+post_z <- post_samps$z
+post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
+                      zM = post_z_summ[, 2], zU = post_z_summ[, 3])
+
+plotz <- ggplot(data = z_combn, aes(x = z)) +
+  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, 
+                color = "skyblue") + 
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
+  theme(panel.background = element_blank(), aspect.ratio = 1)
+plotz
+```
+
+The package also provides functions to plot interpolated spatial surfaces in order for visualization purposes. The function `surfaceplot()` creates a single spatial surface plot, while `surfaceplot2()` creates two side-by-side surface plots. We are using the later to visually inspect the interpolated spatial surfaces of the true spatial effects and their posterior medians.
+```{r fig.align='center', fig.height=2.5, fig.width=6}
+postmedian_z <- apply(post_z, 1, median)
+dat$z_hat <- postmedian_z
+plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
+                       var1_name = "z_true", var2_name = "z_hat")
+library(ggpubr)
+ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+```
+
+### Analysis of spatial non-Gaussian data
+
+In this package, we offer functions for Bayesian analysis Poisson and binomial count data as well as binary data.
+
+#### Spatial Poisson count data
+We first load and plot the point-referenced Poisson count data.
+```{r fig.align='center'}
+data("simPoisson")
+dat <- simPoisson[1:200, ] # work with first 200 observations
+
+ggplot(dat, aes(x = s1, y = s2)) +
+  geom_point(aes(color = y), alpha = 0.75) +
+  scale_color_distiller(palette = "RdYlGn", direction = -1, 
+                        label = function(x) sprintf("%.0f", x)) +
+  guides(alpha = 'none') + theme_bw() +
+  theme(axis.ticks = element_line(linewidth = 0.25),
+        panel.background = element_blank(), panel.grid = element_blank(),
+        legend.title = element_text(size = 10, hjust = 0.25),
+        legend.box.just = "center", aspect.ratio = 1)
+```
+
+Next, we demonstrate the function `spGLMexact()` which delivers posterior samples of the fixed effects and the spatial random effects. The option `family` must be specified correctly while using this function. For instance, in this example `family = "poisson"`. We provide fixed values of the spatial process parameters and the boundary adjustment parameter, given by the argument `boundary`, which if not supplied, defaults to 0.5. For details on the priors and its default value, see function documentation.
+```{r spGLMexact_Pois}
+mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
+                   coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+                   spParams = list(phi = phi0, nu = nu0),
+                   boundary = 0.5,
+                   n.samples = 1000, verbose = TRUE)
+```
+
+We next collect the samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (2, -0.5)$ (for more details, see the documentation of the data `simPoisson`).
+```{r}
+post_beta <- mod1$samples$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod1$X.names
+print(summary_beta)
+```
+
+Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD. 
+```{r spGLMstack_Pois}
+mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+                   coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+                   params.list = list(phi = c(3, 7, 10), nu = c(0.5, 1.5),
+                                      boundary = c(0.5, 0.6)),
+                   n.samples = 1000,
+                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
+                   parallel = TRUE, solver = "ECOS", verbose = TRUE)
+```
+
+We can extract information on solver status and runtime by the following.
+```{r}
+print(mod2$solver.status)
+print(mod2$run.time)
+```
+
+We first obtain final posterior samples by sampling from the stacked sampler.
+```{r}
+post_samps <- stackedSampler(mod2)
+```
+
+Subsequently, we summarize the posterior samples of the fixed effects.
+```{r}
+post_beta <- post_samps$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod3$X.names
+print(summary_beta)
+```
+
+Finally, we analyze the posterior samples of the spatial random effects.
+```{r fig.align='center'}
+post_z <- post_samps$z
+post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
+                      zM = post_z_summ[, 2], zU = post_z_summ[, 3])
+
+plotz <- ggplot(data = z_combn, aes(x = z)) +
+  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15,
+                color = "skyblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
+  theme(panel.background = element_blank(), aspect.ratio = 1)
+plotz
+```
+
+We can also compare the interpolated spatial surfaces of the true spatial effects with that of their posterior median.
+```{r fig.align='center', fig.height=2.5, fig.width=6}
+postmedian_z <- apply(post_z, 1, median)
+dat$z_hat <- postmedian_z
+plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
+                       var1_name = "z_true", var2_name = "z_hat")
+library(ggpubr)
+ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+```
+
+#### Spatial binomial count data
+Here, we present only the `spGLMexact()` function for brevity. The only argument that will change from that of in the case of spatial Poisson data is the structure of `formula` that defines the model.
+```{r}
+data("simBinom")
+dat <- simBinom[1:200, ] # work with first 200 rows
+
+mod1 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
+                   coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+                   spParams = list(phi = 3, nu = 0.5),
+                   boundary = 0.5, n.samples = 1000, verbose = FALSE)
+
+```
+
+Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5)$.
+```{r}
+post_beta <- mod1$samples$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod1$X.names
+print(summary_beta)
+```
+
+#### Spatial binary data
+Finally, we present only the `spGLMexact()` function for spatial binary data to avoid repetition. In this case, unlike the binomial model, almost nothing changes from that of in the case of spatial Poisson data.
+```{r}
+data("simBinary")
+dat <- simBinary[1:200, ]
+
+mod1 <- spGLMexact(y ~ x1, data = dat, family = "binary",
+                   coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+                   spParams = list(phi = 4, nu = 0.4),
+                   boundary = 0.5, n.samples = 1000, verbose = FALSE)
+```
+
+Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5)$.
+```{r}
+post_beta <- mod1$samples$beta
+summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod1$X.names
+print(summary_beta)
+```
+
+## Conclusion
+We have devised and demonstrated Bayesian predictive stacking to be an effective tool for estimating spatial regression models and yielding robust predictions for Gaussian as well as non-Gaussian spatial data. We develop and exploit analytically accessible distribution theory pertaining to Bayesian analysis of linear mixed model and generalized linear mixed models that enables us to directly sample from the posterior distributions. The focus of this package is on effectively combining inference across different closed-form posterior distributions by circumventing inference on weakly identified parameters. Future developments and investigations will consider zero-inflated non-Gaussian data and adapting to variants of Gaussian process models that scale inference to massive datasets by circumventing the Cholesky decomposition of dense covariance matrices.
 
 ## References {-}
 
