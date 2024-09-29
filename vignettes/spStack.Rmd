@@ -1,0 +1,130 @@
+---
+title: "spStack: Bayesian Geostatistics Using Predictive Stacking"
+output: 
+  rmarkdown::html_vignette:
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+vignette: >
+  %\VignetteIndexEntry{spStack: Bayesian Geostatistics Using Predictive Stacking}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+header-includes:
+  - \def\T{{ \scriptstyle \top }}
+  - \newcommand{\thetasp}{{\theta_{\text{sp}}}}
+  - \newcommand{\GP}{\mathrm{GP}}
+  - \newcommand{\N}{\mathcal{N}}
+  - \newcommand{\EF}{\mathrm{EF}}
+bibliography: refs.bib
+link-citations: true
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+## Introduction
+Geostatistics refers to the study of a spatially distributed variable of interest, which in theory is defined at every point over a bounded study region of interest.
+Statistical modelling and analysis for spatially oriented point-referenced outcomes play a crucial role in diverse scientific applications such as earth and environmental sciences, ecology, epidemiology, and economics. With the advent of Markov chain Monte Carlo (MCMC) algorithms, Bayesian hierarchical models have gained massive popularity in analyzing such point-referenced or, geostatistical data. These models involve latent spatial processes characterized by spatial process parameters, which besides lacking substantive relevance in scientific contexts, are also weakly identified and hence, impedes convergence of MCMC algorithms. Thus, even for moderately large datasets (~$10^3$ or higher), the computation for MCMC becomes too onerous for practical use.
+
+We introduce the R package `spStack` that implements Bayesian inference for a class of geostatistical models, where we obviate the issues mentioned by sampling from analytically available posterior distributions conditional upon some candidate values of the spatial process parameters and, subsequently assimilate inference from these individual posterior distributions using Bayesian predictive stacking. Besides delivering competitive predictive performance as compared to fully Bayesian inference using MCMC, our proposed algorithm is embarrassingly parallel, thus drastically improves runtime and elevating the utility of the package for a diverse group of practitioners with limited computational resources at their disposal. This package, to the best of our knowledge, is the first to implement stacking for Bayesian analysis of spatial data.
+
+Technical details surrounding the methodology can be found in the articles @zhang2024stacking which discuss the case where the distribution of the point-referenced outcomes are Gaussian, and, in @pan2024stacking where the case of non-Gaussian outcomes is explored. The code for this package is written primarily in C/C++ with additional calls to FORTRAN routines for optimized linear algebra operations. We leverage the `F77_NAME` macro to interface with legacy FORTRAN functions in conjunction with efficient matrix computation libraries such as [BLAS](https://netlib.org/blas/) (Basic Linear Algebra Subprograms) and [LAPACK](https://netlib.org/lapack/) (Linear Algebra Package) to implement our stacking algorithm. 
+
+## Bayesian Gaussian spatial regression models
+Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial locations yielding measurements $y = (y_1, \ldots, y_n)^\T$ with known values of predictors at these locations collected in the $n \times p$ full rank matrix $X = [x(s_1), \ldots, x(s_n)]^\T$. A customary geostatistical model is 
+\begin{equation}
+  y_i = x(s_i)^\T \beta + z(s_i) + \epsilon_i, \quad i = 1, \ldots, n,
+\end{equation}
+where $\beta$ is the $p \times 1$ vector of slopes, $z(s) \sim \GP(0, R(\cdot, \cdot; \thetasp))$ is a zero-centered spatial Gaussian process on $\mathcal{D}$ with spatial correlation function $R(\cdot, \cdot; \thetasp)$ characterized by process parameters $\thetasp$, $\sigma^2$ is the spatial variance parameter ("partial sill") and $\epsilon_i \sim \N(0, \tau^2), i = 1, \ldots, n$ are i.i.d. with variance $\tau^2$ ("nugget") capturing measurement error. The spatial process $z(\cdot)$ is assumed to be independent of the measurement errors $\{\epsilon_i, i = 1, \ldots, n\}$. Let $z = (z(s_1), \ldots, z(s_n))^\T$ denotes the realization of the spatial process on $\chi$ and $n \times n$ correlation matrix $R(\chi; \thetasp) = (R(s_i, s_j \thetasp))_{1 \leq i,j \leq n}$. We build a conjugate Bayesian hierarchical spatial model,
+\begin{aligned}
+y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \\
+z \mid \sigma^2 &\sim N(0, \sigma^2 R(\chi; \thetasp)), \\
+\beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
+\sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma),
+\end{aligned}
+where we fix the noise-to-spatial variance ratio $\delta^2 = \tau^2 / \sigma^2$, the process parameters $\thetasp$ and the hyperparameters $\mu_\beta$, $V_\beta$, $a_\sigma$ and $b_\sigma$. In this package, we use the Matern covariogram specified by spatial decay parameter $\phi$ and smoothness parameter $\nu$ i.e., $\thetasp = \{\phi, \nu\}$, given by
+\begin{equation}
+R(s, s'; \thetasp) = \frac{(\phi \lvert s - s' \rvert)^\nu}{2^{\nu - 1} \Gamma(\nu)} K_\nu (\phi \lvert s - s' \rvert)).
+\end{equation}
+We utilize a composition sampling strategy to sample the model parameters from their joint posterior distribution which can be written as
+\begin{equation}
+p(\sigma^2, \beta, z \mid y) = p(\sigma^2 \mid y) \times
+p(\beta \mid \sigma^2, y) \times p(z \mid \beta, \sigma^2, y).
+\end{equation}
+We proceed by first sampling $\sigma^2$ from its marginal posterior, then given the samples of $\sigma^2$, we sample $\beta$ and subsequently, we sample $z$ conditioned on the posterior samples of $\beta$ and $\sigma^2$ [@banerjee_massivespatial]. The function `spLMexact()` delivers samples from this posterior distribution. More details can be found in @zhang2024stacking.
+
+## Bayesian non-Gaussian spatial regression models
+Analyzing non-Gaussian spatial data typically requires introducing spatial dependence in generalized linear models through the link function of an exponential family distribution. Let $y(s)$ be the outcome at location $s \in \mathcal{D}$ endowed with a probability law from the natural exponential family, which we denote by 
+\begin{equation}
+    y(s) \sim \EF(x(s)^\T \beta  + z(s); b, \psi_y)
+\end{equation}
+for some positive parameter $b > 0$ and unit log partition function $\psi_y$. Fixed effects regression and spatial dependence, e.g., $x(s)^{\T}\beta + z(s)$, is introduced in the natural parameter, where $x(s)$ is a $p \times 1$ vector of predictors referenced with respect to $s$, $\beta$ is a $p \times 1$ vector of slopes measuring the trend, $z(s)$ is a zero-centered spatial process on $\mathcal{D}$ specified by a scale parameter $\sigma_z$ and a spatial correlation function $R(\cdot, \cdot ; \thetasp)$ with $\thetasp$ consisting of spatial-temporal decay and smoothness parameters.
+
+Unlike in Gaussian likelihoods, inference is considerably encumbered by the inability to analytically integrate out the random effects and reduce the dimension of the parameter space. Iterative algorithms such as Markov Chain Monte Carlo (MCMC), thus attempt to sample from a very high-dimensional posterior distribution, and convergence is often hampered by high auto-correlations and weakly identified spatial process parameters $\thetasp$.
+
+We consider the following three cases - 
+
+1. Point-referenced Poisson count data: Here $b = 1$ and $\psi_y(t) = e^t$.
+\begin{equation}
+\begin{split}
+y(s_i) &\sim \mathrm{Poisson}(\lambda(s_i)), \quad i = 1, \dots, n.\\
+\lambda(s_i) & = \exp(x(s_i)^\T \beta + z(s_i))
+\end{split}
+\end{equation}
+2. Point-referenced binomial count data: Here $b = m(s_i)$ for each $i$ and $\psi_y(t) = \log(1 + e^t)$.
+\begin{equation}
+\begin{split}
+y(s_i) &\sim \mathrm{Binomial}(m(s_i), \pi(s_i)), \quad i = 1, \dots, n.\\
+\pi(s_i) & = \mathrm{ilogit}(x(s_i)^\T \beta + z(s_i))
+\end{split}
+\end{equation}
+3. Point-referenced binary data: Here $b = 1$ and $\psi_y(t) = \log(1 + e^t)$.
+\begin{equation}
+\begin{split}
+y(s_i) &\sim \mathrm{Bernoulli}(\pi(s_i)), \quad i = 1, \dots, n.\\
+\pi(s_i) & = \mathrm{ilogit}(x(s_i)^\T \beta + z(s_i))
+\end{split}
+\end{equation}
+
+Following @bradleyclinch2024, we introduce a Bayesian hierarchical spatial model as
+\begin{aligned}
+y(s_i) &\mid \beta, z, \xi \sim \EF(x(s_i)^\T \beta + z(s_i) +
+\xi_i - \mu_i; b_i, \psi_y), i = 1, \ldots, n\\
+\beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
+\sigma^2_\beta \sim \mathrm{IG}(\nu_\beta/2, \nu_\beta/2)\\
+z &\mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \thetasp)), \quad
+\sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),\\
+\xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
+\mathrm{GCM_c}(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi),
+\end{aligned}
+where $\mu = (\mu_1, \ldots, \mu_n)^\T$ denotes the discrepancy
+parameter. We fix the spatial process parameters $\thetasp$, the boundary adjustment parameter $\epsilon$ and the hyperparameters $V_\beta$, $\nu_\beta$, $\nu_z$ and $\sigma^2_\xi$. The term $\xi$ is known as the fine-scale variation
+term which is given a conditional generalized conjugate multivariate
+distribution ($\mathrm{GCM_c}$) as prior. For details, see @pan2024stacking.
+
+## Predictive stacking
+To implement our stacking algorithm, we consider a set of candidate models based on a grid of values of the parameters in $\{ \thetasp, \delta^2 \}$ for the Gaussian case, and $\{ \thetasp, \epsilon \}$ for the non-Gaussian case, as will be supplied by the user. We build a set of candidate models based on the Cartesian product of the collection of values for each individual parameter as $\mathcal{M} = \{M_1, \ldots, M_G\}$. Then, for each $g = 1, \ldots, G$, we sample from the posterior distribution $p(\sigma^2, \beta, z \mid y, M_g)$ under the model $M_g$ and find
+leave-one-out predictive densities $p(y_i \mid y_{-i}, M_g)$. Then we
+solve the optimization problem
+\begin{aligned}
+ \max_{w_1, \ldots, w_G}& \, \frac{1}{n} \sum_{i = 1}^n \log \sum_{g = 1}^G
+ w_g p(y_i \mid y_{-i}, M_g) \\
+ \text{subject to} & \quad w_g \geq 0, \sum_{g = 1}^G w_g = 1
+\end{aligned}
+to find the optimal stacking weights $\hat{w}_1, \ldots, \hat{w}_G$. After obtaining the optimal stacking weights, posterior inference of any quantity of interest subsequently proceed from the *stacked* posterior,
+\begin{equation}
+\tilde{p}(\cdot \mid y) = \sum_{g = 1}^G \hat{w}_g p(\cdot \mid y, M_g).
+\end{equation}
+
+## Illustrations
+In this section, we thoroughly illustrate our method on synthetic Gaussian as well as non-Gaussian spatial data and provide code to analyze the output of our functions.
+```{r setup}
+library(spStack)
+```
+
+
+## References {-}
+
+<div id="refs"></div>
