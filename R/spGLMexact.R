@@ -35,7 +35,7 @@
 #' \deqn{
 #' \begin{aligned}
 #' y(s_i) &\mid \beta, z, \xi \sim EF(x(s_i)^\top \beta + z(s_i) +
-#' \xi_i - \mu_i), i = 1, \ldots, n\\
+#' \xi_i - \mu_i; b_i, \psi_y), i = 1, \ldots, n\\
 #' \xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
 #' \mathrm{GCM_c}(\cdots),\\
 #' \beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad

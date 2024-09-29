@@ -108,7 +108,7 @@ Instead of assigning a prior on the process parameters \eqn{\phi}
 and \eqn{\nu}, the boundary adjustment parameter \eqn{\epsilon}, we consider
 a set of candidate models based on some candidate values of these parameters
 supplied by the user. Suppose the set of candidate models is
-\eqn{\mathcal{M} = \{M_1, \ldots, M_G\}}. The for each
+\eqn{\mathcal{M} = \{M_1, \ldots, M_G\}}. Then for each
 \eqn{g = 1, \ldots, G}, we sample from the posterior distribution
 \eqn{p(\sigma^2, \beta, z \mid y, M_g)} under the model \eqn{M_g} and find
 leave-one-out predictive densities \eqn{p(y_i \mid y_{-i}, M_g)}. Then we
