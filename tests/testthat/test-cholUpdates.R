@@ -1,4 +1,5 @@
 test_that("cholUpdateRankOne", {
+  set.seed(1729)
   n <- 10
   A <- matrix(rnorm(n^2), n, n)
   A <- crossprod(A)
@@ -7,11 +8,12 @@ test_that("cholUpdateRankOne", {
   APlusvvT <- A + tcrossprod(v)
   cholA1 <- t(chol(APlusvvT))
   cholA2 <- cholUpdateRankOne(cholA, v, lower = F)
-  max_diff <- as.numeric(max(abs(cholA1 - cholA2)) < 1E-8)
+  max_diff <- as.numeric(max(abs(cholA1 - cholA2)) < 1E-9)
   expect_equal(max_diff, 1)
 })
 
 test_that("cholUpdateDel", {
+  set.seed(1729)
   n <- 10
   A <- matrix(rnorm(n^2), n, n)
   A <- crossprod(A)
@@ -25,6 +27,7 @@ test_that("cholUpdateDel", {
 })
 
 test_that("cholUpdateDelBlock", {
+  set.seed(1729)
   n <- 10
   A <- matrix(rnorm(n^2), n, n)
   A <- crossprod(A)
