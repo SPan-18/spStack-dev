@@ -1,0 +1,64 @@
+url: https://span-18.github.io/spStack-dev/
+template:
+  bootstrap: 5
+  bslib:
+    primary: '#0054AD'
+    border-radius: 0.5rem
+    btn-border-radius: 0.25rem
+    danger: '#A6081A'
+    base_font_scale: 0.75
+  includes:
+    in_header: |
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
+      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js" integrity="sha384-7zkQWkzuo3B5mTepMUcHkMB5jZaolc2xDwL6VFqjFALcbeS9Ggm/Yr2r3Dy4lfFg" crossorigin="anonymous"></script>
+      <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous" onload="renderMathInElement(document.body);"></script>
+development:
+  mode: unreleased
+reference:
+- title: Stacking
+  desc: |
+    Implements Bayesian predictive stacking for spatial linear and generalized linear models.
+  contents:
+  - spLMstack
+  - spGLMstack
+- title: Exact samplers and finds LOO-PD
+  desc: |
+    Samples from the posterior distribution conditional on fixed values of spatial process parameters and finds leave-one-out predictive densities
+  contents:
+  - spLMexact
+  - spGLMexact
+- title: Analysis of output
+- subtitle: Stacked posterior
+  desc: |
+    Helps analyze output of stacking algorithms
+  contents:
+  - stackedSampler
+  - get_stacking_weights
+- subtitle: Surface plots
+  desc: |
+    Creates and plots interpolated spatial surfaces
+  contents:
+  - surfaceplot
+  - surfaceplot2
+- title: Matrix algorithms
+  desc: |
+    Provides compiled code for various Cholesky factor updates helpful for those designing their own cross-validation algorithms
+  contents:
+  - cholUpdateRankOne
+  - cholUpdateDel
+  - cholUpdateDelBlock
+- title: Synthetic datasets
+  desc: |
+    Various simulated spatial data sampled on unit square
+  contents:
+  - simBinary
+  - simBinom
+  - simGaussian
+  - simPoisson
+  - sim_spData
+- title: Other utilities
+  contents:
+  - spStack
+  - spStack-package
+  - iDist
+

@@ -13,5 +13,4 @@
 *.lib
 inst/doc
 docs
-_pkgdown.yml
 pkgdown
