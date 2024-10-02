@@ -1,0 +1,26 @@
+<urlset xmlns = 'http://www.sitemaps.org/schemas/sitemap/0.9'>
+<url><loc>/404.html</loc></url>
+<url><loc>/articles/index.html</loc></url>
+<url><loc>/articles/spStack.html</loc></url>
+<url><loc>/authors.html</loc></url>
+<url><loc>/index.html</loc></url>
+<url><loc>/news/index.html</loc></url>
+<url><loc>/reference/cholUpdate.html</loc></url>
+<url><loc>/reference/get_stacking_weights.html</loc></url>
+<url><loc>/reference/iDist.html</loc></url>
+<url><loc>/reference/index.html</loc></url>
+<url><loc>/reference/simBinary.html</loc></url>
+<url><loc>/reference/simBinom.html</loc></url>
+<url><loc>/reference/simGaussian.html</loc></url>
+<url><loc>/reference/simPoisson.html</loc></url>
+<url><loc>/reference/sim_spData.html</loc></url>
+<url><loc>/reference/spGLMexact.html</loc></url>
+<url><loc>/reference/spGLMstack.html</loc></url>
+<url><loc>/reference/spLMexact.html</loc></url>
+<url><loc>/reference/spLMstack.html</loc></url>
+<url><loc>/reference/spStack-package.html</loc></url>
+<url><loc>/reference/stackedSampler.html</loc></url>
+<url><loc>/reference/surfaceplot.html</loc></url>
+<url><loc>/reference/surfaceplot2.html</loc></url>
+</urlset>
+
