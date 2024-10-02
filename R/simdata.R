@@ -32,13 +32,20 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #'  vector of length `n` that will specify the number of trials for each
 #'  observation. If it is of length 1, then that value is considered to be the
 #'  common value for the number of trials for all `n` observations.
+#' @return a `data.frame` object containing the columns -
+#' \describe{
+#' \item{`s1, s2`}{2D-coordinates in unit square}
+#' \item{`x1, x2, ...`}{covariates, not including intercept}
+#' \item{`y`}{response}
+#' \item{`n_trials`}{present only when binomial data is generated}
+#' \item{`z_true`}{true spatial effects with which the data is generated}
+#' }
 #' @importFrom stats dist runif rpois rbinom
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
-#' \dontrun{
 #' set.seed(1729)
-#' n <- 500
+#' n <- 10
 #' beta <- c(2, 5)
 #' phi0 <- 2
 #' nu0 <- 0.5
@@ -48,7 +55,6 @@ rmvn <- function(n, mu = 0, V = matrix(1)) {
 #' sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
 #'                    spParams = spParams, spvar = spvar, deltasq = deltasq,
 #'                    family = "gaussian")
-#' }
 #' @export
 sim_spData <- function(n, beta, cor.fn, spParams, spvar, deltasq, family,
                        n_binom){

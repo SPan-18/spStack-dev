@@ -3,3 +3,8 @@
 ^.github$
 ^.vscode$
 ^.*\.DS_Store$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$
+^cran-comments\.md$
+^\.github$

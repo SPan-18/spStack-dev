@@ -17,7 +17,7 @@
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.
 #' @param priors a list with each tag corresponding to a parameter name and
-#'  containing prior details.
+#'  containing prior details. If not supplied, uses defaults.
 #' @param params.list a list containing candidate values of spatial process
 #'  parameters for the `cor.fn` used, and, noise-to-spatial variance ratio.
 #' @param n.samples number of posterior samples to be generated.
@@ -41,6 +41,7 @@
 #' @param ... currently no additional argument.
 #' @return An object of class \code{spLMstack}, which is a list including the
 #'  following tags -
+#' \describe{
 #' \item{`samples`}{a list of length equal to total number of candidate models
 #'  with each entry corresponding to a list of length 3, containing posterior
 #'  samples of fixed effects (\code{beta}), variance parameter
@@ -56,6 +57,7 @@
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
 #' \item{`solver.status`}{solver status as returned by the optimization
 #' routine.}
+#' }
 #' The return object might include additional data that is useful for subsequent
 #' prediction, model fit evaluation and other utilities.
 #' @details Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -78,18 +80,17 @@
 #' @seealso [spLMexact()], [spGLMstack()]
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-#'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
-#'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
-#' @references Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
-#' Predictive Stacking.” \cr
+#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+#'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
+#'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+#' @references Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
+#' Predictive Stacking." \cr
 #' \doi{10.48550/arXiv.2304.12414}.
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
-#' \dontrun{
 #' # load data and work with first 100 rows
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
@@ -98,12 +99,10 @@
 #' muBeta <- c(0, 0)
 #' VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
 #' sigmaSqIGa <- 2
-#' sigmaSqIGb <- 0.1
+#' sigmaSqIGb <- 2
 #' prior_list <- list(beta.norm = list(muBeta, VBeta),
 #'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 #'
-#' # library(future)                    # if parallel = TRUE
-#' # plan('multicore', workers = 6)     # if running from terminal on Mac/Linux
 #' mod1 <- spLMstack(y ~ x1, data = dat,
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
@@ -113,8 +112,7 @@
 #'                                      noise_sp_ratio = c(1)),
 #'                   n.samples = 1000, loopd.method = "exact",
 #'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
-#' # plan('sequential')                  # turn off parallelization plan
-#' str(mod1)
+#'
 #' post_samps <- stackedSampler(mod1)
 #' post_beta <- post_samps$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
@@ -140,7 +138,6 @@
 #'   theme_bw() +
 #'   theme(panel.background = element_blank(),
 #'         aspect.ratio = 1)
-#' }
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,
@@ -204,9 +201,9 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   sigma.sq.IG <- 0
 
   if(missing(priors)){
-
-    warning("prior list not supplied, using defaults.")
-
+    beta.prior <- "normal"
+    beta.Norm <- list(rep(0.0, p), diag(100.0, p))
+    sigma.sq.IG <- c(2, 2)
   }else{
 
     names(priors) <- tolower(names(priors))
@@ -254,7 +251,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
     # params.list <- vector(mode = "list", length = 3)
     # names(params.list) <- c("phi", "nu", "noise_sp_ratio")
-    # ####### 1L REQUIRES AUTOMATION #######
+    # ####### POSSIBLE AUTOMATION #######
     # params.list[[1L]] <- c(3, 5, 10)
     # params.list[[2L]] <- c(0.5, 1.0, 1.5)
     # params.list[[3L]] <- c(0.25, 1.0, 2.0)
@@ -424,6 +421,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$beta.prior.norm <- beta.Norm
   out$samples <- samps
   out$loopd <- loopd_list
+  out$loopd.method <- loopd.method
   out$n.models <- length(list_candidate)
   out$candidate.models <- stack_out
   out$stacking.weights <- w_hat

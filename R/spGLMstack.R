@@ -46,8 +46,11 @@
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #' stacking weights.
 #' @param ... currently no additional argument.
-#' @return An object of class \code{spLMstack}, which is a list including the
+#' @return An object of class \code{spGLMstack}, which is a list including the
 #'  following tags -
+#' \describe{
+#' \item{`family`}{the distribution of the responses as indicated in the
+#' function call}
 #' \item{`samples`}{a list of length equal to total number of candidate models
 #' with each entry corresponding to a list of length 3, containing posterior
 #' samples of fixed effects (\code{beta}), spatial effects (\code{z}) and
@@ -55,6 +58,8 @@
 #' \item{`loopd`}{a list of length equal to total number of candidate models with
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
+#' \item{`loopd.method`}{a list containing details of the algorithm used for
+#' calculation of leave-one-out predictive densities.}
 #' \item{`n.models`}{number of candidate models that are fit.}
 #' \item{`candidate.models`}{a matrix with \code{n_model} rows with each row
 #'  containing details of the model parameters and its optimal weight.}
@@ -63,6 +68,7 @@
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
 #' \item{`solver.status`}{solver status as returned by the optimization
 #' routine.}
+#' }
 #' The return object might include additional data that is useful for subsequent
 #' prediction, model fit evaluation and other utilities.
 #' @details Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -85,18 +91,18 @@
 #' @seealso [spGLMexact()], [spLMstack()]
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
-#' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+#' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.
-#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-#'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
-#'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+#'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
+#'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
-#' \dontrun{
+#' \donttest{
 #' data("simPoisson")
 #' dat <- simPoisson[1:100,]
 #' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
@@ -117,10 +123,10 @@
 #' post_z <- post_samps$z
 #' post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 #'
-#'z_combn <- data.frame(z = dat$z_true,
-#'                      zL = post_z_summ[, 1],
-#'                      zM = post_z_summ[, 2],
-#'                      zU = post_z_summ[, 3])
+#' z_combn <- data.frame(z = dat$z_true,
+#'                       zL = post_z_summ[, 1],
+#'                       zM = post_z_summ[, 2],
+#'                       zU = post_z_summ[, 3])
 #'
 #' library(ggplot2)
 #' plot_z <- ggplot(data = z_combn, aes(x = z)) +
@@ -534,12 +540,14 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   out$y <- y
   out$X <- X
   out$X.names <- X.names
+  out$family <- family
   out$coords <- coords
   out$cor.fn <- cor.fn
   out$priors <- list(mu.beta = rep(0, p), V.beta = V.beta, nu.beta = nu.beta,
                      nu.z = nu.z, sigmasq.xi = sigmaSq.xi)
   out$samples <- samps
   out$loopd <- loopd_list
+  out$loopd.method <- loopd.controls
   out$n.models <- length(list_candidate)
   out$candidate.models <- stack_out
   out$stacking.weights <- w_hat

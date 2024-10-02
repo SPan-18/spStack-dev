@@ -44,13 +44,10 @@ Make two side-by-side surface plots, particularly useful towards
 a comparative study of two spatial surfaces.
 }
 \examples{
-\dontrun{
 data(simGaussian)
 plots_2 <- surfaceplot2(simGaussian, coords_name = c("s1", "s2"),
                         var1_name = "z_true", var2_name = "y")
 plots_2
-# ggpubr::ggarrange(plots_2[[1]], plots_2[[2]], legend = "right")
-}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

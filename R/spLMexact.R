@@ -47,7 +47,7 @@
 #' @param noise_sp_ratio noise-to-spatial variance ratio.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd logical. If `loopd=TRUE`, returns leave-one-out predictive
-#'  densities, using method as given by \code{loopd.method}. Deafult is
+#'  densities, using method as given by \code{loopd.method}. Default is
 #'  \code{FALSE}.
 #' @param loopd.method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
 #'  valid inputs are `'exact'` and `'PSIS'`. The option `'exact'` corresponds to
@@ -59,6 +59,7 @@
 #' @param ... currently no additional argument.
 #' @return An object of class \code{spLMexact}, which is a list with the
 #'  following tags -
+#' \describe{
 #' \item{samples}{a list of length 3, containing posterior samples of fixed
 #'  effects (\code{beta}), variance parameter (\code{sigmaSq}), spatial effects
 #'  (\code{z}).}
@@ -67,19 +68,19 @@
 #' \item{model.params}{Values of the fixed parameters that includes
 #'  \code{phi} (spatial decay), \code{nu} (spatial smoothness) and
 #'  \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
+#' }
 #' The return object might include additional data used for subsequent
 #' prediction and/or model fit evaluation.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spLMstack()]
-#' @references Banerjee S (2020). “Modeling massive spatial datasets using a
-#' conjugate Bayesian linear modeling framework.” *Spatial Statistics*, **37**,
+#' @references Banerjee S (2020). "Modeling massive spatial datasets using a
+#' conjugate Bayesian linear modeling framework." *Spatial Statistics*, **37**,
 #' 100417. ISSN 2211-6753. \doi{10.1016/j.spasta.2020.100417}.
-#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-#'  Smoothed Importance Sampling.” *Journal of Machine Learning Research*,
-#'  **25**(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+#' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+#'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
+#'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 #' @examples
-#' \dontrun{
 #' # load data
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
@@ -103,7 +104,7 @@
 #'                   priors = prior_list,
 #'                   spParams = list(phi = phi0, nu = nu0),
 #'                   noise_sp_ratio = noise.sp.ratio,
-#'                   n.samples = 1000,
+#'                   n.samples = 100,
 #'                   loopd = TRUE, loopd.method = "exact")
 #'
 #' beta.post <- mod1$samples$beta
@@ -115,7 +116,6 @@
 #'                      var_name = "z.post.median")
 #' plot1
 #' plot2
-#' }
 #' @export
 spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
                       spParams, noise_sp_ratio, n.samples,
@@ -182,7 +182,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   if(missing(priors)){
     beta.prior <- "normal"
     beta.Norm <- list(rep(0.0, p), diag(100.0, p))
-    sigma.sq.IG <- c(2, 0.1)
+    sigma.sq.IG <- c(2, 2)
   }else{
 
     names(priors) <- tolower(names(priors))

@@ -14,9 +14,9 @@ cholUpdateDel(A, del.index, lower = TRUE)
 cholUpdateDelBlock(A, del.start, del.end, lower = TRUE)
 }
 \arguments{
-\item{A}{an \eqn{n\times n}{nxn} triangular matrix}
+\item{A}{an \eqn{n\times n} triangular matrix}
 
-\item{v}{an \eqn{n\times 1}{nx1} matrix/vector}
+\item{v}{an \eqn{n\times 1} matrix/vector}
 
 \item{alpha}{scalar; if not supplied, default is 1}
 
@@ -34,10 +34,8 @@ of a block to be deleted, must be at least 1 less than \code{del.end}}
 of a block to be deleted, must be at least 1 more than \code{del.start}}
 }
 \value{
-An \eqn{m \times m} lower-triangular matrix with \eqn{m = n} in case
-of \code{cholUpdateRankOne()}, \eqn{m = n - 1} in case of \code{cholUpdateDel()}, and,
-\eqn{m = n - n_k} in case of \code{cholUpdateDelBlock()} where \eqn{n_k} is the
-size of the block removed.
+An \eqn{m \times m} lower-triangular \verb{matrix`` with \eqn{m = n} in case of }cholUpdateRankOne()\verb{, \eqn{m = n - 1} in case of }cholUpdateDel()\verb{, and, \eqn{m = n - n_k} in case of }cholUpdateDelBlock()` where \eqn{n_k} is
+the size of the block removed.
 }
 \description{
 Provides functions that implements different types of updates of
@@ -54,9 +52,9 @@ deletion update corresponds to finding the Cholesky factor of the
 \eqn{(n-1)\times(n-1)} matrix \eqn{B_i} which is obtained by removing the
 \eqn{i}-th row and column of \eqn{B}, given \eqn{A} for some
 \eqn{i - 1, \ldots, n}. Lastly, block deletion corresponds to finding the
-Cholesky factor of the \eqn{(n-nk)\times(n-nk)} matrix \eqn{B_{I}} for a
-subset of \eqn{n_k} consecutive indices from \eqn{\{1, \ldots, n\}}, given
-the factor \eqn{A}.
+Cholesky factor of the \eqn{(n-n_k)\times(n-n_k)} matrix \eqn{B_{I}} for a
+subset \eqn{I} of \eqn{\{1, \ldots, n\}} containing \eqn{n_k} consecutive
+indices, given the factor \eqn{A}.
 }
 \examples{
 n <- 10
@@ -91,7 +89,7 @@ print(all(abs(cholA1 - cholA2) < 1E-9))
 Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one
 Covariance Matrix Update for Evolution Strategies. In \emph{Proceedings of the
 2015 ACM Conference on Foundations of Genetic Algorithms XIII} (FOGA '15).
-Association for Computing Machinery, New York, NY, USA, 129–136.
+Association for Computing Machinery, New York, NY, USA, 129-136.
 \doi{10.1145/2725494.2725496}.
 }
 \author{

@@ -31,6 +31,16 @@ vector of length \code{n} that will specify the number of trials for each
 observation. If it is of length 1, then that value is considered to be the
 common value for the number of trials for all \code{n} observations.}
 }
+\value{
+a \code{data.frame} object containing the columns -
+\describe{
+\item{\verb{s1, s2}}{2D-coordinates in unit square}
+\item{\verb{x1, x2, ...}}{covariates, not including intercept}
+\item{\code{y}}{response}
+\item{\code{n_trials}}{present only when binomial data is generated}
+\item{\code{z_true}}{true spatial effects with which the data is generated}
+}
+}
 \description{
 Generates synthetic spatial data of different types where the
 spatial co-ordinates are sampled uniformly on an unit square. Different types
@@ -39,9 +49,8 @@ design includes an intercept and fixed covariates sampled from a standard
 normal distribution.
 }
 \examples{
-\dontrun{
 set.seed(1729)
-n <- 500
+n <- 10
 beta <- c(2, 5)
 phi0 <- 2
 nu0 <- 0.5
@@ -51,7 +60,6 @@ deltasq <- 1
 sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
                    spParams = spParams, spvar = spvar, deltasq = deltasq,
                    family = "gaussian")
-}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

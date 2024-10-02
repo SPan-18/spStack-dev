@@ -76,7 +76,7 @@
 #' number between 0 and 1. Default is 0.5.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd logical. If `loopd=TRUE`, returns leave-one-out predictive
-#'  densities, using method as given by \code{loopd.method}. Deafult is
+#'  densities, using method as given by \code{loopd.method}. Default is
 #'  \code{FALSE}.
 #' @param loopd.method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
 #'  valid inputs are `'exact'`, `'CV'` and `'PSIS'`. The option `'exact'`
@@ -92,29 +92,44 @@
 #' 'exact' or 'CV'.
 #' @param verbose logical. If \code{verbose = TRUE}, prints model description.
 #' @param ... currently no additional argument.
+#' @return An object of class \code{spGLMexact}, which is a list with the
+#'  following tags -
+#' \describe{
+#' \item{priors}{details of the priors used, containing the values of the
+#' boundary adjustment parameter (`boundary`), the variance parameter of the
+#' fine-scale variation term (`simasq.xi`) and others.}
+#' \item{samples}{a list of length 3, containing posterior samples of fixed
+#'  effects (\code{beta}), spatial effects (\code{z}) and the fine-scale
+#' variation term (\code{xi}).}
+#' \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
+#'  densities.}
+#' \item{model.params}{Values of the fixed parameters that includes
+#'  \code{phi} (spatial decay), \code{nu} (spatial smoothness).}
+#' }
+#' The return object might include additional data that can be used for
+#' subsequent prediction and/or model fit evaluation.
 #' @seealso [spLMexact()]
 #' @author Soumyakanti Pan <span18@ucla.edu>
-#' @references Bradley JR, Clinch M (2024). “Generating Independent Replicates
+#' @references Bradley JR, Clinch M (2024). "Generating Independent Replicates
 #' Directly from the Posterior Distribution for a Class of Spatial Hierarchical
-#' Models.” *Journal of Computational and Graphical Statistics*, **0**(0), 1–17.
-#' \doi{10.1080/10618600.2024.2365728}. *(in press)*
-#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
-#' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+#' Models." *Journal of Computational and Graphical Statistics*, **0**(0), 1-17.
+#' \doi{10.1080/10618600.2024.2365728}.
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+#' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.
-#' @references Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
-#' Evaluation Using Leave-One-out Cross-Validation and WAIC.”
-#' *Statistics and Computing*, **27**(5), 1413–1432. ISSN 0960-3174.
+#' @references Vehtari A, Gelman A, Gabry J (2017). "Practical Bayesian Model
+#' Evaluation Using Leave-One-out Cross-Validation and WAIC."
+#' *Statistics and Computing*, **27**(5), 1413-1432. ISSN 0960-3174.
 #' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
-#' \dontrun{
 #' # Example 1: Analyze spatial poisson count data
 #' data(simPoisson)
-#' dat <- simPoisson
+#' dat <- simPoisson[1:10, ]
 #' mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]),
 #'                    cor.fn = "matern",
 #'                    spParams = list(phi = 4, nu = 0.4),
-#'                    n.samples = 1000, verbose = TRUE)
+#'                    n.samples = 100, verbose = TRUE)
 #'
 #' # summarize posterior samples
 #' post_beta <- mod1$samples$beta
@@ -122,12 +137,12 @@
 #'
 #' # Example 2: Analyze spatial binomial count data
 #' data(simBinom)
-#' dat <- simBinom
+#' dat <- simBinom[1:10, ]
 #' mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]),
 #'                    cor.fn = "matern",
 #'                    spParams = list(phi = 3, nu = 0.4),
-#'                    n.samples = 1000, verbose = TRUE)
+#'                    n.samples = 100, verbose = TRUE)
 #'
 #' # summarize posterior samples
 #' post_beta <- mod2$samples$beta
@@ -135,18 +150,16 @@
 #'
 #' # Example 3: Analyze spatial binary data
 #' data(simBinary)
-#' dat <- simBinary
-#' set.seed(1729)
+#' dat <- simBinary[1:10, ]
 #' mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]),
 #'                    cor.fn = "matern",
 #'                    spParams = list(phi = 4, nu = 0.4),
-#'                    n.samples = 1000, verbose = TRUE)
+#'                    n.samples = 100, verbose = TRUE)
 #'
 #' # summarize posterior samples
 #' post_beta <- mod3$samples$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#' }
 #' @export
 spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,

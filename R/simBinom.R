@@ -39,7 +39,6 @@
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @examples
-#' \dontrun{
 #' set.seed(1729)
 #' n <- 500
 #' beta <- c(0.5, -0.5)
@@ -65,6 +64,4 @@
 #'         panel.grid = element_blank(),
 #'         legend.title = element_text(size = 10, hjust = 0.25),
 #'         legend.box.just = "center", aspect.ratio = 1)
-#' # ggpubr::ggarrange(plot1, plot2)
-#' }
 "simBinom"

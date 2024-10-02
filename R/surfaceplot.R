@@ -18,7 +18,6 @@
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
-#' \dontrun{
 #' data(simGaussian)
 #' plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
 #'                      var_name = "z_true")
@@ -30,7 +29,6 @@
 #' plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
 #'                      var_name = "z_true", col.pal = col.br.pal)
 #' plot2
-#' }
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
@@ -97,13 +95,10 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
-#' \dontrun{
 #' data(simGaussian)
 #' plots_2 <- surfaceplot2(simGaussian, coords_name = c("s1", "s2"),
 #'                         var1_name = "z_true", var2_name = "y")
 #' plots_2
-#' # ggpubr::ggarrange(plots_2[[1]], plots_2[[2]], legend = "right")
-#' }
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export

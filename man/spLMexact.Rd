@@ -46,7 +46,7 @@ containing prior details.}
 \item{n.samples}{number of posterior samples to be generated.}
 
 \item{loopd}{logical. If \code{loopd=TRUE}, returns leave-one-out predictive
-densities, using method as given by \code{loopd.method}. Deafult is
+densities, using method as given by \code{loopd.method}. Default is
 \code{FALSE}.}
 
 \item{loopd.method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
@@ -63,6 +63,7 @@ Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
 \value{
 An object of class \code{spLMexact}, which is a list with the
 following tags -
+\describe{
 \item{samples}{a list of length 3, containing posterior samples of fixed
 effects (\code{beta}), variance parameter (\code{sigmaSq}), spatial effects
 (\code{z}).}
@@ -71,6 +72,7 @@ densities.}
 \item{model.params}{Values of the fixed parameters that includes
 \code{phi} (spatial decay), \code{nu} (spatial smoothness) and
 \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
+}
 The return object might include additional data used for subsequent
 prediction and/or model fit evaluation.
 }
@@ -108,7 +110,6 @@ subsequently, we sample \eqn{z} conditioned on the posterior samples of
 \eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020).
 }
 \examples{
-\dontrun{
 # load data
 data(simGaussian)
 dat <- simGaussian[1:100, ]
@@ -132,7 +133,7 @@ mod1 <- spLMexact(y ~ x1, data = dat,
                   priors = prior_list,
                   spParams = list(phi = phi0, nu = nu0),
                   noise_sp_ratio = noise.sp.ratio,
-                  n.samples = 1000,
+                  n.samples = 100,
                   loopd = TRUE, loopd.method = "exact")
 
 beta.post <- mod1$samples$beta
@@ -145,15 +146,14 @@ plot2 <- surfaceplot(dat, coords_name = c("s1", "s2"),
 plot1
 plot2
 }
-}
 \references{
-Banerjee S (2020). “Modeling massive spatial datasets using a
-conjugate Bayesian linear modeling framework.” \emph{Spatial Statistics}, \strong{37},
+Banerjee S (2020). "Modeling massive spatial datasets using a
+conjugate Bayesian linear modeling framework." \emph{Spatial Statistics}, \strong{37},
 100417. ISSN 2211-6753. \doi{10.1016/j.spasta.2020.100417}.
 
-Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
-\strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+Smoothed Importance Sampling." \emph{Journal of Machine Learning Research},
+\strong{25}(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 }
 \seealso{
 \code{\link[=spLMstack]{spLMstack()}}

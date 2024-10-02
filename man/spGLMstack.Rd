@@ -76,8 +76,11 @@ stacking weights.}
 \item{...}{currently no additional argument.}
 }
 \value{
-An object of class \code{spLMstack}, which is a list including the
+An object of class \code{spGLMstack}, which is a list including the
 following tags -
+\describe{
+\item{\code{family}}{the distribution of the responses as indicated in the
+function call}
 \item{\code{samples}}{a list of length equal to total number of candidate models
 with each entry corresponding to a list of length 3, containing posterior
 samples of fixed effects (\code{beta}), spatial effects (\code{z}) and
@@ -85,6 +88,8 @@ fine-scale variation term (\code{xi}) for that particular model.}
 \item{\code{loopd}}{a list of length equal to total number of candidate models with
 each entry containing leave-one-out predictive densities under that
 particular model.}
+\item{\code{loopd.method}}{a list containing details of the algorithm used for
+calculation of leave-one-out predictive densities.}
 \item{\code{n.models}}{number of candidate models that are fit.}
 \item{\code{candidate.models}}{a matrix with \code{n_model} rows with each row
 containing details of the model parameters and its optimal weight.}
@@ -93,6 +98,7 @@ candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
 \item{\code{solver.status}}{solver status as returned by the optimization
 routine.}
+}
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.
 }
@@ -123,7 +129,7 @@ w_g p(y_i \mid y_{-i}, M_g) \\
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
-\dontrun{
+\donttest{
 data("simPoisson")
 dat <- simPoisson[1:100,]
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
@@ -145,9 +151,9 @@ post_z <- post_samps$z
 post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 
 z_combn <- data.frame(z = dat$z_true,
-                     zL = post_z_summ[, 1],
-                     zM = post_z_summ[, 2],
-                     zU = post_z_summ[, 3])
+                      zL = post_z_summ[, 1],
+                      zM = post_z_summ[, 2],
+                      zU = post_z_summ[, 3])
 
 library(ggplot2)
 plot_z <- ggplot(data = z_combn, aes(x = z)) +
@@ -165,13 +171,13 @@ plot_z <- ggplot(data = z_combn, aes(x = z)) +
 }
 }
 \references{
-Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
-Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 \doi{10.48550/arXiv.2406.04655}.
 
-Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
-\strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+Smoothed Importance Sampling." \emph{Journal of Machine Learning Research},
+\strong{25}(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 }
 \seealso{
 \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spLMstack]{spLMstack()}}

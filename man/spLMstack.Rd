@@ -37,7 +37,7 @@ covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
 
 \item{priors}{a list with each tag corresponding to a parameter name and
-containing prior details.}
+containing prior details. If not supplied, uses defaults.}
 
 \item{params.list}{a list containing candidate values of spatial process
 parameters for the \code{cor.fn} used, and, noise-to-spatial variance ratio.}
@@ -70,6 +70,7 @@ stacking weights.}
 \value{
 An object of class \code{spLMstack}, which is a list including the
 following tags -
+\describe{
 \item{\code{samples}}{a list of length equal to total number of candidate models
 with each entry corresponding to a list of length 3, containing posterior
 samples of fixed effects (\code{beta}), variance parameter
@@ -85,6 +86,7 @@ candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
 \item{\code{solver.status}}{solver status as returned by the optimization
 routine.}
+}
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.
 }
@@ -114,7 +116,6 @@ solve the optimization problem
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
-\dontrun{
 # load data and work with first 100 rows
 data(simGaussian)
 dat <- simGaussian[1:100, ]
@@ -123,12 +124,10 @@ dat <- simGaussian[1:100, ]
 muBeta <- c(0, 0)
 VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
 sigmaSqIGa <- 2
-sigmaSqIGb <- 0.1
+sigmaSqIGb <- 2
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
-# library(future)                    # if parallel = TRUE
-# plan('multicore', workers = 6)     # if running from terminal on Mac/Linux
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
@@ -138,8 +137,7 @@ mod1 <- spLMstack(y ~ x1, data = dat,
                                      noise_sp_ratio = c(1)),
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
-# plan('sequential')                  # turn off parallelization plan
-str(mod1)
+
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
@@ -166,14 +164,13 @@ plot1 <- ggplot(data = z_combn, aes(x = z)) +
   theme(panel.background = element_blank(),
         aspect.ratio = 1)
 }
-}
 \references{
-Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). “Pareto
-Smoothed Importance Sampling.” \emph{Journal of Machine Learning Research},
-\strong{25}(72), 1–58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
+Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
+Smoothed Importance Sampling." \emph{Journal of Machine Learning Research},
+\strong{25}(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 
-Zhang L, Tang W, Banerjee S (2024). “Bayesian Geostatistics Using
-Predictive Stacking.” \cr
+Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
+Predictive Stacking." \cr
 \doi{10.48550/arXiv.2304.12414}.
 }
 \seealso{

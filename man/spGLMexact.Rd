@@ -56,7 +56,7 @@ number between 0 and 1. Default is 0.5.}
 \item{n.samples}{number of posterior samples to be generated.}
 
 \item{loopd}{logical. If \code{loopd=TRUE}, returns leave-one-out predictive
-densities, using method as given by \code{loopd.method}. Deafult is
+densities, using method as given by \code{loopd.method}. Default is
 \code{FALSE}.}
 
 \item{loopd.method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
@@ -77,6 +77,24 @@ leave-one-out predictive densities when \code{loopd.method} is set to either
 \item{verbose}{logical. If \code{verbose = TRUE}, prints model description.}
 
 \item{...}{currently no additional argument.}
+}
+\value{
+An object of class \code{spGLMexact}, which is a list with the
+following tags -
+\describe{
+\item{priors}{details of the priors used, containing the values of the
+boundary adjustment parameter (\code{boundary}), the variance parameter of the
+fine-scale variation term (\code{simasq.xi}) and others.}
+\item{samples}{a list of length 3, containing posterior samples of fixed
+effects (\code{beta}), spatial effects (\code{z}) and the fine-scale
+variation term (\code{xi}).}
+\item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
+densities.}
+\item{model.params}{Values of the fixed parameters that includes
+\code{phi} (spatial decay), \code{nu} (spatial smoothness).}
+}
+The return object might include additional data that can be used for
+subsequent prediction and/or model fit evaluation.
 }
 \description{
 Fits a Bayesian spatial generalized linear model with fixed
@@ -135,15 +153,14 @@ values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 }
 \examples{
-\dontrun{
 # Example 1: Analyze spatial poisson count data
 data(simPoisson)
-dat <- simPoisson
+dat <- simPoisson[1:10, ]
 mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]),
                    cor.fn = "matern",
                    spParams = list(phi = 4, nu = 0.4),
-                   n.samples = 1000, verbose = TRUE)
+                   n.samples = 100, verbose = TRUE)
 
 # summarize posterior samples
 post_beta <- mod1$samples$beta
@@ -151,12 +168,12 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 
 # Example 2: Analyze spatial binomial count data
 data(simBinom)
-dat <- simBinom
+dat <- simBinom[1:10, ]
 mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]),
                    cor.fn = "matern",
                    spParams = list(phi = 3, nu = 0.4),
-                   n.samples = 1000, verbose = TRUE)
+                   n.samples = 100, verbose = TRUE)
 
 # summarize posterior samples
 post_beta <- mod2$samples$beta
@@ -164,32 +181,30 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 
 # Example 3: Analyze spatial binary data
 data(simBinary)
-dat <- simBinary
-set.seed(1729)
+dat <- simBinary[1:10, ]
 mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
                    coords = as.matrix(dat[, c("s1", "s2")]),
                    cor.fn = "matern",
                    spParams = list(phi = 4, nu = 0.4),
-                   n.samples = 1000, verbose = TRUE)
+                   n.samples = 100, verbose = TRUE)
 
 # summarize posterior samples
 post_beta <- mod3$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 }
-}
 \references{
-Bradley JR, Clinch M (2024). “Generating Independent Replicates
+Bradley JR, Clinch M (2024). "Generating Independent Replicates
 Directly from the Posterior Distribution for a Class of Spatial Hierarchical
-Models.” \emph{Journal of Computational and Graphical Statistics}, \strong{0}(0), 1–17.
-\doi{10.1080/10618600.2024.2365728}. \emph{(in press)}
+Models." \emph{Journal of Computational and Graphical Statistics}, \strong{0}(0), 1-17.
+\doi{10.1080/10618600.2024.2365728}.
 
-Pan S, Zhang L, Bradley JR, Banerjee S (2024). “Bayesian
-Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking.”
+Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 \doi{10.48550/arXiv.2406.04655}.
 
-Vehtari A, Gelman A, Gabry J (2017). “Practical Bayesian Model
-Evaluation Using Leave-One-out Cross-Validation and WAIC.”
-\emph{Statistics and Computing}, \strong{27}(5), 1413–1432. ISSN 0960-3174.
+Vehtari A, Gelman A, Gabry J (2017). "Practical Bayesian Model
+Evaluation Using Leave-One-out Cross-Validation and WAIC."
+\emph{Statistics and Computing}, \strong{27}(5), 1413-1432. ISSN 0960-3174.
 \doi{10.1007/s11222-016-9696-4}.
 }
 \seealso{

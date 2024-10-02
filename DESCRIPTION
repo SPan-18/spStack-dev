@@ -1,6 +1,6 @@
 Package: spStack
 Type: Package
-Version: 0.1.0
+Version: 1.0.0
 Title: Bayesian Geostatistics Using Predictive Stacking
 Authors@R: c(
     person("Soumyakanti", "Pan", role = c("aut", "cre"),
@@ -36,10 +36,10 @@ Suggests:
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.1
+RoxygenNote: 7.3.2
 Depends:
     R (>= 2.10)
 VignetteBuilder: knitr
-URL: https://github.com/SPan-18/spStack-dev
+URL: https://github.com/SPan-18/spStack-dev, https://span-18.github.io/spStack-dev/
 BugReports: https://github.com/SPan-18/spStack-dev/issues
 Language: en-US

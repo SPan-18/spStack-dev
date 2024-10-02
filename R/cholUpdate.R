@@ -1,11 +1,12 @@
 #' Different Cholesky factor updates
 #'
+#'
 #' @description Provides functions that implements different types of updates of
 #' a Cholesky factor that includes rank-one update, single row/column deletion
 #' update and a block deletion update.
 #' @name cholUpdate
-#' @param A an \eqn{n\times n}{nxn} triangular matrix
-#' @param v an \eqn{n\times 1}{nx1} matrix/vector
+#' @param A an \eqn{n\times n} triangular matrix
+#' @param v an \eqn{n\times 1} matrix/vector
 #' @param alpha scalar; if not supplied, default is 1
 #' @param beta scalar; if not supplied, default is 1
 #' @param del.index an integer from 1 to \eqn{n} indicating the row/column to be
@@ -15,10 +16,10 @@
 #' @param del.end an integer from 1 to \eqn{n} indicating the last row/column
 #' of a block to be deleted, must be at least 1 more than `del.start`
 #' @param lower logical; if `A` is lower-triangular or not
-#' @returns An \eqn{m \times m} lower-triangular matrix with \eqn{m = n} in case
-#' of `cholUpdateRankOne()`, \eqn{m = n - 1} in case of `cholUpdateDel()`, and,
-#' \eqn{m = n - n_k} in case of `cholUpdateDelBlock()` where \eqn{n_k} is the
-#' size of the block removed.
+#' @returns An \eqn{m \times m} lower-triangular `matrix`` with \eqn{m = n} in
+#' case of `cholUpdateRankOne()`, \eqn{m = n - 1} in case of `cholUpdateDel()`,
+#' and, \eqn{m = n - n_k} in case of `cholUpdateDelBlock()` where \eqn{n_k} is
+#' the size of the block removed.
 #' @details Suppose \eqn{B = AA^\top} is a \eqn{n \times n} matrix with \eqn{A}
 #' being its lower-triangular Cholesky factor. Then rank-one update corresponds
 #' to finding the Cholesky factor of the matrix
@@ -28,13 +29,13 @@
 #' \eqn{(n-1)\times(n-1)} matrix \eqn{B_i} which is obtained by removing the
 #' \eqn{i}-th row and column of \eqn{B}, given \eqn{A} for some
 #' \eqn{i - 1, \ldots, n}. Lastly, block deletion corresponds to finding the
-#' Cholesky factor of the \eqn{(n-nk)\times(n-nk)} matrix \eqn{B_{I}} for a
-#' subset of \eqn{n_k} consecutive indices from \eqn{\{1, \ldots, n\}}, given
-#' the factor \eqn{A}.
+#' Cholesky factor of the \eqn{(n-n_k)\times(n-n_k)} matrix \eqn{B_{I}} for a
+#' subset \eqn{I} of \eqn{\{1, \ldots, n\}} containing \eqn{n_k} consecutive
+#' indices, given the factor \eqn{A}.
 #' @references Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one
 #' Covariance Matrix Update for Evolution Strategies. In *Proceedings of the
 #' 2015 ACM Conference on Foundations of Genetic Algorithms XIII* (FOGA '15).
-#' Association for Computing Machinery, New York, NY, USA, 129–136.
+#' Association for Computing Machinery, New York, NY, USA, 129-136.
 #' \doi{10.1145/2725494.2725496}.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
@@ -73,17 +74,9 @@ NULL
 cholUpdateRankOne <- function(A, v, alpha, beta, lower = TRUE){
 
   n <- nrow(A)
-  if(length(v) != n){
-    stop("Dimension mismatch.")
-  }
-
-  if(missing(alpha)){
-    alpha <- 1
-  }
-
-  if(missing(beta)){
-    beta <- 1
-  }
+  if(length(v) != n){ stop("Dimension mismatch.") }
+  if(missing(alpha)){ alpha <- 1 }
+  if(missing(beta)){ beta <- 1 }
 
   storage.mode(A) <- "double"
   storage.mode(v) <- "double"

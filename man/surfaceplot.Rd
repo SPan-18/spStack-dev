@@ -31,7 +31,6 @@ a \code{ggplot} object containing the surface plot
 Make a surface plot
 }
 \examples{
-\dontrun{
 data(simGaussian)
 plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
                      var_name = "z_true")
@@ -43,7 +42,6 @@ col.br.pal <- col.br(100)
 plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
                      var_name = "z_true", col.pal = col.br.pal)
 plot2
-}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

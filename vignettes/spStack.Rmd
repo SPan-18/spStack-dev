@@ -40,12 +40,14 @@ Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial l
   y_i = x(s_i)^\T \beta + z(s_i) + \epsilon_i, \quad i = 1, \ldots, n,
 \end{equation}
 where $\beta$ is the $p \times 1$ vector of slopes, $z(s) \sim \GP(0, R(\cdot, \cdot; \thetasp))$ is a zero-centered spatial Gaussian process on $\mathcal{D}$ with spatial correlation function $R(\cdot, \cdot; \thetasp)$ characterized by process parameters $\thetasp$, $\sigma^2$ is the spatial variance parameter ("partial sill") and $\epsilon_i \sim \N(0, \tau^2), i = 1, \ldots, n$ are i.i.d. with variance $\tau^2$ ("nugget") capturing measurement error. The spatial process $z(\cdot)$ is assumed to be independent of the measurement errors $\{\epsilon_i, i = 1, \ldots, n\}$. Let $z = (z(s_1), \ldots, z(s_n))^\T$ denotes the realization of the spatial process on $\chi$ and $n \times n$ correlation matrix $R(\chi; \thetasp) = (R(s_i, s_j \thetasp))_{1 \leq i,j \leq n}$. We build a conjugate Bayesian hierarchical spatial model,
-\begin{aligned}
+\begin{equation}
+\begin{split}
 y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \\
 z \mid \sigma^2 &\sim N(0, \sigma^2 R(\chi; \thetasp)), \\
 \beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
 \sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma),
-\end{aligned}
+\end{split}
+\end{equation}
 where we fix the noise-to-spatial variance ratio $\delta^2 = \tau^2 / \sigma^2$, the process parameters $\thetasp$ and the hyperparameters $\mu_\beta$, $V_\beta$, $a_\sigma$ and $b_\sigma$. In this package, we use the Matern covariogram specified by spatial decay parameter $\phi$ and smoothness parameter $\nu$ i.e., $\thetasp = \{\phi, \nu\}$, given by
 \begin{equation}
 R(s, s'; \thetasp) = \frac{(\phi \lvert s - s' \rvert)^\nu}{2^{\nu - 1} \Gamma(\nu)} K_\nu (\phi \lvert s - s' \rvert)).
@@ -91,7 +93,8 @@ y(s_i) &\sim \mathrm{Bernoulli}(\pi(s_i)), \quad i = 1, \dots, n.\\
 \end{equation}
 
 Following @bradleyclinch2024, we introduce a Bayesian hierarchical spatial model as
-\begin{aligned}
+\begin{equation}
+\begin{split}
 y(s_i) &\mid \beta, z, \xi \sim \EF(x(s_i)^\T \beta + z(s_i) +
 \xi_i - \mu_i; b_i, \psi_y), i = 1, \ldots, n\\
 \beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
@@ -100,7 +103,8 @@ z &\mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \thetasp)), \quad
 \sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),\\
 \xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
 \mathrm{GCM_c}(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi),
-\end{aligned}
+\end{split}
+\end{equation}
 where $\mu = (\mu_1, \ldots, \mu_n)^\T$ denotes the discrepancy
 parameter. We fix the spatial process parameters $\thetasp$, the boundary adjustment parameter $\epsilon$ and the hyperparameters $V_\beta$, $\nu_\beta$, $\nu_z$ and $\sigma^2_\xi$. The term $\xi$ is known as the fine-scale variation
 term which is given a conditional generalized conjugate multivariate
@@ -110,11 +114,13 @@ distribution ($\mathrm{GCM_c}$) as prior. For details, see @pan2024stacking.
 Following @yao2018stacking, we consider a set of candidate models based on a grid of values of the parameters in $\{ \thetasp, \delta^2 \}$ for the Gaussian case, and $\{ \thetasp, \epsilon \}$ for the non-Gaussian case, as will be supplied by the user. We build a set of candidate models based on the Cartesian product of the collection of values for each individual parameter as $\mathcal{M} = \{M_1, \ldots, M_G\}$. Then, for each $g = 1, \ldots, G$, we sample from the posterior distribution $p(\sigma^2, \beta, z \mid y, M_g)$ under the model $M_g$ and find
 leave-one-out predictive densities $p(y_i \mid y_{-i}, M_g)$. Then we
 solve the optimization problem
-\begin{aligned}
+\begin{equation}
+\begin{split}
  \max_{w_1, \ldots, w_G}& \, \frac{1}{n} \sum_{i = 1}^n \log \sum_{g = 1}^G
  w_g p(y_i \mid y_{-i}, M_g) \\
  \text{subject to} & \quad w_g \geq 0, \sum_{g = 1}^G w_g = 1
-\end{aligned}
+\end{split}
+\end{equation}
 to find the optimal stacking weights $\hat{w}_1, \ldots, \hat{w}_G$. After obtaining the optimal stacking weights, posterior inference of any quantity of interest subsequently proceed from the *stacked* posterior,
 \begin{equation}
 \tilde{p}(\cdot \mid y) = \sum_{g = 1}^G \hat{w}_g p(\cdot \mid y, M_g).

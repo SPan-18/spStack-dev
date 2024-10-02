@@ -28,13 +28,31 @@ succeeded.}
 Obtains optimal stacking weights given leave-one-out predictive densities for
 each candidate model.
 }
+\examples{
+data(simGaussian)
+dat <- simGaussian[1:100, ]
+
+mod1 <- spLMstack(y ~ x1, data = dat,
+                  coords = as.matrix(dat[, c("s1", "s2")]),
+                  cor.fn = "matern",
+                  params.list = list(phi = c(1.5, 3),
+                                     nu = c(0.5, 1),
+                                     noise_sp_ratio = c(1)),
+                  n.samples = 1000, loopd.method = "exact",
+                  parallel = FALSE, solver = "ECOS", verbose = TRUE)
+
+loopd_mat <- do.call('cbind', mod1$loopd)
+w_hat <- get_stacking_weights(loopd_mat)
+print(round(w_hat$weights, 4))
+print(w_hat$status)
+}
 \references{
-Yao Y, Vehtari A, Simpson D, Gelman A (2018). “Using Stacking to
-Average Bayesian Predictive Distributions (with Discussion).” \emph{Bayesian
-Analysis}, \strong{13}(3), 917 – 1007. \doi{10.1214/17-BA1091}.
+Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to
+Average Bayesian Predictive Distributions (with Discussion)." \emph{Bayesian
+Analysis}, \strong{13}(3), 917-1007. \doi{10.1214/17-BA1091}.
 }
 \seealso{
-\code{\link[CVXR:psolve]{CVXR::psolve()}}
+\code{\link[CVXR:psolve]{CVXR::psolve()}}, \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr
