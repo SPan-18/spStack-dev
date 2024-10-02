@@ -95,14 +95,14 @@ y(s_i) &\sim \mathrm{Bernoulli}(\pi(s_i)), \quad i = 1, \dots, n.\\
 Following @bradleyclinch2024, we introduce a Bayesian hierarchical spatial model as
 \begin{equation}
 \begin{split}
-y(s_i) &\mid \beta, z, \xi \sim \EF(x(s_i)^\T \beta + z(s_i) +
-\xi_i - \mu_i; b_i, \psi_y), i = 1, \ldots, n\\
-\beta &\mid \sigma^2_\beta \sim N(0, \sigma^2_\beta V_\beta), \quad
+y(s_i) \mid \beta, z, \xi & \sim \EF\left(x(s_i)^\T \beta + z(s_i) +
+\xi_i - \mu_i; b_i, \psi_y\right), i = 1, \ldots, n\\
+\beta \mid \sigma^2_\beta &\sim N(0, \sigma^2_\beta V_\beta), \quad
 \sigma^2_\beta \sim \mathrm{IG}(\nu_\beta/2, \nu_\beta/2)\\
-z &\mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \thetasp)), \quad
+z \mid \sigma^2_z &\sim N\left(0, \sigma^2_z R(\chi; \thetasp)\right), \quad
 \sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),\\
-\xi &\mid \beta, z, \sigma^2_\xi, \alpha_\epsilon \sim
-\mathrm{GCM_c}(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi),
+\xi \mid \beta, z, \sigma^2_\xi, \alpha_\epsilon &\sim
+\mathrm{GCM_c}\left(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi\right),
 \end{split}
 \end{equation}
 where $\mu = (\mu_1, \ldots, \mu_n)^\T$ denotes the discrepancy
