@@ -14,7 +14,7 @@ install.packages("spStack")
 ```
 
 ### Installing from source
-To install the package from source, download the tarball *spStack_X.X.XX.tar.gz* file. After setting the working directory at the file location, either issue `R CMD install spStack_0.1.0.tar.gz` in the terminal, or run the following command in R to install the package.
+To install the package from source, download the tarball *spStack_X.X.XX.tar.gz* file. After setting the working directory at the file location, either issue `R CMD install spStack_X.X.XX.tar.gz` in the terminal, or run the following command in R to install the package.
 ```r
 install.packages("spStack_X.X.XX.tar.gz", type = "source", repos = NULL)
 ```
