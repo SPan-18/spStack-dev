@@ -14,9 +14,9 @@ install.packages("spStack")
 ```
 
 ### Installing from source
-To install the package from source, download the tarball *spStack_0.1.0.tar.gz* file. After setting the working directory at the file location, either issue `R CMD install spStack_0.1.0.tar.gz` in the terminal, or run the following command in R to install the package.
+To install the package from source, download the tarball *spStack_X.X.XX.tar.gz* file. After setting the working directory at the file location, either issue `R CMD install spStack_0.1.0.tar.gz` in the terminal, or run the following command in R to install the package.
 ```r
-install.packages("spStack_1.0.0.tar.gz", type = "source", repos = NULL)
+install.packages("spStack_X.X.XX.tar.gz", type = "source", repos = NULL)
 ```
 
 Please note that the package is written in C/C++ and hence contains a `Makevars` file for cross-platform portability. So, it is important to set the correct path to FORTRAN libraries as well as BLAS and LAPACK on your computer. For example, if you are working on MacOS, create a file `~.R/Makevars` and set global configurations for the libraries to link with R. The following is an example of such a Makevars file.
