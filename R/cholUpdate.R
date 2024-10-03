@@ -16,7 +16,7 @@
 #' @param del.end an integer from 1 to \eqn{n} indicating the last row/column
 #' of a block to be deleted, must be at least 1 more than `del.start`
 #' @param lower logical; if `A` is lower-triangular or not
-#' @returns An \eqn{m \times m} lower-triangular `matrix`` with \eqn{m = n} in
+#' @returns An \eqn{m \times m} lower-triangular `matrix` with \eqn{m = n} in
 #' case of `cholUpdateRankOne()`, \eqn{m = n - 1} in case of `cholUpdateDel()`,
 #' and, \eqn{m = n - n_k} in case of `cholUpdateDelBlock()` where \eqn{n_k} is
 #' the size of the block removed.
@@ -32,8 +32,8 @@
 #' Cholesky factor of the \eqn{(n-n_k)\times(n-n_k)} matrix \eqn{B_{I}} for a
 #' subset \eqn{I} of \eqn{\{1, \ldots, n\}} containing \eqn{n_k} consecutive
 #' indices, given the factor \eqn{A}.
-#' @references Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one
-#' Covariance Matrix Update for Evolution Strategies. In *Proceedings of the
+#' @references Oswin Krause and Christian Igel. 2015. "A More Efficient Rank-one
+#' Covariance Matrix Update for Evolution Strategies". In *Proceedings of the
 #' 2015 ACM Conference on Foundations of Genetic Algorithms XIII* (FOGA '15).
 #' Association for Computing Machinery, New York, NY, USA, 129-136.
 #' \doi{10.1145/2725494.2725496}.
