@@ -4,6 +4,8 @@
 
 * Minor edits to documentation
 
+* (to be updated)
+
 # spStack 1.0.0
 
 * Initial CRAN submission.
