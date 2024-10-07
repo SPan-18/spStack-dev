@@ -330,7 +330,7 @@ extern "C" {
           F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, h1, &incOne);                         // h1 = t(X)Y[-i]/deltasq + VbetaInvMuBeta
           location += F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);                             // loc = t(h)*Mstar*(gamma_hat)
 
-          b_star = pow(F77_NAME(dnrm2)(&n, h2, &incOne), 2);            // b_star = t(Y[-i])*Y[-i]/(deltasq)^2
+          b_star = pow(F77_NAME(dnrm2)(&n1, h2, &incOne), 2);           // b_star = t(Y[-i])*Y[-i]/(deltasq)^2
           b_star *= deltasq;                                            // b_star = t(Y[-i])*Y[-i]/deltasq
 
           inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
@@ -356,8 +356,9 @@ extern "C" {
 
         R_chk_free(looX);
         R_chk_free(looVz);
-        R_chk_free(looCholVz);
         R_chk_free(looCholVy);
+        R_chk_free(cholVz);
+        R_chk_free(looCholVz);
         R_chk_free(h1);
         R_chk_free(h2);
         R_chk_free(tmp_n11);
