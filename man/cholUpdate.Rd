@@ -88,8 +88,8 @@ cholA2 <- cholUpdateDelBlock(cholA, start_ind, end_ind, lower = FALSE)
 print(all(abs(cholA1 - cholA2) < 1E-9))
 }
 \references{
-Oswin Krause and Christian Igel. 2015. A More Efficient Rank-one
-Covariance Matrix Update for Evolution Strategies. In \emph{Proceedings of the
+Oswin Krause and Christian Igel. 2015. "A More Efficient Rank-one
+Covariance Matrix Update for Evolution Strategies". In \emph{Proceedings of the
 2015 ACM Conference on Foundations of Genetic Algorithms XIII} (FOGA '15).
 Association for Computing Machinery, New York, NY, USA, 129-136.
 \doi{10.1145/2725494.2725496}.
