@@ -40,6 +40,6 @@ RoxygenNote: 7.3.2
 Depends:
     R (>= 2.10)
 VignetteBuilder: knitr
-URL: https://github.com/SPan-18/spStack-dev, https://span-18.github.io/spStack-dev/
+URL: https://span-18.github.io/spStack-dev/
 BugReports: https://github.com/SPan-18/spStack-dev/issues
 Language: en-US

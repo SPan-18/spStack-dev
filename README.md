@@ -1,4 +1,4 @@
-# spStack <img src="man/figures/logo.png" align="right" height="120" alt="" />
+# spStack <a href="https://span-18.github.io/spStack-dev/"><img src="man/figures/logo.svg" align="right" height="139" alt="spStack website" /></a>
 spStack is an R package that delivers Bayesian inference for point-referenced spatial data by assimilating posterior inference over a collection of candidate models using stacking of predictive densities. Currently, it supports point-referenced Gaussian, Poisson, binomial and binary outcomes. Users can supply candidate values of spatial process parameters and certain auxiliary model parameters, based on which the collection of models will be created. spStack utilizes the Bayesian conjugate linear modelling framework for Gaussian data and the generalized conjugate multivariate distribution theory for non-Gaussian exponential family data. Learn more in `vignette("spStack")`. Technical details of the methodology are available in [Zhang, Tang, and Banerjee 2024](https://doi.org/10.48550/arXiv.2304.12414) and [Pan, Zhang, Bradley, and, Banerjee 2024](https://doi.org/10.48550/arXiv.2406.04655).
 
 ## Installation
@@ -19,7 +19,7 @@ To install the package from source, download the tarball *spStack_X.X.XX.tar.gz*
 install.packages("spStack_X.X.XX.tar.gz", type = "source", repos = NULL)
 ```
 
-Please note that the package is written in C/C++ and hence contains a `Makevars` file for cross-platform portability. So, it is important to set the correct path to FORTRAN libraries as well as BLAS and LAPACK on your computer. For example, if you are working on MacOS, create a file `~.R/Makevars` and set global configurations for the libraries to link with R. The following is an example of such a Makevars file.
+Note that the package is written in C++ with calls to FORTRAN routines and hence contains a `Makevars` file for cross-platform portability. So, it is important to set the correct path to FORTRAN libraries as well as BLAS and LAPACK on your computer. For example, if you are working on MacOS, create a file `~.R/Makevars` and set global configurations for the libraries to link with R. The following is an example of such a Makevars file.
 ```bash
 # Set Fortran library paths
 FLIBS = -L/opt/homebrew/opt/gcc/lib/gcc/14 -lgfortran -lquadmath -lm
