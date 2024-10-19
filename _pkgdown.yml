@@ -1,5 +1,7 @@
 url: https://span-18.github.io/spStack-dev/
 template:
+  params:
+    favicon: "favicon.ico"
   bootstrap: 5
   bslib:
     primary: '#0054AD'
