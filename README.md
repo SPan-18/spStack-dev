@@ -1,4 +1,12 @@
-# spStack <a href="https://span-18.github.io/spStack-dev/"><img src="man/figures/logo.svg" align="right" height="139" alt="spStack website" /></a>
+# spStack <a href="https://span-18.github.io/spStack-dev/"><img src="man/figures/logo.png" align="right" height="138" alt="spStack website" /></a>
+
+<!-- badges: start -->
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/spStack?color=blue)](https://cran.r-project.org/web/packages/spStack)
+[![Downloads](https://cranlogs.r-pkg.org/badges/spStack?color=blue)](https://cran.rstudio.com/package=spStack)
+[![R-CMD-check](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml/badge.svg)](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml)
+<!-- badges: end -->
+
+## Overview
 spStack is an R package that delivers Bayesian inference for point-referenced spatial data by assimilating posterior inference over a collection of candidate models using stacking of predictive densities. Currently, it supports point-referenced Gaussian, Poisson, binomial and binary outcomes. Users can supply candidate values of spatial process parameters and certain auxiliary model parameters, based on which the collection of models will be created. spStack utilizes the Bayesian conjugate linear modelling framework for Gaussian data and the generalized conjugate multivariate distribution theory for non-Gaussian exponential family data. Learn more in `vignette("spStack")`. Technical details of the methodology are available in [Zhang, Tang, and Banerjee 2024](https://doi.org/10.48550/arXiv.2304.12414) and [Pan, Zhang, Bradley, and, Banerjee 2024](https://doi.org/10.48550/arXiv.2406.04655).
 
 ## Installation
