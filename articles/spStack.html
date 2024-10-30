@@ -370,7 +370,7 @@ analyze the output of our functions. We start by loading the
 package.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://span-18.github.io/spStack-dev/">spStack</a></span><span class="op">)</span></span></code></pre></div>
-<p>Some synthetic spatial data are lazyloaded which includes synthetic
+<p>Some synthetic spatial data are lazy-loaded which includes synthetic
 spatial Gaussian data <code>simGaussian</code>, Poisson data
 <code>simPoisson</code>, binomial data <code>simBinom</code> and binary
 data <code>simBinary</code>. One can use the function
@@ -522,7 +522,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   2.459   3.052   1.646</span></span></code></pre></div>
+<span><span class="co">#&gt;   2.490   2.992   1.641</span></span></code></pre></div>
 <p>To sample from the stacked posterior, the package provides a helper
 function called <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code>. Subsequent inference
 proceeds from these samples obtained from the stacked posterior.</p>
@@ -692,7 +692,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  24.164  35.581  15.160</span></span></code></pre></div>
+<span><span class="co">#&gt;  25.326  34.747  15.258</span></span></code></pre></div>
 <p>We first obtain final posterior samples by sampling from the stacked
 sampler.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
