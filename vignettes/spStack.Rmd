@@ -131,7 +131,7 @@ In this section, we thoroughly illustrate our method on synthetic Gaussian as we
 ```{r setup}
 library(spStack)
 ```
-Some synthetic spatial data are lazyloaded which includes synthetic spatial Gaussian data `simGaussian`, Poisson data `simPoisson`, binomial data `simBinom` and binary data `simBinary`. One can use the function `sim_spData()` to simulate spatial data. We will be applying our functions on these datasets.
+Some synthetic spatial data are lazy-loaded which includes synthetic spatial Gaussian data `simGaussian`, Poisson data `simPoisson`, binomial data `simBinom` and binary data `simBinary`. One can use the function `sim_spData()` to simulate spatial data. We will be applying our functions on these datasets.
 
 ### Analysis of spatial Gaussian data
 We first load the data `simGaussian` and set up the priors. Supplying the priors is optional. See the documentation of `spLMexact()` to learn more about the default priors. Besides, setting the priors, we also fix the values of the spatial process parameters and the noise-to-spatial variance ratio.
