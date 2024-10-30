@@ -192,8 +192,8 @@ loopd_df <- data.frame(exact = loopd_exact, psis = loopd_psis)
 
 library(ggplot2)
 plot1 <- ggplot(data = loopd_df, aes(x = exact)) +
-  geom_point(aes(y = psis), size = 0.5, alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "red") +
+  geom_point(aes(y = psis), size = 1, alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", alpha = 0.5) +
   xlab("Exact") + ylab("PSIS") + theme_bw() +
   theme(panel.background = element_blank(), aspect.ratio = 1)
 plot1
@@ -239,7 +239,7 @@ z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
                       zM = post_z_summ[, 2], zU = post_z_summ[, 3])
 
 plotz <- ggplot(data = z_combn, aes(x = z)) +
-  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+  geom_point(aes(y = zM), size = 0.75, color = "darkblue", alpha = 0.5) +
   geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, 
                 color = "skyblue") + 
   geom_abline(slope = 1, intercept = 0, color = "red") +
@@ -334,7 +334,7 @@ z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
                       zM = post_z_summ[, 2], zU = post_z_summ[, 3])
 
 plotz <- ggplot(data = z_combn, aes(x = z)) +
-  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+  geom_point(aes(y = zM), size = 0.75, color = "darkblue", alpha = 0.5) +
   geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15,
                 color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
