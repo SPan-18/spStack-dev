@@ -56,7 +56,6 @@ Analysis}, \strong{13}(3), 917-1007. \doi{10.1214/17-BA1091}.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://github.com/SPan-18/spStack-dev}
   \item \url{https://span-18.github.io/spStack-dev/}
   \item Report bugs at \url{https://github.com/SPan-18/spStack-dev/issues}
 }

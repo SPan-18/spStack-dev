@@ -324,7 +324,7 @@ extern "C" {
             F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, looBb, &incOne);                                             // looBb = XtVyInvY + VbetaInvmuBeta
             F77_NAME(dtrsv)(lower, ntran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = cholinv(looB)*b
 
-            loo_sse -= pow(F77_NAME(dnrm2)(&n1, looBb, &incOne), 2);                                                        // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta - t(b)*B*b
+            loo_sse -= pow(F77_NAME(dnrm2)(&p, looBb, &incOne), 2);                                                        // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta - t(b)*B*b
 
             F77_NAME(dtrsv)(lower, ytran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = inv(looB)*b = Bb
             F77_NAME(dcopy)(&p, X_tilde, &incOne, looH, &incOne);                                                           // looH = X_tilde
