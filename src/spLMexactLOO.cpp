@@ -205,7 +205,7 @@ extern "C" {
     F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);                                                         // tmp_nn2 = Vz
     F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
     F77_NAME(dtrsm)(lside, lower, ytran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = inv(Vy)*Vz
-    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(Vz - Vz*VyInv*Vz)
+    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(inv(Vy)*Vz)
     mkLT(tmp_nn2, n);                                                                                            // make cholDinv lower-triangular
 
     // posterior parameters of sigmaSq
@@ -279,94 +279,185 @@ extern "C" {
       // Exact leave-one-out predictive densities calculation
       if(loopd_method == exact_str){
 
-        double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
-        double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
-        double *looCholVy = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVy, n1n1);
-        double *cholVz = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholVz, nn);
-        double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
-        double *h1 = (double *) R_chk_calloc(p, sizeof(double)); zeros(h1, p);
-        double *h2 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(h2, n1);
-        double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
-        double *tmp_n12 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n12, n1);
-        double *tmp_n1p1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p1, n1p);
-        double *tmp_n1p2 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p2, n1p);
-        double *out_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(out_p, p);
-        double *out_n1 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(out_n1, n1);
+        const int marginal_model = 1;        // SWITCH = 1: Use marginal model to find LOO-PD; 0: Use unmarginalized augmented model
 
-        const double deltasqInv = 1.0 / deltasq;
+        if(marginal_model){
 
-        int loo_index = 0;
-        double location = 0.0, scale = 0.0, a_star = 0.0, b_star = 0.0;
+          double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
+          double *X_tilde = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_tilde, p);
+          double *looY = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looY, n1);
+          double *looJ = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looJ, n1);
+          double *looCholVy = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVy, n1n1);
+          double *looB = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looB, pp);
+          double *looBb = (double *) R_chk_calloc(p, sizeof(double)); zeros(looBb, p);
+          double *looH = (double *) R_chk_calloc(p, sizeof(double)); zeros(looH, p);
+          double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
 
-        a_star = sigmaSqIGa;
-        a_star += 0.5 * n1;
+          double location = 0.0, scale = 0.0, loo_sse = 0.0, a_star = 0.0, b_star = 0.0;
 
-        F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-        F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+          a_star = sigmaSqIGa;
+          a_star += 0.5 * n1;
 
-        for(loo_index = 0; loo_index < n; loo_index++){
+          int loo_index = 0;
 
-          copyMatrixDelRow(X, n, p, looX, loo_index);                   // Row-deleted X
-          copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);   // Row-column deleted Vz
-          cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);   // Row-deletion CHOL update Vy
-          cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);   // Row-deletion CHOL update Vz
-          copyMatrixRowToVec(X, n, p, h1, loo_index);                   // h1 = X[i,1:p]
-          copyVecExcludingOne(&Vz[loo_index*n], h2, n, loo_index);      // h2 = Vz[-i,i]
+          for(loo_index = 0; loo_index < n; loo_index++){
 
-          inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
-                      tmp_n11, tmp_n12, tmp_p1, tmp_pp, tmp_n1p1,
-                      out_p, out_n1, 1);                                // call inversionLM with LOO = TRUE
+            copyMatrixDelRow(X, n, p, looX, loo_index);                   // Row-deleted X
+            copyMatrixRowToVec(X, n, p, X_tilde, loo_index);              // Copy left out X into Xtilde
+            copyVecExcludingOne(Y, looY, n, loo_index);                   // Leave-one-out Y
+            cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);   // Row-deletion Cholesky update of Vy
+            copyVecExcludingOne(&Vz[loo_index*n], looJ, n, loo_index);    // h2 = Vz[-i,i]
 
-          F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVz, &n1, h2, &incOne FCONE FCONE FCONE);
-          F77_NAME(dtrsv)(lower, ytran, nUnit, &n1, looCholVz, &n1, h2, &incOne FCONE FCONE FCONE);
-          scale = F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);
-          scale += F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);
+            F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVy, &n1, looY, &incOne FCONE FCONE FCONE); // looY = cholinv(looVy)*Y[-i]
+            F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVy, &n1, looJ, &incOne FCONE FCONE FCONE); // looJ = cholinv(looVy)*J
 
-          copyVecExcludingOne(Y, h2, n, loo_index);                      // h2 = Y[-i]
-          F77_NAME(dscal)(&n1, &deltasqInv, h2, &incOne);                // h2 = Y[-i]/deltasq
-          location = F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);  // loc = t(h2)*Mstar*Y[-i]/deltasq
+            location = F77_CALL(ddot)(&n1, looJ, &incOne, looY, &incOne);                               // location = t(J)*inv(Vy)*Y
 
-          F77_NAME(dgemv)(ytran, &n1, &p, &one, looX, &n1, h2, &incOne, &zero, h1, &incOne FCONE); // h1 = t(X)Y[-i]/deltasq
-          F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, h1, &incOne);                         // h1 = t(X)Y[-i]/deltasq + VbetaInvMuBeta
-          location += F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);                             // loc = t(h)*Mstar*(gamma_hat)
+            loo_sse = pow(F77_NAME(dnrm2)(&n1, looY, &incOne), 2);                                      // loo_sse = t(Y[-i])*looVyInv*Y[-i]
+            loo_sse += muBetatVbetaInvmuBeta;                                                           // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta
 
-          b_star = pow(F77_NAME(dnrm2)(&n1, h2, &incOne), 2);           // b_star = t(Y[-i])*Y[-i]/(deltasq)^2
-          b_star *= deltasq;                                            // b_star = t(Y[-i])*Y[-i]/deltasq
+            F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n1, &p, &one, looCholVy, &n1, looX, &n1 FCONE FCONE FCONE FCONE);  // looX = cholinv(looVy)*looX
+            F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looB, &p FCONE FCONE);            // looB = t(X)*VyInv*X
+            F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, looB, &incOne);                                                   // looB = t(X)*VyInv*X + VbetaInv
+            F77_NAME(dpotrf)(lower, &p, looB, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}        // looB = chol(t(X)*VyInv*X + VbetaInv)
+            F77_NAME(dgemv)(ytran, &n1, &p, &one, looX, &n1, looY, &incOne, &zero, looBb, &incOne FCONE);                   // looBb = t(X)*VyInv*Y
+            F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, looBb, &incOne);                                             // looBb = XtVyInvY + VbetaInvmuBeta
+            F77_NAME(dtrsv)(lower, ntran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = cholinv(looB)*b
 
-          inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
-                      tmp_n11, tmp_n12, tmp_p1, tmp_pp, tmp_n1p1,
-                      out_p, out_n1, 0);                                // call inversionLM with LOO = FALSE
-          b_star -= F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);
-          b_star -= F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);  // b_star = sse_star
-          b_star *= 0.5;
-          b_star += sigmaSqIGb;
+            loo_sse -= pow(F77_NAME(dnrm2)(&n1, looBb, &incOne), 2);                                                        // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta - t(b)*B*b
 
-          scale += deltasq;
-          scale = (b_star / a_star) * scale;
-          scale = sqrt(scale);
+            F77_NAME(dtrsv)(lower, ytran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = inv(looB)*b = Bb
+            F77_NAME(dcopy)(&p, X_tilde, &incOne, looH, &incOne);                                                           // looH = X_tilde
+            F77_NAME(dgemv)(ytran, &n1, &p, &negOne, looX, &n1, looJ, &incOne, &one, looH, &incOne FCONE);                  // looH = X_tilde - t(J)*VyInv*X
 
-          dtemp = Y[loo_index] - location;
-          dtemp = dtemp / scale;
-          dtemp = Rf_dt(dtemp, 2*a_star, 1);
-          dtemp -= log(scale);
+            location += F77_CALL(ddot)(&p, looH, &incOne, looBb, &incOne);                                                  // location = t(J)*inv(Vy)*Y + H*Bb
 
-          REAL(loopd_out_r)[loo_index] = dtemp;
+            scale = Vz[loo_index * n + loo_index] + deltasq;                                                                // scale = V(y_tilde)
+            scale -= F77_CALL(ddot)(&n1, looJ, &incOne, looJ, &incOne);                                                     // scale = V(y_tilde) - t(J)*inv(Vy)*J
+
+            F77_NAME(dtrsv)(lower, ntran, nUnit, &p, looB, &p, looH, &incOne FCONE FCONE FCONE);                            // looH = cholinv(looB)*looH
+
+            scale += F77_CALL(ddot)(&p, looH, &incOne, looH, &incOne);                                                      // scale = V(y_tilde) - t(J)*inv(Vy)*J + H*B*t(H)
+
+            b_star = sigmaSqIGb + 0.5 * loo_sse;
+            scale = (b_star / a_star) * scale;
+            scale = sqrt(scale);
+
+            dtemp = Y[loo_index] - location;
+            dtemp = dtemp / scale;
+            dtemp = Rf_dt(dtemp, 2 * a_star, 1);
+            dtemp -= log(scale);
+
+            REAL(loopd_out_r)[loo_index] = dtemp;
+
+          }
+
+          R_chk_free(looX);
+          R_chk_free(X_tilde);
+          R_chk_free(looY);
+          R_chk_free(looJ);
+          R_chk_free(looCholVy);
+          R_chk_free(looB);
+          R_chk_free(looBb);
+          R_chk_free(looH);
+          R_chk_free(tmp_n11);
+
+          // End LOO-PD calculation using marginal model
+
+        }else{
+
+          double *looX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looX, n1p);
+          double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
+          double *looCholVy = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVy, n1n1);
+          double *cholVz = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholVz, nn);
+          double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
+          double *h1 = (double *) R_chk_calloc(p, sizeof(double)); zeros(h1, p);
+          double *h2 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(h2, n1);
+          double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
+          double *tmp_n12 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n12, n1);
+          double *tmp_n1p1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p1, n1p);
+          double *tmp_n1p2 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p2, n1p);
+          double *out_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(out_p, p);
+          double *out_n1 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(out_n1, n1);
+
+          const double deltasqInv = 1.0 / deltasq;
+
+          int loo_index = 0;
+          double location = 0.0, scale = 0.0, a_star = 0.0, b_star = 0.0;
+
+          a_star = sigmaSqIGa;
+          a_star += 0.5 * n1;
+
+          F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
+          F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+
+          for(loo_index = 0; loo_index < n; loo_index++){
+
+            copyMatrixDelRow(X, n, p, looX, loo_index);                   // Row-deleted X
+            copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);   // Row-column deleted Vz
+            cholRowDelUpdate(n, cholVy, loo_index, looCholVy, tmp_n11);   // Row-deletion CHOL update Vy
+            cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);   // Row-deletion CHOL update Vz
+            copyMatrixRowToVec(X, n, p, h1, loo_index);                   // h1 = X[i,1:p]
+            copyVecExcludingOne(&Vz[loo_index*n], h2, n, loo_index);      // h2 = Vz[-i,i]
+
+            inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
+                        tmp_n11, tmp_n12, tmp_p1, tmp_pp, tmp_n1p1,
+                        out_p, out_n1, 1);                                // call inversionLM with LOO = TRUE
+
+            F77_NAME(dtrsv)(lower, ntran, nUnit, &n1, looCholVz, &n1, h2, &incOne FCONE FCONE FCONE);
+            F77_NAME(dtrsv)(lower, ytran, nUnit, &n1, looCholVz, &n1, h2, &incOne FCONE FCONE FCONE);
+            scale = F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);
+            scale += F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);
+
+            copyVecExcludingOne(Y, h2, n, loo_index);                      // h2 = Y[-i]
+            F77_NAME(dscal)(&n1, &deltasqInv, h2, &incOne);                // h2 = Y[-i]/deltasq
+            location = F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);  // loc = t(h2)*Mstar*Y[-i]/deltasq
+
+            F77_NAME(dgemv)(ytran, &n1, &p, &one, looX, &n1, h2, &incOne, &zero, h1, &incOne FCONE); // h1 = t(X)Y[-i]/deltasq
+            F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, h1, &incOne);                         // h1 = t(X)Y[-i]/deltasq + VbetaInvMuBeta
+            location += F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);                             // loc = t(h)*Mstar*(gamma_hat)
+
+            b_star = pow(F77_NAME(dnrm2)(&n1, h2, &incOne), 2);           // b_star = t(Y[-i])*Y[-i]/(deltasq)^2
+            b_star *= deltasq;                                            // b_star = t(Y[-i])*Y[-i]/deltasq
+
+            inversionLM(looX, n1, p, deltasq, VbetaInv, looVz, looCholVy, h1, h2,
+                        tmp_n11, tmp_n12, tmp_p1, tmp_pp, tmp_n1p1,
+                        out_p, out_n1, 0);                                // call inversionLM with LOO = FALSE
+            b_star -= F77_CALL(ddot)(&p, out_p, &incOne, h1, &incOne);
+            b_star -= F77_CALL(ddot)(&n1, out_n1, &incOne, h2, &incOne);  // b_star = sse_star
+            b_star *= 0.5;
+            b_star += sigmaSqIGb;
+
+            scale += deltasq;
+            scale = (b_star / a_star) * scale;
+            scale = sqrt(scale);
+
+            dtemp = Y[loo_index] - location;
+            dtemp = dtemp / scale;
+            dtemp = Rf_dt(dtemp, 2*a_star, 1);
+            dtemp -= log(scale);
+
+            REAL(loopd_out_r)[loo_index] = dtemp;
+
+          }
+
+          R_chk_free(looX);
+          R_chk_free(looVz);
+          R_chk_free(looCholVy);
+          R_chk_free(cholVz);
+          R_chk_free(looCholVz);
+          R_chk_free(h1);
+          R_chk_free(h2);
+          R_chk_free(tmp_n11);
+          R_chk_free(tmp_n12);
+          R_chk_free(tmp_n1p1);
+          R_chk_free(tmp_n1p2);
+          R_chk_free(out_p);
+          R_chk_free(out_n1);
+
 
         }
 
-        R_chk_free(looX);
-        R_chk_free(looVz);
-        R_chk_free(looCholVy);
-        R_chk_free(cholVz);
-        R_chk_free(looCholVz);
-        R_chk_free(h1);
-        R_chk_free(h2);
-        R_chk_free(tmp_n11);
-        R_chk_free(tmp_n12);
-        R_chk_free(tmp_n1p1);
-        R_chk_free(tmp_n1p2);
-        R_chk_free(out_p);
-        R_chk_free(out_n1);
 
       }
 
