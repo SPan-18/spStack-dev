@@ -2,7 +2,7 @@
 
 <!-- badges: start -->
 [![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/spStack?color=blue)](https://cran.r-project.org/web/packages/spStack)
-[![Downloads](https://cranlogs.r-pkg.org/badges/spStack?color=blue)](https://cran.rstudio.com/package=spStack)
+[![Downloads](https://cranlogs.r-pkg.org/badges/spStack?color=orange)](https://cran.rstudio.com/package=spStack)
 [![R-CMD-check](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml/badge.svg)](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml)
 <!-- badges: end -->
 
@@ -46,4 +46,4 @@ library(spStack)
 View the vignette by running `vignette("spStack")` and see example code to implement predictive stacking for different Bayesian hierarchical spatial models.
 
 ## Acknowledgement
-The graphics used in the logo has been obtained from the page [Gaussian RF](https://www.math.umd.edu/~bnk/CLIP/clip.gauss.htm) (Boris Kozintsev, 1999). It represents a realization of an isotropic Gaussian random field under Matérn correlation function with parameters 5 and 2.
+The graphics used in the logo has been obtained from the page [Gaussian RF](https://www.math.umd.edu/~bnk/CLIP/clip.gauss.htm) (Boris Kozintsev, 1999). It represents a realization of an isotropic Gaussian random field under the Matérn correlation function with decay and smoothness parameters 5 and 2, respectively.
