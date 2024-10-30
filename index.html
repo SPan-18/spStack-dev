@@ -52,10 +52,17 @@
 <div class="row">
   <main id="main" class="col-md-9"><div class="section level1">
 <div class="page-header">
-<img src="logo.png" class="logo" alt=""><h1 id="spstack-">spStack <a class="anchor" aria-label="anchor" href="#spstack-"></a>
+<img src="logo.png" class="logo" alt=""><h1 id="spstack-">spStack 
+<a class="anchor" aria-label="anchor" href="#spstack-"></a>
 </h1>
 </div>
+<!-- badges: start -->
+
+<div class="section level2">
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
 <p>spStack is an R package that delivers Bayesian inference for point-referenced spatial data by assimilating posterior inference over a collection of candidate models using stacking of predictive densities. Currently, it supports point-referenced Gaussian, Poisson, binomial and binary outcomes. Users can supply candidate values of spatial process parameters and certain auxiliary model parameters, based on which the collection of models will be created. spStack utilizes the Bayesian conjugate linear modelling framework for Gaussian data and the generalized conjugate multivariate distribution theory for non-Gaussian exponential family data. Learn more in <code><a href="articles/spStack.html">vignette("spStack")</a></code>. Technical details of the methodology are available in <a href="https://doi.org/10.48550/arXiv.2304.12414" class="external-link">Zhang, Tang, and Banerjee 2024</a> and <a href="https://doi.org/10.48550/arXiv.2406.04655" class="external-link">Pan, Zhang, Bradley, and, Banerjee 2024</a>.</p>
+</div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
@@ -73,7 +80,7 @@
 <p>To install the package from source, download the tarball <em>spStack_X.X.XX.tar.gz</em> file. After setting the working directory at the file location, either issue <code>R CMD install spStack_X.X.XX.tar.gz</code> in the terminal, or run the following command in R to install the package.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/utils/install.packages.html" class="external-link">install.packages</a></span><span class="op">(</span><span class="st">"spStack_X.X.XX.tar.gz"</span>, type <span class="op">=</span> <span class="st">"source"</span>, repos <span class="op">=</span> <span class="cn">NULL</span><span class="op">)</span></span></code></pre></div>
-<p>Please note that the package is written in C/C++ and hence contains a <code>Makevars</code> file for cross-platform portability. So, it is important to set the correct path to FORTRAN libraries as well as BLAS and LAPACK on your computer. For example, if you are working on MacOS, create a file <code>~.R/Makevars</code> and set global configurations for the libraries to link with R. The following is an example of such a Makevars file.</p>
+<p>Note that the package is written in C++ with calls to FORTRAN routines and hence contains a <code>Makevars</code> file for cross-platform portability. So, it is important to set the correct path to FORTRAN libraries as well as BLAS and LAPACK on your computer. For example, if you are working on MacOS, create a file <code>~.R/Makevars</code> and set global configurations for the libraries to link with R. The following is an example of such a Makevars file.</p>
 <div class="sourceCode" id="cb4"><pre class="sourceCode bash"><code class="sourceCode bash"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="co"># Set Fortran library paths</span></span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a><span class="ex">FLIBS</span> = <span class="at">-L</span>/opt/homebrew/opt/gcc/lib/gcc/14 <span class="at">-lgfortran</span> <span class="at">-lquadmath</span> <span class="at">-lm</span></span>
 <span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a></span>
@@ -88,13 +95,13 @@
 </h2>
 <p>Once successfully installed, load the library in R.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/SPan-18/spStack-dev" class="external-link">spStack</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://span-18.github.io/spStack-dev/">spStack</a></span><span class="op">)</span></span></code></pre></div>
 <p>View the vignette by running <code><a href="articles/spStack.html">vignette("spStack")</a></code> and see example code to implement predictive stacking for different Bayesian hierarchical spatial models.</p>
 </div>
 <div class="section level2">
 <h2 id="acknowledgement">Acknowledgement<a class="anchor" aria-label="anchor" href="#acknowledgement"></a>
 </h2>
-<p>The graphics used in the logo has been obtained from the page <a href="https://www.math.umd.edu/~bnk/CLIP/clip.gauss.htm" class="external-link">Gaussian RF</a> (Boris Kozintsev, 1999). It represents a realization of an isotropic Gaussian random field under Matérn correlation function with parameters 5 and 2.</p>
+<p>The graphics used in the logo has been obtained from the page <a href="https://www.math.umd.edu/~bnk/CLIP/clip.gauss.htm" class="external-link">Gaussian RF</a> (Boris Kozintsev, 1999). It represents a realization of an isotropic Gaussian random field under the Matérn correlation function with decay and smoothness parameters 5 and 2, respectively.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">

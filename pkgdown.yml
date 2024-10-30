@@ -3,7 +3,7 @@ pkgdown: 2.1.1
 pkgdown_sha: ~
 articles:
   spStack: spStack.html
-last_built: 2024-10-21T01:58Z
+last_built: 2024-10-30T05:25Z
 urls:
   reference: https://span-18.github.io/spStack-dev/reference
   article: https://span-18.github.io/spStack-dev/articles

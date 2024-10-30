@@ -55,7 +55,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>spStack: Bayesian Geostatistics Using Predictive Stacking</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/v1.0.1/vignettes/spStack.Rmd" class="external-link"><code>vignettes/spStack.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/master/vignettes/spStack.Rmd" class="external-link"><code>vignettes/spStack.Rmd</code></a></small>
       <div class="d-none name"><code>spStack.Rmd</code></div>
     </div>
 
@@ -369,7 +369,7 @@ Gaussian as well as non-Gaussian spatial data and provide code to
 analyze the output of our functions. We start by loading the
 package.</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://github.com/SPan-18/spStack-dev" class="external-link">spStack</a></span><span class="op">)</span></span></code></pre></div>
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://span-18.github.io/spStack-dev/">spStack</a></span><span class="op">)</span></span></code></pre></div>
 <p>Some synthetic spatial data are lazyloaded which includes synthetic
 spatial Gaussian data <code>simGaussian</code>, Poisson data
 <code>simPoisson</code>, binomial data <code>simBinom</code> and binary
@@ -499,14 +499,14 @@ ratio.</p>
 <span><span class="co">#&gt; | Model 1  |  1.5|  0.5|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 2  |  3.0|  0.5|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 3  |  5.0|  0.5|             0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 4  |  1.5|  1.0|             0.5| 0.284  |</span></span>
+<span><span class="co">#&gt; | Model 4  |  1.5|  1.0|             0.5| 0.226  |</span></span>
 <span><span class="co">#&gt; | Model 5  |  3.0|  1.0|             0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 6  |  5.0|  1.0|             0.5| 0.707  |</span></span>
+<span><span class="co">#&gt; | Model 6  |  5.0|  1.0|             0.5| 0.774  |</span></span>
 <span><span class="co">#&gt; | Model 7  |  1.5|  1.5|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 8  |  3.0|  1.5|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 9  |  5.0|  1.5|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 10 |  1.5|  0.5|             1.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 11 |  3.0|  0.5|             1.5| 0.009  |</span></span>
+<span><span class="co">#&gt; | Model 11 |  3.0|  0.5|             1.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 12 |  5.0|  0.5|             1.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 13 |  1.5|  1.0|             1.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 14 |  3.0|  1.0|             1.5| 0.000  |</span></span>
@@ -522,7 +522,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   4.978   6.678   3.177</span></span></code></pre></div>
+<span><span class="co">#&gt;   2.414   3.095   1.654</span></span></code></pre></div>
 <p>To sample from the stacked posterior, the package provides a helper
 function called <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code>. Subsequent inference
 proceeds from these samples obtained from the stacked posterior.</p>
@@ -536,8 +536,8 @@ as follows.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod3</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                  2.5%      50%    97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) 0.8620702 2.173778 2.989719</span></span>
-<span><span class="co">#&gt; x1          4.8678581 4.953678 5.030822</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept) 0.9303819 2.185930 2.949784</span></span>
+<span><span class="co">#&gt; x1          4.8678581 4.954272 5.030520</span></span></code></pre></div>
 <p>Here, we compare the posterior samples of the spatial random effects
 with their corresponding true values.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
@@ -692,7 +692,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  25.415  34.374  15.166</span></span></code></pre></div>
+<span><span class="co">#&gt;  24.906  36.086  15.577</span></span></code></pre></div>
 <p>We first obtain final posterior samples by sampling from the stacked
 sampler.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
