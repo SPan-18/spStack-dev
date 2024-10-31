@@ -522,7 +522,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   2.490   2.992   1.641</span></span></code></pre></div>
+<span><span class="co">#&gt;   2.463   3.147   1.674</span></span></code></pre></div>
 <p>To sample from the stacked posterior, the package provides a helper
 function called <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code>. Subsequent inference
 proceeds from these samples obtained from the stacked posterior.</p>
@@ -568,7 +568,7 @@ surfaces of the true spatial effects and their posterior medians.</p>
 <span>                       var1_name <span class="op">=</span> <span class="st">"z_true"</span>, var2_name <span class="op">=</span> <span class="st">"z_hat"</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpkgs.datanovia.com/ggpubr/" class="external-link">ggpubr</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plot_z</span>, common.legend <span class="op">=</span> <span class="cn">TRUE</span>, legend <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="spStack_files/figure-html/unnamed-chunk-9-1.png" width="576" style="display: block; margin: auto;"></p>
+<p><img src="spStack_files/figure-html/unnamed-chunk-9-1.png" width="672" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level3">
 <h3 id="analysis-of-spatial-non-gaussian-data">Analysis of spatial non-Gaussian data<a class="anchor" aria-label="anchor" href="#analysis-of-spatial-non-gaussian-data"></a>
@@ -692,7 +692,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  25.326  34.747  15.258</span></span></code></pre></div>
+<span><span class="co">#&gt;  24.320  34.959  15.036</span></span></code></pre></div>
 <p>We first obtain final posterior samples by sampling from the stacked
 sampler.</p>
 <div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
@@ -733,7 +733,7 @@ spatial effects with that of their posterior median.</p>
 <span>                       var1_name <span class="op">=</span> <span class="st">"z_true"</span>, var2_name <span class="op">=</span> <span class="st">"z_hat"</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://rpkgs.datanovia.com/ggpubr/" class="external-link">ggpubr</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rpkgs.datanovia.com/ggpubr/reference/ggarrange.html" class="external-link">ggarrange</a></span><span class="op">(</span>plotlist <span class="op">=</span> <span class="va">plot_z</span>, common.legend <span class="op">=</span> <span class="cn">TRUE</span>, legend <span class="op">=</span> <span class="st">"right"</span><span class="op">)</span></span></code></pre></div>
-<p><img src="spStack_files/figure-html/unnamed-chunk-16-1.png" width="576" style="display: block; margin: auto;"></p>
+<p><img src="spStack_files/figure-html/unnamed-chunk-16-1.png" width="672" style="display: block; margin: auto;"></p>
 </div>
 <div class="section level4">
 <h4 id="spatial-binomial-count-data">Spatial binomial count data<a class="anchor" aria-label="anchor" href="#spatial-binomial-count-data"></a>
