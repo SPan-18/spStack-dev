@@ -249,7 +249,7 @@ plotz
 ```
 
 The package also provides functions to plot interpolated spatial surfaces in order for visualization purposes. The function `surfaceplot()` creates a single spatial surface plot, while `surfaceplot2()` creates two side-by-side surface plots. We are using the later to visually inspect the interpolated spatial surfaces of the true spatial effects and their posterior medians.
-```{r fig.align='center', fig.height=2.5, fig.width=6}
+```{r fig.align='center', fig.height=3.5, fig.width=7}
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
@@ -344,7 +344,7 @@ plotz
 ```
 
 We can also compare the interpolated spatial surfaces of the true spatial effects with that of their posterior median.
-```{r fig.align='center', fig.height=2.5, fig.width=6}
+```{r fig.align='center', fig.height=3.5, fig.width=7}
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
