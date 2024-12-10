@@ -13,7 +13,8 @@ static const R_CallMethodDef CallEntries[] = {
   {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           21},
   {"spLMexact",               (DL_FUNC) &spLMexact,               14},
   {"spLMexact2",              (DL_FUNC) &spLMexact2,              14},
-  {"spLMexactLOO",            (DL_FUNC) &spLMexactLOO,            16}
+  {"spLMexactLOO",            (DL_FUNC) &spLMexactLOO,            16},
+  {"stvcGLMexact",            (DL_FUNC) &stvcGLMexact,            21}
 };
 
 void

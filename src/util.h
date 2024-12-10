@@ -70,6 +70,10 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C);
 
 void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C);
 
+void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C);
+
+double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t);
+
 void zeros(double *x, int length);
 
 void zeros(int *x, int length);

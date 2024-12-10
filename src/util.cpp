@@ -541,7 +541,7 @@ void printMtrx(double *m, int nRow, int nCol){
   for(i = 0; i < nRow; i++){
     Rprintf("\t");
     for(j = 0; j < nCol; j++){
-      Rprintf("%.2f\t", m[j*nRow+i]);
+      Rprintf("%.5f\t", m[j*nRow+i]);
     }
     Rprintf("\n");
   }
@@ -626,6 +626,50 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
     perror("c++ error: corfn is not correctly specified");
   }
 }
+
+// Create full spatial-temporal correlation matrix
+void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C){
+  int i, j, k;
+  double sp_dist, tm_dist;
+
+  for(i = 0; i < n; i++){
+    for(j = i; j < n; j++){
+      sp_dist = 0.0;
+      tm_dist = 0.0;
+
+      // find spatial distance
+      for(k = 0; k < p; k++){
+        sp_dist += pow(coords_sp[k * n + i] - coords_sp[k * n + j], 2);
+      }
+      sp_dist = sqrt(sp_dist);
+
+      // find temporal distance
+      tm_dist = pow(coords_tm[i] - coords_tm[j], 2);
+      tm_dist = sqrt(tm_dist);
+
+      // evaluate correlation kernel
+      if(corfn == "gneiting-decay"){
+        C[i * n + j] = gneiting_spt_decay(sp_dist, tm_dist, theta[0], theta[1]);
+        C[j * n + i] = C[i * n + j];
+      }else{
+        perror("c++ error: corfn is incorrectly specified");
+      }
+
+    }
+  }
+}
+
+// gneiting-decay spatio-temporal correlation function (Gneiting and Guttorp 2010)
+double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t){
+
+  double dist_t_sq = pow(dist_t, 2);
+  double tmp = 0.0;
+  tmp = (phi_t * dist_t_sq) + 1.0;
+
+  return (1.0 / tmp) * exp(- (phi_s * dist_s) / sqrt(tmp));
+
+}
+
 
 // Fill a double vector with zeros
 void zeros(double *x, int length){
