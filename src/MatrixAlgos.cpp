@@ -660,3 +660,205 @@ void upperTri_lowerTri(double *M, int n){
     }
   }
 }
+
+// Function for priming (pre-proprocessing) step for varying-coefficients model
+void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
+                  double *VBetaInv, double *Vz, int sharedP, double *cholCap, double sigmaSqxi,
+                  double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+                  double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn){
+
+  int np = n * p;
+  int pp = p * p;
+  int nn = n * n;
+  int nr = n * r;
+  int nrp = nr * p;
+  int nnr = n * nr;
+  int nrnr = nr * nr;
+  int i = 0, j = 0, k = 0;
+
+  int info = 0;
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  char const *lside = "L";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaSqxi2 = (sigmaSqxi + 1.0) / sigmaSqxi;
+
+  // F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &one, XtVzXtt, &n, X, &n, &zero, tmp_np1, &n FCONE FCONE);                 // tmp_np1 = X_tilde*Vz*t(X_tilde)*X
+  // F77_NAME(dcopy)(&np, tmp_np1, &incOne, tmp_np2, &incOne);                                                            // tmp_n2 = X_tilde*Vz*t(X_tilde)*X
+  // F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &p, &one, cholCap, &n, tmp_np1, &n FCONE FCONE FCONE FCONE);
+  // F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholCap, &n, tmp_np1, &n FCONE FCONE FCONE FCONE);         // tmp_np1 = inv(I+XTildeVzXTildet)*X_tilde*Vz*t(X_tilde)*X
+  // F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &negone, XtVzXtt, &n, tmp_np1, &n, &one, tmp_np2, &n FCONE FCONE);         // tmp_np2 = X_tilde*inv(D1)*t(X_tilde)*X
+  // F77_NAME(dscal)(&np, &negone, tmp_np2, &incOne);                                                                     // tmp_np2 = -X_tilde*inv(D1)*t(X_tilde)*X
+  // F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, tmp_np2, &n, &zero, tmp_pp, &p FCONE FCONE);                  // tmp_pp = -t(X)*X_tilde*inv(D1)*t(X_tilde)*X
+  // F77_NAME(daxpy)(&pp, &one, XtX, &incOne, tmp_pp, &incOne);                                                           // tmp_pp = XtX - t(X)*X_tilde*inv(D1)*t(X_tilde)*X
+  // F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, tmp_pp, &incOne);                                                      // tmp_pp = XtX + VbetaInv - t(X)*X_tilde*inv(D1)*t(X_tilde)*X = Schur(A1)
+  // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}           // tmp_pp = chol(Schur(A1))
+  // F77_NAME(daxpy)(&np, &one, X, &incOne, tmp_np2, &incOne);                                                            // tmp_np2 = X - X_tilde*inv(D1)*t(X_tilde)*X
+  // transpose_matrix(tmp_np2, n, p, tmp_pn);                                                                             // tmp_pn = t(tmp_np2) = t(X - X_tilde*inv(D1)*t(X_tilde)*X)
+  // F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, tmp_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);
+  // F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, tmp_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);           // tmp_np1 = inv(schur(A1))*t(X - X_tilde*inv(D1)*t(X_tilde)*X) and RETURN
+
+  // printMtrx(tmp_pn, p, n);
+
+  // Find inv(D1)
+  zeros(D1inv, nrnr);
+  // Step 1: Find invchol(I+XTVzXTt)*XT
+  for(i = 0; i < r; i++){
+    for(j = 0; j < n; j++){
+      dtrsv_sparse1(cholCap, XTilde[i*n + j], &D1inv[(i*n + j)*n], n, j);
+    }
+  }
+  if(sharedP){
+    for(i = 0; i < r; i++){
+      F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, Vz, &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
+    }
+  }else{
+    for(i = 0; i < r; i++){
+      F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, &Vz[i*nn], &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
+    }
+  }
+  F77_NAME(dgemm)(ytran, ntran, &nr, &nr, &n, &one, tmp_nnr, &n, tmp_nnr, &n, &zero, D1inv, &nr FCONE FCONE);
+  F77_NAME(dscal)(&nrnr, &negone, D1inv, &incOne);
+  if(sharedP){
+    for(i = 0; i < r; i++){
+      for(j = 0; j < n; j++){
+        for(k = 0; k < n; k++){
+          D1inv[i*n*nr + j*nr + (i*n + k)] += Vz[j*n + k];
+        }
+      }
+    }
+  }else{
+    for(i = 0; i < r; i++){
+      for(j = 0; j < n; j++){
+        for(k = 0; k < n; k++){
+          D1inv[i*n*nr + j*nr + (i*n + k)] += Vz[i*nn + j*n + k];
+        }
+      }
+    }
+  }
+
+  F77_NAME(dgemm)(ntran, ntran, &nr, &p, &nr, &one, D1inv, &nr, XTildetX, &nr, &zero, tmp_nnr, &nr FCONE FCONE);       // inv(D1)*XTildetX
+  F77_NAME(dcopy)(&nrp, tmp_nnr, &incOne, D1invB1, &incOne);                                                           // D1invB1 = inv(D1)*XTildetX
+  lmulm_XTilde_VC(ntran, n, r, p, XTilde, tmp_nnr, DinvB_pn);                                                          // XTilde*inv(D1)*XTildetX
+  F77_NAME(dscal)(&np, &negone, DinvB_pn, &incOne);                                                                    // - XTilde*inv(D1)*XTildetX
+
+  F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, DinvB_pn, &n, &zero, cholSchurA1_pp, &p FCONE FCONE);         // - t(X)*XTilde*inv(D1)*XTildetX
+  F77_NAME(daxpy)(&pp, &one, XtX, &incOne, cholSchurA1_pp, &incOne);                                                   // XtX - t(X)*XTilde*inv(D1)*XTildetX
+  F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, cholSchurA1_pp, &incOne);                                              // SchurA1 = XtX + VBetaInv - t(X)*XTilde*inv(D1)*XTildetX
+  F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // chol(Schur(A1))
+
+  F77_NAME(daxpy)(&np, &one, X, &incOne, DinvB_pn, &incOne);                                                           // X - XTilde*inv(D1)*XTildetX
+  F77_NAME(dcopy)(&np, DinvB_pn, &incOne, tmp_nnr, &incOne);
+  transpose_matrix(tmp_nnr, n, p, DinvB_pn);
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, cholSchurA1_pp, &p, DinvB_pn, &p FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, cholSchurA1_pp, &p, DinvB_pn, &p FCONE FCONE FCONE FCONE); // inv(schurA1)*t(X - XTilde*inv(D1)*XTildetX)
+
+  F77_NAME(dgemm)(ntran, ntran, &nr, &n, &p, &one, XTildetX, &nr, DinvB_pn, &p, &zero, tmp_nnr, &nr FCONE FCONE);      // t(XTilde)*X*DinvB_pn
+  F77_NAME(dscal)(&nnr, &negone, tmp_nnr, &incOne);                                                                    // - t(XTilde)*X*DinvB_pn
+  addXTildeTransposeToMatrixByRow(XTilde, tmp_nnr, n, r);                                                              // t(XTilde) - t(XTilde)*X*DinvB_pn
+  F77_NAME(dgemm)(ntran, ntran, &nr, &n, &nr, &one, D1inv, &nr, tmp_nnr, &nr, &zero, DinvB_nrn, &nr FCONE FCONE);      // inv(D1)*(t(XTilde) - t(XTilde)*X*DinvB_pn)
+
+  lmulm_XTilde_VC(ntran, n, r, n, XTilde, DinvB_nrn, cholSchurA_nn);                                                   // XTilde*DinvB_nrn
+  F77_NAME(dgemm)(ntran, ntran, &n, &n, &p, &one, X, &n, DinvB_pn, &p, &one, cholSchurA_nn, &n FCONE FCONE);           // XTilde*DinvB_nrn + X*DinvB_pn
+  F77_NAME(dscal)(&nn, &negone, cholSchurA_nn, &incOne);
+  for(i = 0; i < n; i++){
+    cholSchurA_nn[i*n + i] += sigmaSqxi2;
+  }
+  F77_NAME(dpotrf)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // chol(Schur(A))
+
+}
+
+// Function for triangular-solve of a vector with only one non-zero entry
+void dtrsv_sparse1(double *L, double b, double *x, int n, int k){
+
+  int i = 0, j = 0;
+  double sum = 0.0;
+
+  zeros(x, n);
+
+  // Solve for x[k] directly
+  x[k] = b / L[k * n + k];
+
+  // Forward solve for x[i] (i > k)
+  for(i = k + 1; i < n; i++){
+
+    sum = 0.0;
+
+    // Compute the sum L[i,j] * x[j] for j = k to i - 1
+    for(j = k; j < i; j++){
+      sum += L[j * n + i] * x[j];
+    }
+
+    // Compute x[i]
+    x[i] = - sum / L[i * n + i];
+
+  }
+
+}
+
+// Function for the projection for GLM in varying-coefficients model
+void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
+               double *cholVz, int sharedP, double *v_eta, double *v_xi, double *v_beta, double *v_z,
+               double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+               double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn,
+               double *tmp_nr){
+
+  int i = 0;
+  int nn = n * n;
+  int nr = n * r;
+
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaxiInv = 1.0 / sqrt(sigmaSqxi);
+
+  // Find components of t(H)*v, where (2n+p+nr)x1 vector v = [v_eta, v_xi, v_beta, v_z]
+  F77_NAME(dscal)(&n, &sigmaxiInv, v_xi, &incOne);                                                    // v_xi = v_xi/sigmasqxi
+  F77_NAME(daxpy)(&n, &one, v_eta, &incOne, v_xi, &incOne);                                           // v_xi = v_eta + v_xi/sigmasqxi
+
+  F77_NAME(dtrsv)(lower, ytran, nunit, &p, Lbeta, &p, v_beta, &incOne FCONE FCONE FCONE);             // v_beta = LbetatInv*v_beta
+  F77_NAME(dgemv)(ytran, &n, &p, &one, X, &n, v_eta, &incOne, &one, v_beta, &incOne FCONE);           // v_beta = Xt*v_eta + LbetaInv*v_beta
+
+  if(sharedP){
+    for(i = 0; i < r; i++){
+      F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVz, &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
+    }
+  }else{
+    for(i = 0; i < r; i++){
+      F77_NAME(dtrsv)(lower, ytran, nunit, &n, &cholVz[i*nn], &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
+    }
+  }
+  lmulv_XTilde_VC(ytran, n, r, XTilde, v_eta, tmp_nr);
+  F77_NAME(daxpy)(&nr, &one, tmp_nr, &incOne, v_z, &incOne);                                          // v_z = XTildet*v_eta + t(LzInv)*v_z
+
+  F77_NAME(dgemv)(ytran, &nr, &n, &one, DinvB_nrn, &nr, v_z, &incOne, &zero, tmp_nr, &incOne FCONE);  // tmp_nr = (BtDInv*v2)_1
+  F77_NAME(dgemv)(ytran, &p, &n, &one, DinvB_pn, &p, v_beta, &incOne, &one, tmp_nr, &incOne FCONE);   // tmp_nr = BtDInv*v2
+  F77_NAME(dscal)(&n, &negone, tmp_nr, &incOne);                                                      // tmp_nr = - BtDInv*v2
+  F77_NAME(daxpy)(&n, &one, tmp_nr, &incOne, v_xi, &incOne);                                          // v_xi = v_xi - BtDInv*v2
+  F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholSchurA_nn, &n, v_xi, &incOne FCONE FCONE FCONE);
+  F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholSchurA_nn, &n, v_xi, &incOne FCONE FCONE FCONE);       // v_xi = inv(schurA)*(v_xi - BtDInv*v2)
+
+  F77_NAME(dgemv)(ytran, &nr, &p, &negone, D1invB1, &nr, v_z, &incOne, &zero, tmp_nr, &incOne FCONE); // tmp_nr = - t(B1)*inv(D1)*v_z
+  F77_NAME(daxpy)(&p, &one, tmp_nr, &incOne, v_beta, &incOne);                                        // v_beta = v_beta - t(B1)*inv(D1)*v_z
+  F77_NAME(dtrsv)(lower, ntran, nunit, &p, cholSchurA1_pp, &p, v_beta, &incOne FCONE FCONE FCONE);
+  F77_NAME(dtrsv)(lower, ytran, nunit, &p, cholSchurA1_pp, &p, v_beta, &incOne FCONE FCONE FCONE);    // v_beta = inv(schurA1)*(v21 - t(B1)*inv(D1)*v22)
+
+  F77_NAME(dgemv)(ntran, &nr, &p, &negone, D1invB1, &nr, v_beta, &incOne, &zero, tmp_nr, &incOne FCONE);  // tmp_nr = - inv(D1)*B1*v_beta
+  F77_NAME(dgemv)(ntran, &nr, &nr, &one, D1inv, &nr, v_z, &incOne, &one, tmp_nr, &incOne FCONE);       // tmp_nr = inv(D1)*v_z - inv(D1)*B1*v_beta
+  F77_NAME(dcopy)(&nr, tmp_nr, &incOne, v_z, &incOne);                                                 // v_z = inv(D1)*v_z - inv(D1)*B1*v_beta
+
+  // Find inv(D)*v2 - inv(D)*B*inv(schurA1)*(v1 - t(B)*inv(D)*v2)
+  F77_NAME(dgemv)(ntran, &p, &n, &negone, DinvB_pn, &p, v_xi, &incOne, &one, v_beta, &incOne FCONE);
+  F77_NAME(dgemv)(ntran, &nr, &n, &negone, DinvB_nrn, &nr, v_xi, &incOne, &one, v_z, &incOne FCONE);
+
+}

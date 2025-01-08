@@ -552,7 +552,7 @@ void printVec(double *m, int n){
 
   Rprintf("\t");
   for(int j = 0; j < n; j++){
-    Rprintf("%.2f\t", m[j]);
+    Rprintf("%.5f\t", m[j]);
   }
   Rprintf("\n");
 }
@@ -888,5 +888,98 @@ double qGPD(double p, double k, double sigma){
   out = sigma * expm1(- k * log1p(- p)) / k;
 
   return out;
+
+}
+
+// WARNING: the following function has the transpose case erroneous
+// Function for sparse matrix-vector multiplication for varying coefficients models
+void lmulv_XTilde_VC(const char *trans, int n, int r, double *XTilde, double *v, double *res){
+
+  int i = 0, j = 0;
+  const int inc_n = n;
+
+  char const *yestrans = "T";
+  char const *notrans = "N";
+
+  if(trans == notrans){
+    for(i = 0; i < n; i++){
+      res[i] = F77_CALL(ddot)(&r, &XTilde[i], &inc_n, &v[i], &inc_n);
+    }
+  }else if(trans == yestrans){
+    for(i = 0; i < r; i++){
+      for(j = 0; j < n; j++){
+        res[i*n + j] = XTilde[i*n + j] * v[j];
+      }
+    }
+  }else{
+    perror("lmulv_XTilde_VC: Invalid transpose argument.");
+  }
+
+}
+
+// Function for sparse matrix-matrix multiplication for varying coefficients models
+void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, double *A, double *res){
+
+  int i = 0, j = 0, l = 0;
+  const int inc_n = n;
+
+  char const *yestrans = "T";
+  char const *notrans = "N";
+
+  if(trans == notrans){
+    for(i = 0; i < n; i++){
+      for(j = 0; j < k; j++){
+        res[j * n + i] = F77_CALL(ddot)(&r, &XTilde[i], &inc_n, &A[j * n * r + i], &inc_n);
+      }
+    }
+  }else if(trans == yestrans){
+    for(i = 0; i < r; i++){
+      for(j = 0; j < n; j++){
+        for(l = 0; l < k; l++){
+          res[n*r*l + i*n + j] = XTilde[i*n + j] * A[n*l + j];
+        }
+      }
+    }
+  }else{
+    perror("lmulm_XTilde_VC: Invalid transpose argument.");
+  }
+
+}
+
+void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, int sharedP){
+
+  int i = 0, j = 0, l = 0;
+
+  if(sharedP){
+    for(l = 0; l < r; l++){
+      for(i = 0; i < n; i ++){
+        for(j = 0; j < n; j++){
+          res[n*r*j + l*n + i] = Vz[j*n + i] * XTilde[l*n + j];
+        }
+      }
+    }
+  }else{
+    for(l = 0; l < r; l++){
+      for(i = 0; i < n; i ++){
+        for(j = 0; j < n; j++){
+          res[n*r*j + l*n + i] = Vz[n*n*l + j*n + i] * XTilde[l*n + j];
+        }
+      }
+    }
+  }
+
+}
+
+// Function for sparse-addition of t(XTilde) to a nr x n matrix
+void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r){
+
+  int i = 0, j = 0;
+  int nr = n * r;
+
+  for(i = 0; i < n; i++){
+    for(j = 0; j < r; j++){
+      B[i*nr + j*n + i] += XTilde[j*n + i];
+    }
+  }
 
 }

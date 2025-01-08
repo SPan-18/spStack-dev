@@ -88,3 +88,11 @@ void fitGeneralParetoDist(double *x, int n, int wip, int min_grid_pts, double *r
 double lx(double b, double *x, int n);
 
 double qGPD(double p, double k, double sigma);
+
+void lmulv_XTilde_VC(const char *trans, int n, int r, double *XTilde, double *v, double *res);
+
+void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, double *A, double *res);
+
+void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, int sharedP);
+
+void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r);
