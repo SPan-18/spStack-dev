@@ -40,14 +40,14 @@ extern "C" {
 
   SEXP stvcGLMexact(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
                     SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
-                    SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r,
-                    SEXP sharedProcess_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                    SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                    SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
                     SEXP nSamples_r, SEXP verbose_r);
 
   SEXP stvcGLMexactLOO(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
                        SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
-                       SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r,
-                       SEXP sharedProcess_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                       SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                       SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
                        SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                       SEXP CV_K_r, SEXP loopd_nMC_r, SEXP verbose_r);
+                       SEXP CV_K_r, SEXP loopd_nMC_r,  SEXP verbose_r);
 }

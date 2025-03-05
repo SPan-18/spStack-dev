@@ -82,16 +82,22 @@
 #' and Guttorp 2010). See below for details.
 #' @param priors (optional) a list with each tag corresponding to a
 #' hyperparameter name and containing hyperprior details. Valid tags include
-#' `V.beta`, `nu.beta`, `nu.z` and `sigmaSq.xi`. Values of `nu.beta` and `nu.z`
-#' must be at least 2.1. If not supplied, uses defaults.
+#' `V.beta`, `nu.beta`, `nu.z`, `sigmaSq.xi` and `IW.scale`. Values of `nu.beta`
+#' and `nu.z` must be at least 2.1. If not supplied, uses defaults.
+#' @param process.type a quoted keyword specifying the model for the
+#' spatial-temporal process. Supported keywords are `'independent'` which
+#' indicates independent processes for each varying coefficients characterized
+#' by different process parameters, `independent.shared` implies independent
+#' processes for the varying coefficients that shares common process parameters,
+#' and `multivariate` implies correlated processes for the varying coefficients
+#' modeled by a multivariate Gaussian process with an inverse-Wishart prior on
+#' the correlation matrix. The input for `sptParams` and `priors` must be given
+#' accordingly.
 #' @param sptParams fixed values of spatial-temporal process parameters in
 #' usually a list of length 2. If `cor.fn='gneiting-decay'`, then it is a list
-#' of length 2 with tags `phi_s` and `phi_t`. If `sptShared=TRUE`, then `phi_s`
-#' and `phi_t` contain scalars, otherwise it will contain fixed values of the
-#' \eqn{r} spatial-temporal processes. See examples below.
-#' @param sptShared If `TRUE`, then model assumes shared spatial and temporal
-#' decay parameters across all processes. If `FALSE`, fixed values of process
-#' parameters must be supplied within the `sptParams` argument.
+#' of length 2 with tags `phi_s` and `phi_t`. If `process.type='independent'`,
+#' then `phi_s` and `phi_t` contain fixed values of the \eqn{r} spatial-temporal
+#' processes, otherwise they will contain scalars. See examples below.
 #' @param boundary Specifies the boundary adjustment parameter. Must be a real
 #' number between 0 and 1. Default is 0.5.
 #' @param n.samples number of posterior samples to be generated.
@@ -150,7 +156,7 @@
 #' @export
 stvcGLMexact <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn,
-                         sptParams, sptShared = FALSE,
+                         process.type, sptParams,
                          priors, boundary = 0.5, n.samples,
                          loopd = FALSE, loopd.method = "exact", CV.K = 10,
                          loopd.nMC = 500, verbose = TRUE, ...){
@@ -272,6 +278,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   nu.beta <- 0
   nu.z <- 0
   sigmaSq.xi <- 0
+  IW.scale <- 0
   missing.flag <- 0
 
   if(missing(priors)){
@@ -279,6 +286,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
     nu.beta <- 2.1
     nu.z <- 2.1
     sigmaSq.xi <- 0.1
+    IW.scale <- diag(rep(1.0, r))
   }else{
     names(priors) <- tolower(names(priors))
     if(!'v.beta' %in% names(priors)){
@@ -329,6 +337,18 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         stop("priors[['sigmaSq.xi']] must be positive real number.")
       }
     }
+    if(process.type == 'multivariate'){
+      if(!'iw.scale' %in% names(priors)){
+        missing.flag <- missing.flag + 1
+        IW.scale <- diag(rep(1.0, r))
+      }else{
+        IW.scale <- priors[['iw.scale']]
+        if(!is.numeric(IW.scale) || length(IW.scale) != r^2){
+          stop(paste("priors[['IW.scale']] must be a ", r, "x", r,
+                     " covariance matrix.", sep = ""))
+        }
+      }
+    }
     if(missing.flag > 0){
       warning("Some priors were not supplied. Using defaults.")
     }
@@ -347,7 +367,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   names(sptParams) <- tolower(names(sptParams))
 
   if(cor.fn == "gneiting-decay"){
-    if(sptShared){
+    if(process.type %in% c("independent.shared", "multivariate")){
         phi_s <- 0
         phi_t <- 0
         if(!"phi_s" %in% names(sptParams)){
@@ -355,7 +375,8 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         }
         phi_s <- sptParams[["phi_s"]]
         if(!is.numeric(phi_s) || length(phi_s) != 1){
-            stop("phi_s must be a scalar when sptShared = TRUE")
+            stop(paste("phi_s must be a scalar when process.type = ",
+            process.type))
         }
         if(phi_s <= 0){
             stop("phi_s (spatial decay) must be a positive real.")
@@ -365,7 +386,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         }
         phi_t <- sptParams[["phi_t"]]
         if(!is.numeric(phi_t) || length(phi_t) != 1){
-            stop("phi_t must be a scalar when sptShared = TRUE")
+            stop(paste("phi_t must be a scalar when sptShared =", process.type))
         }
         if(phi_t <= 0){
             stop("phi_t (temporal decay) must be a positive real.")
@@ -378,7 +399,8 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         }
         phi_s <- sptParams[["phi_s"]]
         if(!is.numeric(phi_s) || length(phi_s) != r){
-            stop("When sptShared = FALSE, phi_s must be of length ", r)
+            stop("When process.type = 'independent', phi_s must be of length ",
+            r)
         }
         if(any(phi_s <= 0)){
             stop("phi_s (spatial decay) must be positive reals.")
@@ -388,7 +410,8 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         }
         phi_t <- sptParams[["phi_t"]]
         if(!is.numeric(phi_t) || length(phi_t) != r){
-            stop("When sptShared = FALSE, phi_t must be of length ", r)
+            stop("When process.type = 'independent', phi_t must be of length ",
+            r)
         }
         if(any(phi_t <= 0)){
             stop("phi_t (temporal decay) must be positive reals.")
@@ -433,7 +456,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
       CV.K <- as.integer(0)
     }
     if(loopd.method == "cv"){
-      if(n < 100){
+      if(n < 2){
         warning("Sample size too low for CV. Finding exact LOO-PD.")
         loopd.method <- "exact"
         CV.K <- as.integer(0)
@@ -476,14 +499,14 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   if(loopd){
     samps <- .Call("stvcGLMexactLOO", y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,
-                   V.beta, nu.beta, nu.z, sigmaSq.xi,
-                   sptShared, phi_s, phi_t, epsilon,
+                   V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale,
+                   process.type, phi_s, phi_t, epsilon,
                    n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
   }else{
     samps <- .Call("stvcGLMexact", y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,
-                   V.beta, nu.beta, nu.z, sigmaSq.xi,
-                   sptShared, phi_s, phi_t, epsilon,
+                   V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale,
+                   process.type, phi_s, phi_t, epsilon,
                    n.samples, verbose)
   }
 
@@ -498,7 +521,8 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   out$time_coords <- time_coords
   out$cor.fn <- cor.fn
   out$priors <- list(mu.beta = rep(0, p), V.beta = V.beta, nu.beta = nu.beta,
-                     nu.z = nu.z, sigmasq.xi = sigmaSq.xi, boundary = epsilon)
+                     nu.z = nu.z, sigmaSq.xi = sigmaSq.xi, IW.scale = IW.scale,
+                     boundary = epsilon)
   out$samples <- samps[c("beta", "z", "xi")]
   if(loopd){
     out$loopd <- samps[["loopd"]]

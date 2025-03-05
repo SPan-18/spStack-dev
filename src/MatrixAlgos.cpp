@@ -663,7 +663,7 @@ void upperTri_lowerTri(double *M, int n){
 
 // Function for priming (pre-proprocessing) step for varying-coefficients model
 void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
-                  double *VBetaInv, double *Vz, int sharedP, double *cholCap, double sigmaSqxi,
+                  double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
                   double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
                   double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn){
 
@@ -713,18 +713,27 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
       dtrsv_sparse1(cholCap, XTilde[i*n + j], &D1inv[(i*n + j)*n], n, j);
     }
   }
-  if(sharedP){
+  if(processtype == "independent.shared"){
     for(i = 0; i < r; i++){
       F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, Vz, &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
     }
-  }else{
+  }else if(processtype == "independent"){
     for(i = 0; i < r; i++){
       F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, &Vz[i*nn], &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
     }
+  }else if(processtype == "multivariate"){
+    F77_NAME(dgemm)(ntran, ntran, &n, &nr, &nr, &one, D1inv, &n, Vz, &nr, &zero, tmp_nnr, &n FCONE FCONE);
   }
+
+  // Find Vz*t(XTilde)*inv(I + XTilde*Vz*t(XTilde))*XTilde*Vz
   F77_NAME(dgemm)(ytran, ntran, &nr, &nr, &n, &one, tmp_nnr, &n, tmp_nnr, &n, &zero, D1inv, &nr FCONE FCONE);
+
+  // Find - Vz*t(XTilde)*inv(I + XTilde*Vz*t(XTilde))*XTilde*Vz
   F77_NAME(dscal)(&nrnr, &negone, D1inv, &incOne);
-  if(sharedP){
+
+  // Then add Vz to D1inv, to get Vz - Vx*t(XTilde)*inv(I + XTilde*Vz*t(XTilde))*XTilde*Vz
+  // which is equal to inv(t(XTilde)*XTilde + inv(Vz)) by Sherman-Woodbury-Morrison identity
+  if(processtype == "independent.shared"){
     for(i = 0; i < r; i++){
       for(j = 0; j < n; j++){
         for(k = 0; k < n; k++){
@@ -732,7 +741,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
         }
       }
     }
-  }else{
+  }else if(processtype == "independent"){
     for(i = 0; i < r; i++){
       for(j = 0; j < n; j++){
         for(k = 0; k < n; k++){
@@ -740,6 +749,8 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
         }
       }
     }
+  }else if(processtype == "multivariate"){
+    F77_NAME(daxpy)(&nrnr, &one, Vz, &incOne, D1inv, &incOne);
   }
 
   F77_NAME(dgemm)(ntran, ntran, &nr, &p, &nr, &one, D1inv, &nr, XTildetX, &nr, &zero, tmp_nnr, &nr FCONE FCONE);       // inv(D1)*XTildetX
@@ -803,7 +814,7 @@ void dtrsv_sparse1(double *L, double b, double *x, int n, int k){
 
 // Function for the projection for GLM in varying-coefficients model
 void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
-               double *cholVz, int sharedP, double *v_eta, double *v_xi, double *v_beta, double *v_z,
+               double *cholVz, std::string &processtype, double *v_eta, double *v_xi, double *v_beta, double *v_z,
                double *D1inv, double *D1invB1, double *cholSchurA1_pp,
                double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn,
                double *tmp_nr){
@@ -829,15 +840,19 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, Lbeta, &p, v_beta, &incOne FCONE FCONE FCONE);             // v_beta = LbetatInv*v_beta
   F77_NAME(dgemv)(ytran, &n, &p, &one, X, &n, v_eta, &incOne, &one, v_beta, &incOne FCONE);           // v_beta = Xt*v_eta + LbetaInv*v_beta
 
-  if(sharedP){
+  if(processtype == "independent.shared"){
     for(i = 0; i < r; i++){
       F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVz, &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
     }
-  }else{
+  }else if(processtype == "independent"){
     for(i = 0; i < r; i++){
       F77_NAME(dtrsv)(lower, ytran, nunit, &n, &cholVz[i*nn], &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
     }
+  }else if(processtype == "multivariate"){
+    // can it be made efficient by passing cholR and chol_iwScale, instead of cholVz? probably not.
+    F77_NAME(dtrsv)(lower, ytran, nunit, &nr, cholVz, &nr, v_z, &incOne FCONE FCONE FCONE);
   }
+
   lmulv_XTilde_VC(ytran, n, r, XTilde, v_eta, tmp_nr);
   F77_NAME(daxpy)(&nr, &one, tmp_nr, &incOne, v_z, &incOne);                                          // v_z = XTildet*v_eta + t(LzInv)*v_z
 
@@ -860,5 +875,61 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
   // Find inv(D)*v2 - inv(D)*B*inv(schurA1)*(v1 - t(B)*inv(D)*v2)
   F77_NAME(dgemv)(ntran, &p, &n, &negone, DinvB_pn, &p, v_xi, &incOne, &one, v_beta, &incOne FCONE);
   F77_NAME(dgemv)(ntran, &nr, &n, &negone, DinvB_nrn, &nr, v_xi, &incOne, &one, v_z, &incOne FCONE);
+
+}
+
+// Find Kronecker product of two matrices A (rxr) and B (nxn), and store in C (nrxnr)
+void kronecker(int r, int n, double *A, double *B, double *C){
+
+  int nr = n * r;
+  int i = 0, j = 0, k = 0, l = 0;
+  double a_ij = 0.0;
+  int C_base = 0;                     // Compute block starting position in C
+
+  for(j = 0; j < r; j++){
+    for(i = 0; i < r; i++){
+
+      // A(i, j) in column-major order
+      a_ij = A[i + j * r];
+
+      // Compute block starting position in C
+      C_base = (j * n) * nr + (i * n);
+
+      // Insert scaled B into the corresponding block of C
+      for(l = 0; l < n; l++){
+        for(k = 0; k < n; k++){
+          C[C_base + l * nr + k] = a_ij * B[k + l * n];
+        }
+      }
+    }
+  }
+}
+
+// Find Cholesky factor of Kronecker product from the individual Cholesky factors
+// Cholesky factors are always considered to be lower-triangular (just kronecker of two triangular matrices)
+void chol_kron(int r, int n, double *cholA, double *cholB, double *cholC){
+
+  int nr = n * r;
+  int i = 0, j = 0, k = 0, l = 0;
+  double a_ij = 0.0;
+  int C_base = 0; // Compute block starting position in C
+
+  for(j = 0; j < r; j++){
+    for(i = j; i < r; i++){
+
+      // A(i, j) in column-major order
+      a_ij = cholA[i + j * r];
+
+      // Compute block starting position in C
+      C_base = (j * n) * nr + (i * n);
+
+      // Insert scaled B into the corresponding block of C
+      for(l = 0; l < n; l++){
+        for(k = l; k < n; k++){
+          cholC[C_base + l * nr + k] = a_ij * cholB[k + l * n];
+        }
+      }
+    }
+  }
 
 }

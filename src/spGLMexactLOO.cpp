@@ -464,6 +464,8 @@ extern "C" {
 
         }
 
+        PutRNGstate();
+
         R_chk_free(looY);
         R_chk_free(loo_nBinom);
         R_chk_free(looX);
@@ -487,8 +489,6 @@ extern "C" {
         R_chk_free(loo_tmp_p);
 
       }
-
-      PutRNGstate();
 
       // K-fold cross-validation for LOO-PD calculation
       if(loopd_method == cv_str){
@@ -564,6 +564,8 @@ extern "C" {
         int sMC_CV = 0;
         int loopd_nMC_nkmax = loopd_nMC * nkmax;
         double *loopd_val_MC_CV = (double *) R_chk_calloc(loopd_nMC_nkmax, sizeof(double)); zeros(loopd_val_MC_CV, loopd_nMC_nkmax);
+
+        GetRNGstate();
 
         for(cv_index = 0; cv_index < CV_K; cv_index++){
 
@@ -712,6 +714,8 @@ extern "C" {
             REAL(loopd_out_r)[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
           }
         }
+
+        PutRNGstate();
 
         R_chk_free(startsCV);
         R_chk_free(endsCV);

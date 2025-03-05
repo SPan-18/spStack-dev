@@ -10,13 +10,22 @@ void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int e
 
 void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol);
 
+void copyMatrixDelRowCol_vc(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol, int rep);
+
+void copyMatrixDelRow_vc(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index, int n);
+
 void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
                               int delRow_start, int delRow_end, int delCol_start, int delCol_end);
 
 void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy_start, int copy_end);
 
+void copyMatrixDelRowBlock_vc(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end, int rep);
+
 void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
                            int copyCol_start, int copyCol_end, int copyRow_start, int copyRow_end);
+
+void copyMatrixDelRowColBlock_vc(double *M1, int nRowM1, int nColM1, double *M2, int delRow_start, int delRow_end,
+                                 int delCol_start, int delCol_end, int rep);
 
 void copyMatrixColToVec(double *M, int nRowM, int nColM, double *vec, int copy_index);
 
@@ -93,6 +102,6 @@ void lmulv_XTilde_VC(const char *trans, int n, int r, double *XTilde, double *v,
 
 void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, double *A, double *res);
 
-void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, int sharedP);
+void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std::string &processtype);
 
 void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r);

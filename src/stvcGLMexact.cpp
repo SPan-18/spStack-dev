@@ -18,8 +18,8 @@ extern "C" {
 
   SEXP stvcGLMexact(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
                     SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
-                    SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r,
-                    SEXP sharedProcess_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                    SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                    SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
                     SEXP nSamples_r, SEXP verbose_r){
 
     /*****************************************
@@ -46,6 +46,7 @@ extern "C" {
     int nn = n * n;
     int np = n * p;
     int r = INTEGER(r_r)[0];
+    int rr = r * r;
     int nr = n * r;
     int nrp = nr * p;
     int nnr = nn * r;
@@ -68,16 +69,20 @@ extern "C" {
     double sigmaSq_xi = REAL(sigmaSq_xi_r)[0];
     double sigma_xi = sqrt(sigmaSq_xi);
 
+    double *iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(iwScale, rr);
+    F77_NAME(dcopy)(&rr, REAL(iwScale_r), &incOne, iwScale, &incOne);
+
     // spatial-temporal process parameters: create spatial-temporal covariance matrices
-    int sharedProcess = INTEGER(sharedProcess_r)[0];
+    std::string processType = CHAR(STRING_ELT(processType_r, 0));
     double *phi_s_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_s_vec, r);
     double *phi_t_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_t_vec, r);
     double *thetaspt = (double *) R_alloc(2, sizeof(double));
     double *Vz = NULL;
+    double *R = NULL;
 
     if(corfn == "gneiting-decay"){
 
-        if(sharedProcess){
+        if(processType == "independent.shared"){
 
             phi_s_vec[0] = REAL(phi_s_r)[0];
             phi_t_vec[0] = REAL(phi_t_r)[0];
@@ -87,7 +92,7 @@ extern "C" {
             Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
             sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
 
-        }else{
+        }else if(processType == "independent"){
 
             F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
             F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
@@ -100,6 +105,18 @@ extern "C" {
                 thetaspt[1] = phi_t_vec[k];
                 sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
             }
+
+        }else if(processType == "multivariate"){
+
+          phi_s_vec[0] = REAL(phi_s_r)[0];
+          phi_t_vec[0] = REAL(phi_t_r)[0];
+          thetaspt[0] = phi_s_vec[0];
+          thetaspt[1] = phi_t_vec[0];
+
+          R = (double *) R_alloc(nn, sizeof(double)); zeros(R, nn);
+          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, R);
+          Vz = (double *) R_alloc(nrnr, sizeof(double)); zeros(Vz, nrnr);
+          kronecker(r, n, iwScale, R, Vz);
 
         }
     }
@@ -129,14 +146,21 @@ extern "C" {
       Rprintf("\n");
 
       Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)\n");
-      Rprintf("\tsigmaSq.z.j ~ IG(nu.z/2, nu.z/2), j = 1,...,%i.\n", r);
       Rprintf("\tnu.beta = %.2f, nu.z = %.2f.\n", nu_beta, nu_z);
+      Rprintf("\tSpatial-temporal process model: %s.\n", processType.c_str());
+      if(processType == "multivariate"){
+        Rprintf("\tSigma: Inverse-Wishart\n");
+        Rprintf("\tdf: %.2f\n", nu_z);
+        Rprintf("\tScale:\n"); printMtrx(iwScale, r, r);
+      }else{
+        Rprintf("\tsigmaSq.z.j ~ IG(nu.z/2, nu.z/2), j = 1,...,%i.\n", r);
+      }
       Rprintf("\tsigmaSq.xi = %.2f.\n", sigmaSq_xi);
       Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
 
       Rprintf("Spatial-temporal correlation function: %s.\n", corfn.c_str());
 
-      if(sharedProcess){
+      if(processType == "independent.shared" || processType == "multivariate"){
         Rprintf("All %i spatial-temporal processes share common parameters:\n", r);
         if(corfn == "gneiting-decay"){
             Rprintf("\tphi_s = %.2f, and, phi_t = %.2f.\n\n", phi_s_vec[0], phi_t_vec[0]);
@@ -159,25 +183,39 @@ extern "C" {
      *****************************************/
 
     double *cholVz = NULL;               // define NULL pointer for chol(Vz)
-
-    if(sharedProcess){
-        cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
-    }else{
-        cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
-    }
+    double *cholR = NULL;
+    double *chol_iwScale = NULL;
 
     // Find Cholesky of Vz
-    if(sharedProcess){
+    if(processType == "independent.shared"){
+
+        cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
         F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
         F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
         mkLT(cholVz, n);
 
-    }else{
+    }else if(processType == "independent"){
+
+        cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
         F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
         for(k = 0; k < r; k++){
             F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
             mkLT(&cholVz[nn * k], n);
         }
+
+    }else if(processType == "multivariate"){
+
+        // Efficient Cholesky for kronecker product: chol(kron(A, B)) = kron(chol(A), chol(B))
+        cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
+        cholR = (double *) R_alloc(nn, sizeof(double)); zeros(cholR, nn);
+        chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
+        F77_NAME(dcopy)(&nn, R, &incOne, cholR, &incOne);
+        F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
+        F77_NAME(dpotrf)(lower, &n, cholR, &n, &info FCONE); if(info != 0){perror("c++ error: R dpotrf failed\n");}
+        F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
+        chol_kron(r, n, chol_iwScale, cholR, cholVz);
+        mkLT(cholVz, nr);
+
     }
 
     // Allocations for XtX, XTildetX, and VbetaInv
@@ -203,10 +241,11 @@ extern "C" {
     double *cholIplusXTildeVzXTildet = (double *) R_alloc(nn, sizeof(double)); zeros(cholIplusXTildeVzXTildet, nn);
     double *VzXTildet = (double *) R_chk_calloc(nnr, sizeof(double)); zeros(VzXTildet, nnr);
 
-    rmul_Vz_XTildeT(n, r, X_tilde, Vz, VzXTildet, sharedProcess);                                                // Vz*t(X_tilde)
+    rmul_Vz_XTildeT(n, r, X_tilde, Vz, VzXTildet, processType);                                                  // Vz*t(X_tilde)
     lmulm_XTilde_VC(ntran, n, r, n, X_tilde, VzXTildet, XTildeVzXTildet);                                        // X_tilde*Vz*t(X_tilde)
     R_chk_free(VzXTildet);
 
+    // Find Cholesky of capacitance matric: I + XTilde*Vz*t(XTilde)
     F77_NAME(dcopy)(&nn, XTildeVzXTildet, &incOne, cholIplusXTildeVzXTildet, &incOne);
     for(i = 0; i < n; i++){
         cholIplusXTildeVzXTildet[i*n + i] += 1.0;
@@ -225,7 +264,7 @@ extern "C" {
     double *cholschurA = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholschurA, nn);
 
     // Evaluate priming step
-    primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, sharedProcess, cholIplusXTildeVzXTildet,
+    primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
                  sigmaSq_xi, tmp_nnr, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
     R_chk_free(tmp_nnr);
@@ -310,7 +349,7 @@ extern "C" {
       }
 
       // projection step
-      projGLMvc(n, p, r, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, sharedProcess,
+      projGLMvc(n, p, r, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
                 v_eta, v_xi, v_beta, v_z, D1Inv, D1InvB1, cholschurA1,
                 DInvB_pn, DInvB_nrn, cholschurA, tmp_nr);
 
@@ -336,7 +375,7 @@ extern "C" {
     SEXP result_r, resultName_r;
 
     // make return object for posterior samples and leave-one-out predictive densities
-    int nResultListObjs = 4;
+    int nResultListObjs = 3;
 
     result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
     resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -359,5 +398,5 @@ extern "C" {
 
     return result_r;
 
-    } // end stvcGLMexact
+  } // end stvcGLMexact
 }

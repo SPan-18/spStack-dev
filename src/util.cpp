@@ -82,6 +82,28 @@ void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int e
   }
 }
 
+// Copy a matrix excluding a row block in every n-th row block
+void copyMatrixDelRowBlock_vc(double *M1, int nRowM1, int nColM1, double *M2, int exclude_start, int exclude_end, int rep){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(exclude_start > exclude_end || exclude_start == exclude_end){
+    perror("Start index must be at least 1 less than End index.");
+  }
+
+  if(exclude_start < 0 || exclude_end > nRowM1*rep){
+    perror("Row index to exclude is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i % rep < exclude_start || i % rep > exclude_end){
+          M2[new_index++] = M1[j*nRowM1 + i];
+        }
+      }
+    }
+  }
+}
+
 // Copy a matrix deleting ith row and jth column
 void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol){
 
@@ -96,6 +118,43 @@ void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del
       if(j == del_indexCol) continue;
       for(i = 0; i < nRowM1; i++){
         if(i == del_indexRow) continue;
+        M2[new_index++] = M1[j*nRowM1 + i];
+      }
+    }
+  }
+}
+
+// Copy a matrix deleting ith row and jth column for every n-th block
+void copyMatrixDelRowCol_vc(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol, int n){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(del_indexRow < 0 || del_indexRow > nRowM1){
+    perror("Row index to delete is out of bounds.");
+  }else if(del_indexCol < 0 || del_indexCol > nColM1){
+    perror("Column index to delete is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      if(j % n == del_indexCol) continue;
+      for(i = 0; i < nRowM1; i++){
+        if(i % n == del_indexRow) continue;
+        M2[new_index++] = M1[j*nRowM1 + i];
+      }
+    }
+  }
+}
+
+// Copy a matrix excluding the i-th row for every n-th block
+void copyMatrixDelRow_vc(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index, int n){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(exclude_index < 0 || exclude_index > nRowM1){
+    perror("Row index to exclude is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      for(i = 0; i < nRowM1; i++){
+        if(i % n == exclude_index) continue;
         M2[new_index++] = M1[j*nRowM1 + i];
       }
     }
@@ -126,6 +185,37 @@ void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
       if(j < delCol_start || j > delCol_end){
         for(i = 0; i < nRowM1; i++){
           if(i < delRow_start || i > delRow_end){
+            M2[new_index++] = M1[j*nRowM1 + i];
+          }
+        }
+      }
+    }
+  }
+}
+
+// Copy a matrix deleting a row and column block within each repxrep block
+void copyMatrixDelRowColBlock_vc(double *M1, int nRowM1, int nColM1, double *M2, int delRow_start, int delRow_end,
+                                 int delCol_start, int delCol_end, int rep){
+
+  int i = 0, j = 0, new_index = 0;
+
+  if(delRow_start > delRow_end || delRow_start == delRow_end){
+    perror("Row Start index must be at least 1 less than End index.");
+  }
+
+  if(delCol_start > delCol_end || delCol_start == delCol_end){
+    perror("Column Start index must be at least 1 less than End index.");
+  }
+
+  if(delRow_start < 0 || delRow_end > nRowM1){
+    perror("Row indices to delete are out of bounds.");
+  }else if(delCol_start < 0 || delCol_end > nColM1){
+    perror("Column indices to delete is out of bounds.");
+  }else{
+    for(j = 0; j < nColM1; j++){
+      if(j % rep < delCol_start || j % rep > delCol_end){
+        for(i = 0; i < nRowM1; i++){
+          if(i % rep < delRow_start || i % rep > delRow_end){
             M2[new_index++] = M1[j*nRowM1 + i];
           }
         }
@@ -946,11 +1036,12 @@ void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, dou
 
 }
 
-void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, int sharedP){
+void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std::string &processtype){
 
-  int i = 0, j = 0, l = 0;
+  int i = 0, j = 0, k = 0, l = 0;
+  int nr = n * r;
 
-  if(sharedP){
+  if(processtype == "independent.shared"){
     for(l = 0; l < r; l++){
       for(i = 0; i < n; i ++){
         for(j = 0; j < n; j++){
@@ -958,11 +1049,21 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, int 
         }
       }
     }
-  }else{
+  }else if(processtype == "independent"){
     for(l = 0; l < r; l++){
       for(i = 0; i < n; i ++){
         for(j = 0; j < n; j++){
           res[n*r*j + l*n + i] = Vz[n*n*l + j*n + i] * XTilde[l*n + j];
+        }
+      }
+    }
+  }else if(processtype == "multivariate"){
+    for(l = 0; l < r; l++){
+      for(j = 0; j < n; j++){
+        for(i = 0; i < n; i++){
+          for(k = 0; k < r; k++){
+            res[j*nr + l*n + i] += XTilde[k*n + j] * Vz[(k*n + j)*nr + l*n + i];
+          }
         }
       }
     }

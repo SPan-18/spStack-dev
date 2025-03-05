@@ -34,14 +34,18 @@ void transpose_matrix(double *M, int nrow, int ncol, double *Mt);
 void upperTri_lowerTri(double *M, int n);
 
 void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
-                  double *VBetaInv, double *Vz, int sharedP, double *cholCap, double sigmaSqxi,
+                  double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
                   double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
                   double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn);
 
 void dtrsv_sparse1(double *L, double b, double *x, int n, int k);
 
 void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
-               double *cholVz, int sharedP, double *v_eta, double *v_xi, double *v_beta, double *v_z,
+               double *cholVz, std::string &processtype, double *v_eta, double *v_xi, double *v_beta, double *v_z,
                double *D1inv, double *D1invB1, double *cholSchurA1_pp,
                double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn,
                double *tmp_nr);
+
+void kronecker(int r, int n, double *A, double *B, double *C);
+
+void chol_kron(int r, int n, double *cholA, double *cholB, double *cholC);
