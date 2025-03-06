@@ -30,7 +30,7 @@ parseFormula <- function(formula, data, intercept = TRUE, justX = FALSE) {
 
 }
 
-#' @importFrom stats is.empty.model model.matrix model.response terms
+#' @importFrom stats is.empty.model model.matrix model.response terms model.frame as.formula
 parseFormula2 <- function(formula, data, intercept = TRUE, justX = FALSE) {
 
   # extract Y, X, and variable names for model formula and frame
