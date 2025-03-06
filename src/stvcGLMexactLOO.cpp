@@ -775,8 +775,6 @@ extern "C" {
       // K-fold cross-validation for LOO-PD calculation
       if(loopd_method == cv_str){
 
-        CV_K = 2;
-
         int *startsCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(startsCV, CV_K);
         int *endsCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(endsCV, CV_K);
         int *sizesCV = (int *) R_chk_calloc(CV_K, sizeof(int)); zeros(sizesCV, CV_K);
@@ -788,6 +786,7 @@ extern "C" {
         int nnk = 0;
         int nnknnk = 0;
         int nnkr = 0;
+        int nkr = 0;
 
         int nkmin = findMin(sizesCV, CV_K);
         int nkmax = findMax(sizesCV, CV_K);
@@ -823,6 +822,7 @@ extern "C" {
         double *z_tilde_cov = NULL;
         double *z_tilde_mu = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(z_tilde_mu, nkmaxr);
         double *z_tilde = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(z_tilde, nkmaxr);
+        double *PCM_dist = (double *) R_chk_calloc(rr, sizeof(double)); zeros(PCM_dist, rr);
 
         if(corfn == "gneiting-decay"){
 
@@ -868,6 +868,7 @@ extern "C" {
         double *tmp_n1r = (double *) R_chk_calloc(nnkmaxr, sizeof(double)); zeros(tmp_n1r, nnkmaxr);
         double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);
         double *tmp_nknkmax = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(tmp_nknkmax, nknkmax);
+        double *tmp_nkmaxr = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(tmp_nkmaxr, nkmaxr);
 
         // Set-up storage for sampling for leave-one-out model fit
         double *cv_v_eta = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_eta, nnkmax);
@@ -893,6 +894,7 @@ extern "C" {
           nnk = n - nk;
           nnknnk = nnk * nnk;
           nnkr = nnk * r;
+          nkr = nk * r;
 
           start_index = startsCV[cv_index];
           end_index = endsCV[cv_index];
@@ -980,7 +982,6 @@ extern "C" {
                        sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
 
           // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
-          loopd_nMC = 1;
           for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV++){
 
             if(family == family_poisson){
@@ -1072,16 +1073,103 @@ extern "C" {
 
               F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholVz, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);  // cv_v_z <- inv(Lz)*v_z
               F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(Cz)*inv(Vz)*v_z
-              // for loop over r?
-              // F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, cvCz, &nnk, cvCz, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);
-              printMtrx(z_tilde_mu, nk, r);
+              for(k = 0; k < r; k++){
+                PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &cv_v_z[nnk * k], &incOne), 2);
+
+                // sample z_tilde
+                dtemp1 = 0.5 * (nu_z + nnk);
+                dtemp2 = 1.0 / dtemp1;
+                dtemp3 = rgamma(dtemp1, dtemp2);
+                dtemp2 = 1.0 / dtemp3;
+                dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
+                dtemp3 = dtemp1 * dtemp2;
+                dtemp1 = sqrt(dtemp3);
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
+                }
+                F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+                F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+                F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
+              }
+
+            }else if(processType == "independent"){
+
+              for(k = 0; k < r; k++){
+                F77_NAME(dtrsv)(lower, ntran, nunit, &nnk, &cvCholVz[nnknnk * k], &nnk, &cv_v_z[nnk * k], &incOne FCONE FCONE FCONE);
+                F77_NAME(dgemv)(ytran, &nnk, &nk, &one, &cvCz[nnk * nk * k], &nnk, &cv_v_z[nnk * k], &incOne, &zero, &z_tilde_mu[nk * k], &incOne FCONE);
+                PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &cv_v_z[nnk * k], &incOne), 2);
+
+                // sample z_tilde
+                dtemp1 = 0.5 * (nu_z + nnk);
+                dtemp2 = 1.0 / dtemp1;
+                dtemp3 = rgamma(dtemp1, dtemp2);
+                dtemp2 = 1.0 / dtemp3;
+                dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
+                dtemp3 = dtemp1 * dtemp2;
+                dtemp1 = sqrt(dtemp3);
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
+                }
+                F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+                F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+                F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
+              }
+
+            }else if(processType == "multivariate"){
+
+              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholR, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);   // cv_v_z <- invchol(R)*v_z
+              F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
+              F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, cv_v_z, &nnk, cv_v_z, &nnk, &zero, PCM_dist, &r FCONE FCONE);     // PCM_dist <- t(v_z)*inv(R)*v_z
+              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                    // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
+              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+              mkLT(PCM_dist, r);
+              for(k = 0; k < r; k++){
+                dtemp1 = 0.5 * (nu_z + nnk);
+                dtemp2 = 1.0 / dtemp1;
+                dtemp3 = rgamma(dtemp1, dtemp2);
+                dtemp2 = 1.0 / dtemp3;
+                dtemp1 = sqrt(dtemp3);
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
+                }
+              }
+              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+              F77_NAME(dgemm)(ntran, ytran, &nk, &r, &r, &one, tmp_nkmaxr, &nk, PCM_dist, &r, &zero, z_tilde, &nk FCONE FCONE);
+              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
 
             }
+
+            // Find canonical parameter (X*beta + X_tilde*z_tilde)
+            lmulm_XTilde_VC(ntran, nk, r, 1, X_tilde_pred, z_tilde, tmp_nkmaxr);
+            F77_NAME(dgemv)(ntran, &nk, &p, &one, X_pred, &nk, cv_v_beta, &incOne, &one, tmp_nkmaxr, &incOne FCONE);
+
+            // Find CV-LOO-PD
+            if(family == family_poisson){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = exp(tmp_nkmaxr[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dpois(Y_pred[cv_i], dtemp1, 1);
+              }
+            }
+
+            if(family == family_binomial){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_pred[cv_i], nBinom_pred[cv_i], dtemp1, 1);
+              }
+            }
+
+            if(family == family_binary){
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
+                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_pred[cv_i], 1.0, dtemp1, 1);
+              }
+            }
+
 
           }
 
           for(cv_i = 0; cv_i < nk; cv_i++){
-            REAL(loopd_out_r)[start_index + cv_i] = 0.0;
+            REAL(loopd_out_r)[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
           }
 
         }
@@ -1102,6 +1190,7 @@ extern "C" {
         R_chk_free(cvCholVz);
         R_chk_free(cvCholR);
         R_chk_free(cvCz);
+        R_chk_free(PCM_dist);
         R_chk_free(cvXtX);
         R_chk_free(cvXTildetX);
         R_chk_free(cvCholIplusXTildeVzXTildet);
@@ -1116,6 +1205,7 @@ extern "C" {
         R_chk_free(tmp_n1r);
         R_chk_free(tmp_nnknnkmax);
         R_chk_free(tmp_nknkmax);
+        R_chk_free(tmp_nkmaxr);
         R_chk_free(z_tilde_cov);
         R_chk_free(z_tilde_mu);
         R_chk_free(z_tilde);
