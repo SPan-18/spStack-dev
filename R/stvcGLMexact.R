@@ -105,11 +105,10 @@
 #' densities, using method as given by \code{loopd.method}. Default is
 #' \code{FALSE}.
 #' @param loopd.method character. Ignored if `loopd=FALSE`. If `loopd=TRUE`,
-#' valid inputs are `'exact'`, `'CV'` and `'PSIS'`. The option `'exact'`
-#' corresponds to exact leave-one-out predictive densities which requires
-#' computation almost equivalent to fitting the model \eqn{n} times. The
-#' options `'CV'` and `'PSIS'` are faster and they implement \eqn{K}-fold
-#' cross validation and Pareto-smoothed importance sampling to find approximate
+#' valid inputs are `'exact'`, `'CV'`. The option `'exact'` corresponds to exact
+#' leave-one-out predictive densities which requires computation almost
+#' equivalent to fitting the model \eqn{n} times. The options `'CV'` is faster
+#' as it implements \eqn{K}-fold cross validation to find approximate
 #' leave-one-out predictive densities (Vehtari *et al.* 2017).
 #' @param CV.K An integer between 10 and 20. Considered only if
 #' `loopd.method='CV'`. Default is 10 (as recommended in Vehtari *et. al* 2017).

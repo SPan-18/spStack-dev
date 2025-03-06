@@ -11,8 +11,8 @@ stvcGLMexact(
   sp_coords,
   time_coords,
   cor.fn,
+  process.type,
   sptParams,
-  sptShared = FALSE,
   priors,
   boundary = 0.5,
   n.samples,
@@ -49,20 +49,26 @@ to model the spatial-temporal dependence structure among the observations.
 Supported covariance model key words are: \code{'gneiting-decay'} (Gneiting
 and Guttorp 2010). See below for details.}
 
+\item{process.type}{a quoted keyword specifying the model for the
+spatial-temporal process. Supported keywords are \code{'independent'} which
+indicates independent processes for each varying coefficients characterized
+by different process parameters, \code{independent.shared} implies independent
+processes for the varying coefficients that shares common process parameters,
+and \code{multivariate} implies correlated processes for the varying coefficients
+modeled by a multivariate Gaussian process with an inverse-Wishart prior on
+the correlation matrix. The input for \code{sptParams} and \code{priors} must be given
+accordingly.}
+
 \item{sptParams}{fixed values of spatial-temporal process parameters in
 usually a list of length 2. If \code{cor.fn='gneiting-decay'}, then it is a list
-of length 2 with tags \code{phi_s} and \code{phi_t}. If \code{sptShared=TRUE}, then \code{phi_s}
-and \code{phi_t} contain scalars, otherwise it will contain fixed values of the
-\eqn{r} spatial-temporal processes. See examples below.}
-
-\item{sptShared}{If \code{TRUE}, then model assumes shared spatial and temporal
-decay parameters across all processes. If \code{FALSE}, fixed values of process
-parameters must be supplied within the \code{sptParams} argument.}
+of length 2 with tags \code{phi_s} and \code{phi_t}. If \code{process.type='independent'},
+then \code{phi_s} and \code{phi_t} contain fixed values of the \eqn{r} spatial-temporal
+processes, otherwise they will contain scalars. See examples below.}
 
 \item{priors}{(optional) a list with each tag corresponding to a
 hyperparameter name and containing hyperprior details. Valid tags include
-\code{V.beta}, \code{nu.beta}, \code{nu.z} and \code{sigmaSq.xi}. Values of \code{nu.beta} and \code{nu.z}
-must be at least 2.1. If not supplied, uses defaults.}
+\code{V.beta}, \code{nu.beta}, \code{nu.z}, \code{sigmaSq.xi} and \code{IW.scale}. Values of \code{nu.beta}
+and \code{nu.z} must be at least 2.1. If not supplied, uses defaults.}
 
 \item{boundary}{Specifies the boundary adjustment parameter. Must be a real
 number between 0 and 1. Default is 0.5.}
@@ -74,11 +80,10 @@ densities, using method as given by \code{loopd.method}. Default is
 \code{FALSE}.}
 
 \item{loopd.method}{character. Ignored if \code{loopd=FALSE}. If \code{loopd=TRUE},
-valid inputs are \code{'exact'}, \code{'CV'} and \code{'PSIS'}. The option \code{'exact'}
-corresponds to exact leave-one-out predictive densities which requires
-computation almost equivalent to fitting the model \eqn{n} times. The
-options \code{'CV'} and \code{'PSIS'} are faster and they implement \eqn{K}-fold
-cross validation and Pareto-smoothed importance sampling to find approximate
+valid inputs are \code{'exact'}, \code{'CV'}. The option \code{'exact'} corresponds to exact
+leave-one-out predictive densities which requires computation almost
+equivalent to fitting the model \eqn{n} times. The options \code{'CV'} is faster
+as it implements \eqn{K}-fold cross validation to find approximate
 leave-one-out predictive densities (Vehtari \emph{et al.} 2017).}
 
 \item{CV.K}{An integer between 10 and 20. Considered only if
