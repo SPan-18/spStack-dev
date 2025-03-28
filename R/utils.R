@@ -81,7 +81,7 @@ parseFormula2 <- function(formula, data, intercept = TRUE, justX = FALSE) {
     # No parentheses, X_tilde is NULL
     X_tilde <- NULL
   }
-  X_tilde_vars <- dimnames(X_tilde)[2L]
+  X_tilde_vars <- dimnames(X_tilde)[[2L]]
 
   return(list(Y, X, xvars, xobs, X_tilde, X_tilde_vars))
 
@@ -90,17 +90,6 @@ parseFormula2 <- function(formula, data, intercept = TRUE, justX = FALSE) {
 # internal function: checks if input is integer
 is_integer <- function(x) {
     is.numeric(x) && (floor(x) == x)
-}
-
-# internal function: input a list of candidate values of all model parameters
-# expands list of vectors, called inside spLMstack and similar functions
-candidate_models <- function(params_list){
-
-    models <- expand.grid(params_list)
-    models_list <- apply(models, 1, function(x) as.vector(x, mode = "list"))
-
-    return(models_list)
-
 }
 
 # internal function: pretty prints a matrix with colnames and rownames
@@ -227,4 +216,82 @@ pretty_print_matrix <- function(mat, heading = NULL){
 # internal function: inverse logit transformation
 ilogit <- function(x){
   return(1.0 / (1.0 + exp(- x)))
+}
+
+# internal function: input a list of candidate values of all model parameters
+# expands list of vectors, called inside spLMstack and similar functions
+candidate_models <- function(params_list){
+
+    models <- expand.grid(params_list)
+    models_list <- apply(models, 1, function(x) as.vector(x, mode = "list"))
+
+    return(models_list)
+
+}
+
+#' Create a collection of candidate models for stacking
+#'
+#' @description Creates an object of class \code{'candidateModels'} that
+#' contains a list of candidate models for stacking. The function takes a list
+#' of candidate values for each model parameter and returns a list of possible
+#' combinations of these values based on either simple aggregation or Cartesian
+#' product of indivdual candidate values.
+#' @param params_list a list of candidate values for each model parameter. See
+#' examples for details.
+#' @param aggregation a character string specifying the type of aggregation to
+#' be used. Options are \code{'simple'} and \code{'cartesian'}. Default is
+#' \code{'simple'}.
+#' @return an object of class \code{'candidateModels'}
+#' @author Soumyakanti Pan <span18@ucla.edu>,\cr
+#' Sudipto Banerjee <sudipto@ucla.edu>
+#' @seealso [stvcGLMstack()]
+#' @examples
+#' m1 <- candidateModels(list(phi_s = c(1, 1), phi_t = c(1, 2)), "simple")
+#' m1
+#' m2 <- candidateModels(list(phi_s = c(1, 1), phi_t = c(1, 2)), "cartesian")
+#' m2
+#' m3 <- candidateModels(list(phi_s = list(c(1, 1), c(1, 2)),
+#'                           phi_t = list(c(1, 3), c(2, 3)),
+#'                           boundary = c(0.5)),
+#'                       "simple")
+#' @export
+candidateModels <- function(params_list, aggregation = "simple"){
+
+    if(!is.list(params_list)){
+      stop("params_list must be a list")
+    }
+
+    if(!is.character(aggregation)){
+      stop("aggregation must be a character string")
+    }
+
+    aggregation <- tolower(aggregation)
+
+    if(!aggregation %in% c("simple", "cartesian")){
+      stop("aggregation must be either 'simple' or 'cartesian'")
+    }
+
+    if(aggregation == "simple"){
+
+      if(!all(sapply(params_list, is.vector))){
+        stop("All elements of params_list must be vectors")
+      }
+
+      if(length(unique(sapply(params_list, length))) > 1){
+        stop("All vectors in params_list must be of the same length")
+      }
+
+      models_list <- do.call("cbind", params_list)
+      models_list <- apply(models_list, 1, function(x) as.vector(x, mode = "list"))
+
+    }else{
+
+      models_list <- expand.grid(params_list)
+      models_list <- apply(models_list, 1, function(x) as.vector(x, mode = "list"))
+
+    }
+
+    class(models_list) <- "candidateModels"
+    return(models_list)
+
 }

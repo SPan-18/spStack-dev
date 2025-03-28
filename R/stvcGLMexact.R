@@ -64,11 +64,11 @@
 #' 0.1 respectively.
 #' @param formula a symbolic description of the regression model to be fit.
 #' Variables in parenthesis are assigned spatially-temporally varying
-#' coefficients. See example below.
+#' coefficients. See examples.
 #' @param data an optional data frame containing the variables in the model.
 #' If not found in \code{data}, the variables are taken from
 #' \code{environment(formula)}, typically the environment from which
-#' \code{spGLMexact} is called.
+#' \code{stvcGLMexact} is called.
 #' @param family Specifies the distribution of the response as a member of the
 #' exponential family. Supported options are `'poisson'`, `'binomial'` and
 #' `'binary'`.
@@ -319,9 +319,16 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
       if(!is.numeric(nu.z) || length(nu.z) != 1){
         stop("priors[['nu.z']] must be a single numeric value.")
       }
-      if(nu.z < 2.1){
-        warning("Supplied nu.z is less than 2.1. Setting it to defaults.")
-        nu.z <- 2.1
+      if(process.type == 'multivariate'){
+        if(nu.z < 1){
+          warning("Supplied nu.z is less than 0.1. Setting it to defaults.")
+          nu.z <- 1
+        }
+      }else{
+        if(nu.z < 2.1){
+          warning("Supplied nu.z is less than 2.1. Setting it to defaults.")
+          nu.z <- 2.1
+        }
       }
     }
     if(!'sigmasq.xi' %in% names(priors)){
@@ -455,7 +462,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
       CV.K <- as.integer(0)
     }
     if(loopd.method == "cv"){
-      if(n < 2){
+      if(n < 100){
         warning("Sample size too low for CV. Finding exact LOO-PD.")
         loopd.method <- "exact"
         CV.K <- as.integer(0)
@@ -516,9 +523,13 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   out$X <- X
   out$X.names <- X.names
   out$X.stvc.names <- X_tilde.names
+  out$family <- family
   out$sp_coords <- sp_coords
   out$time_coords <- time_coords
   out$cor.fn <- cor.fn
+  out$process.type <- process.type
+  out$spt.params <- sptParams
+  out$n.samples <- n.samples
   out$priors <- list(mu.beta = rep(0, p), V.beta = V.beta, nu.beta = nu.beta,
                      nu.z = nu.z, sigmaSq.xi = sigmaSq.xi, IW.scale = IW.scale,
                      boundary = epsilon)

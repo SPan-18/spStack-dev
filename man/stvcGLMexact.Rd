@@ -27,12 +27,12 @@ stvcGLMexact(
 \arguments{
 \item{formula}{a symbolic description of the regression model to be fit.
 Variables in parenthesis are assigned spatially-temporally varying
-coefficients. See example below.}
+coefficients. See examples.}
 
 \item{data}{an optional data frame containing the variables in the model.
 If not found in \code{data}, the variables are taken from
 \code{environment(formula)}, typically the environment from which
-\code{spGLMexact} is called.}
+\code{stvcGLMexact} is called.}
 
 \item{family}{Specifies the distribution of the response as a member of the
 exponential family. Supported options are \code{'poisson'}, \code{'binomial'} and

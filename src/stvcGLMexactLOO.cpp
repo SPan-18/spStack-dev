@@ -86,31 +86,31 @@ extern "C" {
 
     if(corfn == "gneiting-decay"){
 
-        if(processType == "independent.shared"){
+        if(processType == "independent.shared" || processType == "multivariate"){
 
-            phi_s_vec[0] = REAL(phi_s_r)[0];
-            phi_t_vec[0] = REAL(phi_t_r)[0];
-            thetaspt[0] = phi_s_vec[0];
-            thetaspt[1] = phi_t_vec[0];
+          phi_s_vec[0] = REAL(phi_s_r)[0];
+          phi_t_vec[0] = REAL(phi_t_r)[0];
+          thetaspt[0] = phi_s_vec[0];
+          thetaspt[1] = phi_t_vec[0];
 
-            Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-            sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
+          Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
+          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
 
         }else if(processType == "independent"){
 
-            F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
-            F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
+          F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
+          F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
 
-            Vz = (double *) R_alloc(nnr, sizeof(double)); zeros(Vz, nnr);
+          Vz = (double *) R_alloc(nnr, sizeof(double)); zeros(Vz, nnr);
 
-            // find r-many correlation matrices, stacked into a rn^2-dim vector
-            for(k = 0; k < r; k++){
-                thetaspt[0] = phi_s_vec[k];
-                thetaspt[1] = phi_t_vec[k];
-                sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
-            }
+          // find r-many correlation matrices, stacked into a rn^2-dim vector
+          for(k = 0; k < r; k++){
+            thetaspt[0] = phi_s_vec[k];
+            thetaspt[1] = phi_t_vec[k];
+            sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
+          }
 
-        }else if(processType == "multivariate"){
+        }else if(processType == "multivariate2"){
 
           phi_s_vec[0] = REAL(phi_s_r)[0];
           phi_t_vec[0] = REAL(phi_t_r)[0];
@@ -174,6 +174,8 @@ extern "C" {
 
       Rprintf("Spatial-temporal correlation function: %s.\n", corfn.c_str());
 
+      Rprintf("Process type: %s.\n", processType.c_str());
+
       if(processType == "independent.shared" || processType == "multivariate"){
         Rprintf("All %i spatial-temporal processes share common parameters:\n", r);
         if(corfn == "gneiting-decay"){
@@ -230,6 +232,19 @@ extern "C" {
 
     }else if(processType == "multivariate"){
 
+      cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
+      F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      mkLT(cholVz, n);
+      chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
+      F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
+      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
+      mkLT(chol_iwScale, r);
+
+    }else if(processType == "multivariate2"){
+
         // // Inefficient cholesky!
         // cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
         // F77_NAME(dcopy)(&nrnr, Vz, &incOne, cholVz, &incOne);
@@ -256,10 +271,10 @@ extern "C" {
     double *XTildetX = (double *) R_alloc(nrp, sizeof(double)); zeros(XTildetX, nrp);         // Store XTildetX
 
     // Find VbetaInv
-    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                     // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
 
     // Find XtX
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
@@ -293,6 +308,8 @@ extern "C" {
     double *DInvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DInvB_pn, np);
     double *DInvB_nrn = (double *) R_chk_calloc(nnr, sizeof(double)); zeros(DInvB_nrn, nnr);
     double *cholschurA = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholschurA, nn);
+    double *tmp_rr = (double *) R_alloc(rr, sizeof(double)); zeros(tmp_rr, rr);
+    double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
     primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
@@ -368,15 +385,39 @@ extern "C" {
         v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
       }
 
-      for(k = 0; k < r; k++){
+      if(processType == "independent.shared"){
         dtemp1 = 0.5 * nu_z;
         dtemp2 = 1.0 / dtemp1;
         dtemp3 = rgamma(dtemp1, dtemp2);
         dtemp3 = 1.0 / dtemp3;
         dtemp3 = sqrt(dtemp3);
-        for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);                                           // v_z ~ t
+        for(k = 0; k < r; k++){
+          for(i = 0; i < n; i++){
+            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          }
         }
+      }else if(processType == "independent"){
+        for(k = 0; k < r; k++){
+          dtemp1 = 0.5 * nu_z;
+          dtemp2 = 1.0 / dtemp1;
+          dtemp3 = rgamma(dtemp1, dtemp2);
+          dtemp3 = 1.0 / dtemp3;
+          dtemp3 = sqrt(dtemp3);
+          for(i = 0; i < n; i++){
+            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          }
+        }
+      }else if(processType == "multivariate"){
+
+        for(k = 0; k < r; k++){
+          for(i = 0; i < n; i++){
+            tmp_nr[k*n + i] = rnorm(0.0, 1.0);
+          }
+        }
+        rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+        F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+        F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, v_z, &n FCONE FCONE);
+
       }
 
       // projection step
@@ -393,6 +434,10 @@ extern "C" {
 
     PutRNGstate();
 
+    R_chk_free(v_eta);
+    R_chk_free(v_xi);
+    R_chk_free(v_beta);
+    R_chk_free(v_z);
     R_chk_free(tmp_nr);
 
     R_chk_free(D1Inv);
@@ -406,6 +451,10 @@ extern "C" {
     SEXP result_r, resultName_r;
 
     if(loopd){
+
+      if(verbose){
+        Rprintf("Evaluating leave-one-out predictive densities.\n");
+      }
 
       SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
@@ -436,7 +485,7 @@ extern "C" {
 
         if(corfn == "gneiting-decay"){
 
-          if(processType == "independent.shared"){
+          if(processType == "independent.shared" || processType == "multivariate"){
 
             looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
             looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
@@ -448,7 +497,7 @@ extern "C" {
             looCholVz = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(looCholVz, n1n1r);
             looCz = (double *) R_chk_calloc(n1r, sizeof(double)); zeros(looCz, n1r);
 
-          }else if(processType == "multivariate"){
+          }else if(processType == "multivariate2"){
 
             looVz = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looVz, n1rn1r);
             looCholVz = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looCholVz, n1rn1r);
@@ -512,7 +561,7 @@ extern "C" {
           copyMatrixDelRow_vc(XTildetX, nr, p, looXTildetX, loo_index, n);
 
           // Constructing leave-one-out Vz for each spatial-temporal process model, and also Schur complement for prediction
-          if(processType == "independent.shared"){
+          if(processType == "independent.shared" || processType == "multivariate"){
 
             copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);
             cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);
@@ -528,14 +577,14 @@ extern "C" {
               copyMatrixDelRowCol(&Vz[nn*k], n, n, &looVz[n1n1*k], loo_index, loo_index);
               cholRowDelUpdate(n, &cholVz[nn*k], loo_index, &looCholVz[n1n1*k], tmp_n11);
 
-              copyVecExcludingOne(&Vz[nn*k + loo_index*n], &looCz[n1*k], n, loo_index);                            // looCz = Vz[-i,i]
+              copyVecExcludingOne(&Vz[nn*k + loo_index*n], &looCz[n1*k], n, loo_index);                                     // looCz = Vz[-i,i]
               F77_NAME(dtrsv)(lower, ntran, nunit, &n1, &looCholVz[n1n1*k], &n1, &looCz[n1*k], &incOne FCONE FCONE FCONE);  // looCz = LzInv * Cz
               dtemp1 = pow(F77_NAME(dnrm2)(&n1, &looCz[n1*k], &incOne), 2);                                                 // dtemp1 = Czt*VzInv*Cz
               z_tilde_var[k] = Vz[nn*k + loo_index*n + loo_index] - dtemp1;
 
             }
 
-          }else if(processType == "multivariate"){
+          }else if(processType == "multivariate2"){
 
             copyMatrixDelRowCol_vc(Vz, nr, nr, looVz, loo_index, loo_index, n);   // Row-column deleted Vz
             cholRowDelUpdate(n, cholR, loo_index, looCholR, tmp_n11);             // Row-column deleted R
@@ -627,15 +676,15 @@ extern "C" {
               }
             }else if(processType == "multivariate"){
               for(k = 0; k < r; k++){
-                dtemp1 = 0.5 * nu_z;
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp3 = 1.0 / dtemp3;
-                dtemp3 = sqrt(dtemp3);
                 for(loo_i = 0; loo_i < n1; loo_i++){
-                  loo_v_z[k*n1 + loo_i] = rnorm(0.0, dtemp3);
+                  tmp_n1r[k*n1 + loo_i] = rnorm(0.0, 1.0);
                 }
               }
+              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              mkLT(samp_Sigma, r);
+              F77_NAME(dgemm)(ntran, ytran, &n1, &r, &r, &one, tmp_n1r, &n1, samp_Sigma, &r, &zero, loo_v_z, &n1 FCONE FCONE);
+
             }
 
             // projection step
@@ -684,6 +733,27 @@ extern "C" {
 
             }else if(processType == "multivariate"){
 
+              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &r, &one, looCholVz, &n1, loo_v_z, &n1 FCONE FCONE FCONE FCONE);          // loo_v_z = cholinv(Vz)*Z
+              F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, loo_v_z, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);   // z_tilde_mu = t(C)*inv(R)*Z
+              F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, loo_v_z, &n1, loo_v_z, &n1, &zero, Mdist_rr, &r FCONE FCONE);             // Mdist = t(Z)*inv(R)*Z
+              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Mdist_rr, &incOne);                                                           // Mdist = iwScale + t(Z)*inv(R)*Z
+              F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+              F77_NAME(dpotri)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
+              F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+              mkLT(Mdist_rr, r);
+              rInvWishart(r, nu_z + n1 + 2*r, Mdist_rr, samp_Sigma, tmp_rr);
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              mkLT(samp_Sigma, r);
+
+              dtemp1 = sqrt(z_tilde_var[0]);
+              for(k = 0; k < r; k++){
+                tmp_r[k] = rnorm(0.0, dtemp1);
+              }
+              F77_NAME(dgemv)(ntran, &r, &r, &one, samp_Sigma, &r, tmp_r, &incOne, &zero, z_tilde, &incOne FCONE);
+              F77_NAME(daxpy)(&r, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
+
+            }else if(processType == "multivariate2"){
+
               F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &r, &one, looCholR, &n1, loo_v_z, &n1 FCONE FCONE FCONE FCONE);          // loo_v_z = cholinv(R)*Z
               F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, loo_v_z, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);  // z_tilde_mu = t(C)*inv(R)*Z
               F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, loo_v_z, &n1, loo_v_z, &n1, &zero, Mdist_rr, &r FCONE FCONE);            // Mdist = t(Z)*inv(R)*Z
@@ -709,8 +779,6 @@ extern "C" {
 
             dtemp1 = F77_CALL(ddot)(&p, X_pred, &incOne, loo_v_beta, &incOne);
             dtemp1 += F77_CALL(ddot)(&r, X_tilde_pred, &incOne, z_tilde, &incOne);
-
-            // Rprintf("%.5f\n", dtemp1);
 
             // Find predictive densities from canonical parameter dtemp2 = (X*beta + z)
             if(family == family_poisson){
@@ -826,7 +894,7 @@ extern "C" {
 
         if(corfn == "gneiting-decay"){
 
-          if(processType == "independent.shared"){
+          if(processType == "independent.shared" || processType == "multivariate"){
 
             cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);
             cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);
@@ -840,7 +908,7 @@ extern "C" {
             cvCz = (double *) R_chk_calloc(nnkmaxnkmaxr, sizeof(double)); zeros(cvCz, nnkmaxnkmaxr);
             z_tilde_cov = (double *) R_chk_calloc(nknkmaxr, sizeof(double)); zeros(z_tilde_cov, nknkmaxr);
 
-          }else if(processType == "multivariate"){
+          }else if(processType == "multivariate2"){
 
             cvVz = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvVz, nnkmaxrnnkmaxr);
             cvCholVz = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvCholVz, nnkmaxrnnkmaxr);
@@ -898,6 +966,7 @@ extern "C" {
 
           start_index = startsCV[cv_index];
           end_index = endsCV[cv_index];
+          // Rprintf("CV index: %d, start index: %d, end index: %d\n", cv_index, start_index, end_index);
 
           // Block-deleted data
           copyVecExcludingBlock(Y, cvY, n, start_index, end_index);                                                 // Block-deleted Y
@@ -920,7 +989,7 @@ extern "C" {
           copyMatrixDelRowBlock_vc(XTildetX, nr, p, cvXTildetX, start_index, end_index, n);
 
           // Constructing cross-validated Vz for each spatial-temporal process model, and also Schur complement for prediction
-          if(processType == "independent.shared"){
+          if(processType == "independent.shared" || processType == "multivariate"){
 
             // spatial-temporal covariance matrix
             copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);
@@ -940,7 +1009,7 @@ extern "C" {
             for(k = 0; k < r; k++){
 
               // spatial-temporal covariance matrix
-              copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvVz[nknk * k], start_index, end_index, start_index, end_index);
+              copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvVz[nnknnk * k], start_index, end_index, start_index, end_index);
               cholBlockDelUpdate(n, &cholVz[nn * k], start_index, end_index, &cvCholVz[nnknnk * k], tmp_nnknnkmax, tmp_n11);
 
               // Pre-processing for spatial prediction
@@ -954,7 +1023,7 @@ extern "C" {
 
             }
 
-          }else if(processType == "multivariate"){
+          }else if(processType == "multivariate2"){
 
             // spatial-temporal covariance matrix
             copyMatrixDelRowColBlock_vc(Vz, nr, nr, cvVz, start_index, end_index, start_index, end_index, n);
@@ -1051,6 +1120,18 @@ extern "C" {
                 }
               }
             }else if(processType == "multivariate"){
+
+              for(k = 0; k < r; k++){
+                for(cv_i = 0; cv_i < nnk; cv_i++){
+                  tmp_n1r[k*nnk + cv_i] = rnorm(0.0, 1.0);
+                }
+              }
+              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              mkLT(samp_Sigma, r);
+              F77_NAME(dgemm)(ntran, ytran, &nnk, &r, &r, &one, tmp_n1r, &nnk, samp_Sigma, &r, &zero, cv_v_z, &nnk FCONE FCONE);
+
+            }else if(processType == "multivariate2"){
               for(k = 0; k < r; k++){
                 dtemp1 = 0.5 * nu_z;
                 dtemp2 = 1.0 / dtemp1;
@@ -1116,6 +1197,29 @@ extern "C" {
               }
 
             }else if(processType == "multivariate"){
+
+              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholVz, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);  // cv_v_z <- invchol(R)*v_z
+              F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
+              F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, cv_v_z, &nnk, cv_v_z, &nnk, &zero, PCM_dist, &r FCONE FCONE);     // PCM_dist <- t(v_z)*inv(R)*v_z
+              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                    // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
+              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+              F77_NAME(dpotri)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
+              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+              mkLT(PCM_dist, r);
+              rInvWishart(r, nu_z + nnk + 2*r, PCM_dist, samp_Sigma, tmp_rr);
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              mkLT(samp_Sigma, r);
+
+              for(k = 0; k < r; k++){
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  z_tilde[k*nk + cv_i] = rnorm(0.0, 1.0);
+                }
+              }
+              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+              F77_NAME(dgemm)(ntran, ytran, &nk, &r, &r, &one, tmp_nkmaxr, &nk, samp_Sigma, &r, &zero, z_tilde, &nk FCONE FCONE);
+              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
+
+            }else if(processType == "multivariate2"){
 
               F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholR, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);   // cv_v_z <- invchol(R)*v_z
               F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
@@ -1190,6 +1294,9 @@ extern "C" {
         R_chk_free(cvCholVz);
         R_chk_free(cvCholR);
         R_chk_free(cvCz);
+        R_chk_free(z_tilde_cov);
+        R_chk_free(z_tilde_mu);
+        R_chk_free(z_tilde);
         R_chk_free(PCM_dist);
         R_chk_free(cvXtX);
         R_chk_free(cvXTildetX);
@@ -1206,9 +1313,6 @@ extern "C" {
         R_chk_free(tmp_nnknnkmax);
         R_chk_free(tmp_nknkmax);
         R_chk_free(tmp_nkmaxr);
-        R_chk_free(z_tilde_cov);
-        R_chk_free(z_tilde_mu);
-        R_chk_free(z_tilde);
         R_chk_free(cv_v_eta);
         R_chk_free(cv_v_xi);
         R_chk_free(cv_v_beta);
@@ -1267,6 +1371,7 @@ extern "C" {
     }
 
     UNPROTECT(nProtect);
+    // return R_NilValue;
 
     return result_r;
 

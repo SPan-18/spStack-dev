@@ -5,11 +5,20 @@ extern "C" {
 
   SEXP idist(SEXP coords1_r, SEXP n1_r, SEXP coords2_r, SEXP n2_r, SEXP p_r, SEXP D_r);
 
+  SEXP recoverScale_stvcGLM(SEXP n_r, SEXP p_r, SEXP r_r, SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
+                            SEXP betaMu_r, SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP iwScale_r, SEXP processType_r,
+                            SEXP phi_s_r, SEXP phi_t_r, SEXP nSamples_r, SEXP betaSamps_r, SEXP zSamps_r);
+
   SEXP R_cholRankOneUpdate(SEXP L_r, SEXP n_r, SEXP v_r, SEXP alpha_r, SEXP beta_r, SEXP lower_r);
 
   SEXP R_cholRowDelUpdate(SEXP L_r, SEXP n_r, SEXP row_r, SEXP lower_r);
 
   SEXP R_cholRowBlockDelUpdate(SEXP L_r, SEXP n_r, SEXP start_r, SEXP end_r, SEXP lower_r);
+
+  SEXP predict_stvcGLMexact(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP X_new_r, SEXP XTilde_new_r,
+                            SEXP sp_coords_r, SEXP time_coords_r, SEXP sp_coords_new_r, SEXP time_coords_new_r,
+                            SEXP processType_r, SEXP corfn_r, SEXP phi_s_r, SEXP phi_t_r, SEXP nSamples_r,
+                            SEXP beta_samps_r, SEXP z_samps_r, SEXP sigmaSqbeta_samps_r, SEXP z_scale_samps_r);
 
   SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                   SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,

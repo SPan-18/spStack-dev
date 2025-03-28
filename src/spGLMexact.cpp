@@ -147,10 +147,10 @@ extern "C" {
     // find Cholesky factor of unit spherical perturbation of Vz
     F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE); if(info != 0){perror("c++ error: VzPlusI dpotrf failed\n");}
 
-    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                     // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
 
     // Find XtX
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
@@ -263,7 +263,7 @@ extern "C" {
     SEXP result_r, resultName_r;
 
     // make return object for posterior samples and leave-one-out predictive densities
-    int nResultListObjs = 4;
+    int nResultListObjs = 3;
 
     result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
     resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;

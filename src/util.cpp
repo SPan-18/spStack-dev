@@ -631,7 +631,7 @@ void printMtrx(double *m, int nRow, int nCol){
   for(i = 0; i < nRow; i++){
     Rprintf("\t");
     for(j = 0; j < nCol; j++){
-      Rprintf("%.5f\t", m[j*nRow+i]);
+      Rprintf("% .5f\t", m[j*nRow+i]);
     }
     Rprintf("\n");
   }
@@ -748,6 +748,38 @@ void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *thet
     }
   }
 }
+
+// Create nxn' cross-correlation spatial-temporal matrix
+void sptCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_tm, double *coords_sp_prime, double *coords_tm_prime, double *theta, std::string &corfn, double *C){
+  int i, j, k;
+  double sp_dist, tm_dist;
+
+  for(i = 0; i < n; i++){
+    for(j = 0; j < n_prime; j++){
+      sp_dist = 0.0;
+      tm_dist = 0.0;
+
+      // find spatial distance
+      for(k = 0; k < p; k++){
+        sp_dist += pow(coords_sp[k * n + i] - coords_sp_prime[k * n_prime + j], 2);
+      }
+      sp_dist = sqrt(sp_dist);
+
+      // find temporal distance
+      tm_dist = pow(coords_tm[i] - coords_tm_prime[j], 2);
+      tm_dist = sqrt(tm_dist);
+
+      // evaluate correlation kernel
+      if(corfn == "gneiting-decay"){
+        C[j * n + i] = gneiting_spt_decay(sp_dist, tm_dist, theta[0], theta[1]);
+      }else{
+        perror("c++ error: corfn is incorrectly specified");
+      }
+
+    }
+  }
+}
+
 
 // gneiting-decay spatio-temporal correlation function (Gneiting and Guttorp 2010)
 double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t){
@@ -1041,7 +1073,7 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std:
   int i = 0, j = 0, k = 0, l = 0;
   int nr = n * r;
 
-  if(processtype == "independent.shared"){
+  if(processtype == "independent.shared" || processtype == "multivariate"){
     for(l = 0; l < r; l++){
       for(i = 0; i < n; i ++){
         for(j = 0; j < n; j++){
@@ -1057,7 +1089,7 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std:
         }
       }
     }
-  }else if(processtype == "multivariate"){
+  }else if(processtype == "multivariate2"){
     for(l = 0; l < r; l++){
       for(j = 0; j < n; j++){
         for(i = 0; i < n; i++){
@@ -1080,6 +1112,59 @@ void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r){
   for(i = 0; i < n; i++){
     for(j = 0; j < r; j++){
       B[i*nr + j*n + i] += XTilde[j*n + i];
+    }
+  }
+
+}
+
+// Function for drawing a sample from a Inverse-Wishart distribution
+void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+
+  int info = 0;
+  int i = 0, j = 0;
+  int rr = r * r;
+  char const *lower = "L";
+  char const *ntran = "N";
+  // char const *ndiag = "N";
+  char const *ytran = "T";
+  // char const *lside = "L";
+  char const *rside = "R";
+  const double one = 1.0;
+  const double zero = 0.0;
+
+  // Draw a sample from a Wishart distribution: W_r(nu, I)
+  // Using Bartlett decomposition (Bartlett 1939) and
+  // rectangular coordinates (Mahalanobis, Bose, and Roy 1937)
+
+  zeros(tmp_rr, rr);
+  // Fill diagonal with chi-square distributed values
+  for(i = 0; i < r; i++){
+    tmp_rr[i * r + i] = sqrt(rchisq(nu-i));   //sqrt(rgamma(0.5*(nu - i), 2.0));
+  }
+
+  // Fill lower triangle with standard normal variates
+  for(i = 1; i < r; i++){
+    for(j = 0; j < i; j++){
+      tmp_rr[j * r + i] = rnorm(0.0, 1.0);
+    }
+  }
+
+  // Sigma = tmp_rr * t(tmp_rr)
+  F77_NAME(dsyrk)(lower, ntran, &r, &r, &one, tmp_rr, &r, &zero, Sigma, &r FCONE FCONE);
+  // Sigma = cholinvIWscale * Sigma * t(cholinvIWscale)
+  mkLT(cholinvIWscale, r);
+  // F77_NAME(dtrmm)(lside, lower, ntran, ndiag, &r, &r, &one, cholinvIWscale, &r, Sigma, &r FCONE FCONE FCONE FCONE);
+  // F77_NAME(dtrmm)(rside, lower, ytran, ndiag, &r, &r, &one, cholinvIWscale, &r, Sigma, &r FCONE FCONE FCONE FCONE);
+  F77_NAME(dsymm)(rside, lower, &r, &r, &one, Sigma, &r, cholinvIWscale, &r, &zero, tmp_rr, &r FCONE FCONE);
+  F77_NAME(dgemm)(ntran, ytran, &r, &r, &r, &one, tmp_rr, &r, cholinvIWscale, &r, &zero, Sigma, &r FCONE FCONE);
+
+  F77_NAME(dpotrf)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: rInvWishart dpotrf failed\n");}
+  F77_NAME(dpotri)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: rInvWishart dpotri failed\n");}
+
+  // make Sigma symmetric
+  for(i = 1; i < r; i++){
+    for(j = 0; j < i; j++){
+      Sigma[i * r + j] = Sigma[j * r + i];
     }
   }
 

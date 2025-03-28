@@ -82,43 +82,43 @@ extern "C" {
 
     if(corfn == "gneiting-decay"){
 
-        if(processType == "independent.shared"){
+      if(processType == "independent.shared" || processType == "multivariate"){
 
-            phi_s_vec[0] = REAL(phi_s_r)[0];
-            phi_t_vec[0] = REAL(phi_t_r)[0];
-            thetaspt[0] = phi_s_vec[0];
-            thetaspt[1] = phi_t_vec[0];
+        phi_s_vec[0] = REAL(phi_s_r)[0];
+        phi_t_vec[0] = REAL(phi_t_r)[0];
+        thetaspt[0] = phi_s_vec[0];
+        thetaspt[1] = phi_t_vec[0];
 
-            Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-            sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
+        Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
+        sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
 
-        }else if(processType == "independent"){
+      }else if(processType == "independent"){
 
-            F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
-            F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
+        F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
+        F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
 
-            Vz = (double *) R_alloc(nnr, sizeof(double)); zeros(Vz, nnr);
+        Vz = (double *) R_alloc(nnr, sizeof(double)); zeros(Vz, nnr);
 
-            // find r-many correlation matrices, stacked into a rn^2-dim vector
-            for(k = 0; k < r; k++){
-                thetaspt[0] = phi_s_vec[k];
-                thetaspt[1] = phi_t_vec[k];
-                sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
-            }
-
-        }else if(processType == "multivariate"){
-
-          phi_s_vec[0] = REAL(phi_s_r)[0];
-          phi_t_vec[0] = REAL(phi_t_r)[0];
-          thetaspt[0] = phi_s_vec[0];
-          thetaspt[1] = phi_t_vec[0];
-
-          R = (double *) R_alloc(nn, sizeof(double)); zeros(R, nn);
-          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, R);
-          Vz = (double *) R_alloc(nrnr, sizeof(double)); zeros(Vz, nrnr);
-          kronecker(r, n, iwScale, R, Vz);
-
+        // find r-many correlation matrices, stacked into a rn^2-dim vector
+        for(k = 0; k < r; k++){
+          thetaspt[0] = phi_s_vec[k];
+          thetaspt[1] = phi_t_vec[k];
+          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
         }
+
+      }else if(processType == "multivariate2"){
+
+        phi_s_vec[0] = REAL(phi_s_r)[0];
+        phi_t_vec[0] = REAL(phi_t_r)[0];
+        thetaspt[0] = phi_s_vec[0];
+        thetaspt[1] = phi_t_vec[0];
+
+        R = (double *) R_alloc(nn, sizeof(double)); zeros(R, nn);
+        sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, R);
+        Vz = (double *) R_alloc(nrnr, sizeof(double)); zeros(Vz, nrnr);
+        kronecker(r, n, iwScale, R, Vz);
+
+      }
     }
 
     // boundary adjustment parameter
@@ -160,6 +160,8 @@ extern "C" {
 
       Rprintf("Spatial-temporal correlation function: %s.\n", corfn.c_str());
 
+      Rprintf("Process type: %s.\n", processType.c_str());
+
       if(processType == "independent.shared" || processType == "multivariate"){
         Rprintf("All %i spatial-temporal processes share common parameters:\n", r);
         if(corfn == "gneiting-decay"){
@@ -189,21 +191,34 @@ extern "C" {
     // Find Cholesky of Vz
     if(processType == "independent.shared"){
 
-        cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
-        F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-        F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-        mkLT(cholVz, n);
+      cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
+      F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      mkLT(cholVz, n);
 
     }else if(processType == "independent"){
 
-        cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
-        F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
-        for(k = 0; k < r; k++){
-            F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-            mkLT(&cholVz[nn * k], n);
-        }
+      cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
+      F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
+      for(k = 0; k < r; k++){
+          F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+          mkLT(&cholVz[nn * k], n);
+      }
 
     }else if(processType == "multivariate"){
+
+      cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
+      F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      mkLT(cholVz, n);
+      chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
+      F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
+      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
+      mkLT(chol_iwScale, r);
+
+    }else if(processType == "multivariate2"){
 
         // Efficient Cholesky for kronecker product: chol(kron(A, B)) = kron(chol(A), chol(B))
         cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
@@ -225,10 +240,10 @@ extern "C" {
     double *XTildetX = (double *) R_alloc(nrp, sizeof(double)); zeros(XTildetX, nrp);         // Store XTildetX
 
     // Find VbetaInv
-    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                     // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
 
     // Find XtX
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
@@ -255,19 +270,21 @@ extern "C" {
     mkLT(cholIplusXTildeVzXTildet, n);
 
     // Allocations for priming step (pre-processing)
-    double *tmp_nnr = (double *) R_chk_calloc(nnr, sizeof(double)); zeros(tmp_nnr, nnr);
+    double *tmp_nnr1 = (double *) R_chk_calloc(nnr, sizeof(double)); zeros(tmp_nnr1, nnr);
     double *D1Inv = (double *) R_chk_calloc(nrnr, sizeof(double)); zeros(D1Inv, nrnr);
     double *D1InvB1 = (double *) R_chk_calloc(nrp, sizeof(double)); zeros(D1InvB1, nrp);
     double *cholschurA1 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholschurA1, pp);
     double *DInvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DInvB_pn, np);
     double *DInvB_nrn = (double *) R_chk_calloc(nnr, sizeof(double)); zeros(DInvB_nrn, nnr);
     double *cholschurA = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholschurA, nn);
+    double *tmp_rr = (double *) R_alloc(rr, sizeof(double)); zeros(tmp_rr, rr);
+    double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
     primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
-                 sigmaSq_xi, tmp_nnr, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
+                 sigmaSq_xi, tmp_nnr1, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
-    R_chk_free(tmp_nnr);
+    R_chk_free(tmp_nnr1);
 
     /*****************************************
      Set-up posterior sampling
@@ -337,15 +354,40 @@ extern "C" {
         v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
       }
 
-      for(k = 0; k < r; k++){
+      if(processType == "independent.shared"){
         dtemp1 = 0.5 * nu_z;
         dtemp2 = 1.0 / dtemp1;
         dtemp3 = rgamma(dtemp1, dtemp2);
         dtemp3 = 1.0 / dtemp3;
         dtemp3 = sqrt(dtemp3);
-        for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);                                           // v_z ~ t
+        for(k = 0; k < r; k++){
+          for(i = 0; i < n; i++){
+            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          }
         }
+      }else if(processType == "independent"){
+        for(k = 0; k < r; k++){
+          dtemp1 = 0.5 * nu_z;
+          dtemp2 = 1.0 / dtemp1;
+          dtemp3 = rgamma(dtemp1, dtemp2);
+          dtemp3 = 1.0 / dtemp3;
+          dtemp3 = sqrt(dtemp3);
+          for(i = 0; i < n; i++){
+            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          }
+        }
+      }else if(processType == "multivariate"){
+
+        for(k = 0; k < r; k++){
+          for(i = 0; i < n; i++){
+            tmp_nr[k*n + i] = rnorm(0.0, 1.0);
+          }
+        }
+        rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+        F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+        mkLT(samp_Sigma, r);
+        F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, v_z, &n FCONE FCONE);
+
       }
 
       // projection step
@@ -362,6 +404,10 @@ extern "C" {
 
     PutRNGstate();
 
+    R_chk_free(v_eta);
+    R_chk_free(v_xi);
+    R_chk_free(v_beta);
+    R_chk_free(v_z);
     R_chk_free(tmp_nr);
 
     R_chk_free(D1Inv);
@@ -374,7 +420,7 @@ extern "C" {
     // make return object
     SEXP result_r, resultName_r;
 
-    // make return object for posterior samples and leave-one-out predictive densities
+    // make return object for posterior samples
     int nResultListObjs = 3;
 
     result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;

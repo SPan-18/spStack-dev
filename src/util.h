@@ -81,6 +81,9 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C);
 
 void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C);
 
+void sptCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_tm,
+                 double *coords_sp_prime, double *coords_tm_prime, double *theta, std::string &corfn, double *C);
+
 double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t);
 
 void zeros(double *x, int length);
@@ -105,3 +108,5 @@ void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, dou
 void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std::string &processtype);
 
 void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r);
+
+void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr);

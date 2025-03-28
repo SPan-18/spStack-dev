@@ -713,7 +713,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
       dtrsv_sparse1(cholCap, XTilde[i*n + j], &D1inv[(i*n + j)*n], n, j);
     }
   }
-  if(processtype == "independent.shared"){
+  if(processtype == "independent.shared" || processtype == "multivariate"){
     for(i = 0; i < r; i++){
       F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, Vz, &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
     }
@@ -721,7 +721,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
     for(i = 0; i < r; i++){
       F77_NAME(dgemm)(ntran, ntran, &n, &n, &n, &one, &D1inv[i*nn], &n, &Vz[i*nn], &n, &zero, &tmp_nnr[i*nn], &n FCONE FCONE);
     }
-  }else if(processtype == "multivariate"){
+  }else if(processtype == "multivariate2"){
     F77_NAME(dgemm)(ntran, ntran, &n, &nr, &nr, &one, D1inv, &n, Vz, &nr, &zero, tmp_nnr, &n FCONE FCONE);
   }
 
@@ -733,7 +733,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
 
   // Then add Vz to D1inv, to get Vz - Vx*t(XTilde)*inv(I + XTilde*Vz*t(XTilde))*XTilde*Vz
   // which is equal to inv(t(XTilde)*XTilde + inv(Vz)) by Sherman-Woodbury-Morrison identity
-  if(processtype == "independent.shared"){
+  if(processtype == "independent.shared" || processtype == "multivariate"){
     for(i = 0; i < r; i++){
       for(j = 0; j < n; j++){
         for(k = 0; k < n; k++){
@@ -749,7 +749,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
         }
       }
     }
-  }else if(processtype == "multivariate"){
+  }else if(processtype == "multivariate2"){
     F77_NAME(daxpy)(&nrnr, &one, Vz, &incOne, D1inv, &incOne);
   }
 
@@ -761,7 +761,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, DinvB_pn, &n, &zero, cholSchurA1_pp, &p FCONE FCONE);         // - t(X)*XTilde*inv(D1)*XTildetX
   F77_NAME(daxpy)(&pp, &one, XtX, &incOne, cholSchurA1_pp, &incOne);                                                   // XtX - t(X)*XTilde*inv(D1)*XTildetX
   F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, cholSchurA1_pp, &incOne);                                              // SchurA1 = XtX + VBetaInv - t(X)*XTilde*inv(D1)*XTildetX
-  F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // chol(Schur(A1))
+  F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: cholSchurA1_pp dpotrf failed\n");}   // chol(Schur(A1))
 
   F77_NAME(daxpy)(&np, &one, X, &incOne, DinvB_pn, &incOne);                                                           // X - XTilde*inv(D1)*XTildetX
   F77_NAME(dcopy)(&np, DinvB_pn, &incOne, tmp_nnr, &incOne);
@@ -780,7 +780,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   for(i = 0; i < n; i++){
     cholSchurA_nn[i*n + i] += sigmaSqxi2;
   }
-  F77_NAME(dpotrf)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}   // chol(Schur(A))
+  F77_NAME(dpotrf)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){perror("c++ error: cholSchurA_nn dpotrf failed\n");}   // chol(Schur(A))
 
 }
 
@@ -840,7 +840,7 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
   F77_NAME(dtrsv)(lower, ytran, nunit, &p, Lbeta, &p, v_beta, &incOne FCONE FCONE FCONE);             // v_beta = LbetatInv*v_beta
   F77_NAME(dgemv)(ytran, &n, &p, &one, X, &n, v_eta, &incOne, &one, v_beta, &incOne FCONE);           // v_beta = Xt*v_eta + LbetaInv*v_beta
 
-  if(processtype == "independent.shared"){
+  if(processtype == "independent.shared" || processtype == "multivariate"){
     for(i = 0; i < r; i++){
       F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholVz, &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
     }
@@ -848,8 +848,8 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
     for(i = 0; i < r; i++){
       F77_NAME(dtrsv)(lower, ytran, nunit, &n, &cholVz[i*nn], &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
     }
-  }else if(processtype == "multivariate"){
-    // can it be made efficient by passing cholR and chol_iwScale, instead of cholVz? probably not.
+  }else if(processtype == "multivariate2"){
+    // can it be made efficient by passing cholR and chol_iwScale, instead of cholVz? [probably not.]
     F77_NAME(dtrsv)(lower, ytran, nunit, &nr, cholVz, &nr, v_z, &incOne FCONE FCONE FCONE);
   }
 
