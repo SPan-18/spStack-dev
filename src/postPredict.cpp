@@ -118,7 +118,7 @@ extern "C" {
     double *cholVz = NULL;               // define NULL pointer for chol(Vz)
     double *cholVz_new = NULL;           // define NULL pointer for chol(Vz_new)
     double *z_pred_cov = NULL;           // define NULL pointer for z_pred_cov
-    double *z_pred_mu = NULL;            // define NULL pointer for z_pred_mu
+    // double *z_pred_mu = NULL;            // define NULL pointer for z_pred_mu
 
     // Find Cholesky of Vz
     if(processType == "independent.shared"){
