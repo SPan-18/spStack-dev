@@ -2,9 +2,12 @@ pandoc: 3.1.11
 pkgdown: 2.1.3
 pkgdown_sha: ~
 articles:
+  posterior-predictive: posterior-predictive.html
+  spatial-temporal: spatial-temporal.html
+  spatial: spatial.html
   spStack: spStack.html
   technical_overview: technical_overview.html
-last_built: 2025-07-08T11:45Z
+last_built: 2025-07-08T17:30Z
 urls:
   reference: https://span-18.github.io/spStack-dev/reference
   article: https://span-18.github.io/spStack-dev/articles
