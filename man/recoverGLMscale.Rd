@@ -8,22 +8,41 @@ generalized linear models}
 recoverGLMscale(mod_out)
 }
 \arguments{
-\item{mod_out}{an object returned by \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}.}
+\item{mod_out}{an object returned by a fitting a spatial or spatial-temporal
+GLM.}
 }
 \value{
 An object of the same class as input, and updates the list tagged
-\code{samples} with the posterior samples of the scale parameters. Usually, the
-new tags are \code{sigmasq.beta} and \code{z.scale}.
+\code{samples} with the posterior samples of the scale parameters. The new tags
+are \code{sigmasq.beta} and \code{z.scale}.
 }
 \description{
 A function to recover posterior samples of scale parameters that
 were marginalized out during model fit. This is only applicable for spatial
 or, spatial-temporal generalized linear models. This function applies on
 outputs of functions that fits a spatial/spatial-temporal generalized linear
-model, such as \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}} etc.
+model, such as \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, and
+\code{\link[=stvcGLMstack]{stvcGLMstack()}}.
+}
+\examples{
+data("simPoisson")
+dat <- simPoisson[1:100, ]
+mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+                   coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+                   params.list = list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
+                                      boundary = c(0.5)),
+                   n.samples = 100,
+                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
+                   verbose = TRUE)
+
+# Recover posterior samples of scale parameters
+mod1.1 <- recoverGLMscale(mod1)
+
+# sample from the stacked posterior distribution
+post_samps <- stackedSampler(mod1.1)
 }
 \seealso{
-\code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}
+\code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

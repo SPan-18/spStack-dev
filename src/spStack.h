@@ -29,6 +29,12 @@ extern "C" {
                        SEXP processType_r, SEXP corfn_r, SEXP phi_s_r, SEXP phi_t_r, SEXP nSamples_r,
                        SEXP beta_samps_r, SEXP z_samps_r, SEXP z_scale_samps_r, SEXP joint_r);
 
+  SEXP predict_spLM(SEXP n_r, SEXP n_pred_r, SEXP p_r,
+                    SEXP X_new_r, SEXP sp_coords_r, SEXP sp_coords_new_r,
+                    SEXP corfn_r, SEXP phi_r, SEXP nu_r, SEXP deltasq_r,
+                    SEXP beta_samps_r, SEXP z_samps_r, SEXP sigmaSq_z_samps_r,
+                    SEXP nSamples_r, SEXP joint_r);
+
   SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                   SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                   SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,

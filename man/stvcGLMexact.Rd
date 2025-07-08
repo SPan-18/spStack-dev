@@ -183,6 +183,19 @@ Default values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z},
 \eqn{\sigma^2_\xi} are diagonal with each diagonal element 100, 2.1, 2.1 and
 0.1 respectively.
 }
+\examples{
+data("sim_stvcPoisson")
+dat <- sim_stvcPoisson[1:100, ]
+
+# Fit a spatial-temporal varying coefficient Poisson GLM
+mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                     time_coords = as.matrix(dat[, "t_coords"]),
+                     cor.fn = "gneiting-decay",
+                     process.type = "multivariate",
+                     sptParams = list(phi_s = 1, phi_t = 1),
+                     verbose = FALSE, n.samples = 100)
+}
 \references{
 Bradley JR, Clinch M (2024). "Generating Independent Replicates
 Directly from the Posterior Distribution for a Class of Spatial Hierarchical

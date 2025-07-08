@@ -13,6 +13,7 @@ static const R_CallMethodDef CallEntries[] = {
   {"R_cholRowBlockDelUpdate", (DL_FUNC) &R_cholRowBlockDelUpdate, 5},
   {"predict_spGLM",           (DL_FUNC) &predict_spGLM,           16},
   {"predict_stvcGLM",         (DL_FUNC) &predict_stvcGLM,         21},
+  {"predict_spLM",            (DL_FUNC) &predict_spLM,            15},
   {"spGLMexact",              (DL_FUNC) &spGLMexact,              17},
   {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           21},
   {"spLMexact",               (DL_FUNC) &spLMexact,               14},

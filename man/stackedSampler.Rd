@@ -7,14 +7,16 @@
 stackedSampler(mod_out, n.samples)
 }
 \arguments{
-\item{mod_out}{an object of class \code{spLMstack} or \code{spGLMstack}.}
+\item{mod_out}{an object that is an output of a model fit or a prediction
+task, i.e., the class should be either \code{spLMstack}, 'pp.spLMstack',
+\code{spGLMstack}, \code{pp.spGLMstack}, \code{stvcGLMexact}, or \code{pp.stvcGLMexact}.}
 
 \item{n.samples}{(optional) If missing, inherits the number
 of posterior samples from the original output. Otherwise, it specifies
 number of posterior samples to draw from the stacked posterior. If it exceeds
-the number of posterior draws used in the original function, then a warning
-is thrown and the samples are obtained by resampling. It is recommended, to
-run the original function with enough samples.}
+the number of posterior draws used in the original function, then a message
+is thrown and the samples are obtained by resampling. We recommended running
+the original model fit/prediction with enough samples.}
 }
 \value{
 An object of class \code{stacked_posterior}, which is a list that
@@ -24,12 +26,7 @@ includes the following tags -
 \item{z}{samples of the spatial random effects from the stacked joint
 posterior.}
 }
-In case of model output of class \code{spLMstack}, the list additionally contains
-\code{sigmaSq} which are the samples of the variance parameter from the stacked
-joint posterior of the spatial linear model. For model output of class
-\code{spGLMstack}, the list also contains \code{xi} which are the samples of the
-fine-scale variation term from the stacked joint posterior of the spatial
-generalized linear model.
+The list may also include other scale parameters corresponding to the model.
 }
 \description{
 A helper function to sample from the stacked posterior

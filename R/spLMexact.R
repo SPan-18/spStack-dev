@@ -328,9 +328,13 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   out$X.names <- X.names
   out$coords <- coords
   out$cor.fn <- cor.fn
-  out$beta.prior.norm <- beta.Norm
+  out$priors <- list(beta.Norm = list(mu = beta.Norm[[1]],
+                                      V = matrix(beta.Norm[[2]], p, p)),
+                     sigma.sq.IG = sigma.sq.IG)
+  out$n.samples <- n.samples
   out$samples <- samps[c("beta", "sigmaSq", "z")]
   if(loopd){
+    out$loopd.method <- loopd.method
     out$loopd <- samps[["loopd"]]
   }
   if(cor.fn == 'matern'){

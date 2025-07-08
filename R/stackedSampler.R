@@ -4,13 +4,15 @@
 #' distribution to obtain final posterior samples that can be used for
 #' subsequent analysis. This function applies on outputs of functions
 #' [spLMstack()] and [spGLMstack()].
-#' @param mod_out an object of class `spLMstack` or `spGLMstack`.
+#' @param mod_out an object that is an output of a model fit or a prediction
+#' task, i.e., the class should be either `spLMstack`, 'pp.spLMstack',
+#' `spGLMstack`, `pp.spGLMstack`, `stvcGLMexact`, or `pp.stvcGLMexact`.
 #' @param n.samples (optional) If missing, inherits the number
 #' of posterior samples from the original output. Otherwise, it specifies
 #' number of posterior samples to draw from the stacked posterior. If it exceeds
-#' the number of posterior draws used in the original function, then a warning
-#' is thrown and the samples are obtained by resampling. It is recommended, to
-#' run the original function with enough samples.
+#' the number of posterior draws used in the original function, then a message
+#' is thrown and the samples are obtained by resampling. We recommended running
+#' the original model fit/prediction with enough samples.
 #' @return An object of class \code{stacked_posterior}, which is a list that
 #' includes the following tags -
 #' \describe{
@@ -18,12 +20,7 @@
 #' \item{z}{samples of the spatial random effects from the stacked joint
 #' posterior.}
 #' }
-#' In case of model output of class `spLMstack`, the list additionally contains
-#' `sigmaSq` which are the samples of the variance parameter from the stacked
-#' joint posterior of the spatial linear model. For model output of class
-#' `spGLMstack`, the list also contains `xi` which are the samples of the
-#' fine-scale variation term from the stacked joint posterior of the spatial
-#' generalized linear model.
+#' The list may also include other scale parameters corresponding to the model.
 #' @details After obtaining the optimal stacking weights
 #' \eqn{\hat{w}_1, \ldots, \hat{w}_G}, posterior inference of quantities of
 #' interest subsequently proceed from the *stacked* posterior,
@@ -73,7 +70,9 @@ stackedSampler <- function(mod_out, n.samples){
     }
   }
 
-  if(inherits(mod_out, c('spLMstack', 'spGLMstack', 'pp.spGLMstack', 'stvcGLMstack', 'pp.stvcGLMstack'))){
+  if(inherits(mod_out, c('spLMstack', 'pp.spLMstack',
+                         'spGLMstack', 'pp.spGLMstack',
+                         'stvcGLMstack', 'pp.stvcGLMstack'))){
 
     nModels <- mod_out$n.models
     model_id <- sample(seq_len(nModels), n.samples, replace = TRUE, prob = mod_out$stacking.weights)

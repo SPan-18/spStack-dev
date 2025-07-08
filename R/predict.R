@@ -2,29 +2,111 @@
 #'
 #' @description A function to sample from the posterior predictive distribution
 #' of the latent spatial or spatial-temporal process.
-#' @param mod_out an object returned by [stvcGLMexact()], [stvcGLMstack()], etc.
+#' @param mod_out an object returned by any model fit under fixed
+#' hyperparameters or using predictive stacking, i.e., [spLMexact()],
+#' [spLMstack()], [spGLMexact()], [spGLMstack()], [stvcGLMexact()], or
+#' [stvcGLMstack()].
 #' @param coords_new a list of new spatial or spatial-temporal coordinates at
-#' which the latent process is to be predicted.
+#' which the latent process, the mean, and the response is to be predicted.
 #' @param covars_new a list of new covariates at the new spatial or
-#' spatial-temporal coordinates. Only required if the model is either a
-#' spatially or a spatial-temporally varying coefficient model.
+#' spatial-temporal coordinates. See examples for the structure of this list.
 #' @param joint a logical value indicating whether to return the joint posterior
 #' predictive samples of the latent process at the new locations or times.
 #' Defaults to `FALSE`.
 #' @param nBinom_new a vector of the number of trials for each new prediction
 #' location or time. Only required if the model family is `"binomial"`. Defaults
 #' to a vector of ones, indicating one trial for each new prediction.
-#' @return A modified object of class named same as that of the input object
-#' except now the name of the class will be preceeded by the identifier `pp`
-#' separated by a `.`. The entry with the tag `samples` will include the
-#' following additional components:
-#' \item{samples}{a list of length `nsamples` containing the posterior
-#' predictive samples of the latent process at the new locations or times.}
-#' \item{coords_new}{a list of new spatial or spatial-temporal coordinates at
-#' which the latent process is to be predicted.}
+#' @return A modified object with the class name preceeded by the identifier
+#' `pp` separated by a `.`. For example, if input is of class `spLMstack`, then
+#' the output of this prediction function would be `pp.spLMstack`. The entry
+#' with the tag `samples` is updated and will include samples from the posterior
+#' predictive distribution of the latent process, the mean, and the response at
+#' the new locations or times. The entry with the tag `prediction` is added
+#' and contains the new coordinates and covariates, and whether the joint
+#' posterior predictive samples were requested.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @seealso [stvcGLMexact()], [stvcGLMstack()]
+#' @seealso [spLMexact()], [spLMstack()], [spGLMexact()], [spGLMstack()],
+#' [stvcGLMexact()], [stvcGLMstack()]
+#' @examples
+#' # training and test data sizes
+#' n_train <- 100
+#' n_pred <- 10
+#'
+#' # Example 1: Spatial linear model
+#' # load and split data into training and prediction sets
+#' data(simGaussian)
+#' dat <- simGaussian
+#' dat_train <- dat[1:n_train, ]
+#' dat_pred <- dat[n_train + 1:n_pred, ]
+#'
+#' # fit a spatial linear model using predictive stacking
+#' mod1 <- spLMstack(y ~ x1, data = dat_train,
+#'                   coords = as.matrix(dat_train[, c("s1", "s2")]),
+#'                   cor.fn = "matern",
+#'                   params.list = list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
+#'                                      noise_sp_ratio = c(0.5, 1, 2)),
+#'                   n.samples = 1000, loopd.method = "psis",
+#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#'
+#' # prepare new coordinates and covariates for prediction
+#' sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
+#' X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+#'
+#' # carry out posterior prediction
+#' mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new,
+#'                              joint = TRUE)
+#'
+#' # sample from the stacked posterior and posterior predictive distribution
+#' post_samps <- stackedSampler(mod.pred)
+#'
+#' # analyze posterior samples
+#' postpred_z <- post_samps$z.pred
+#' post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+#' z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
+#'                       zM = post_z_summ[, 2], zU = post_z_summ[, 3])
+#' library(ggplot2)
+#' ggplot(data = z_combn, aes(x = z)) +
+#'   geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, color = "skyblue") +
+#'   geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+#'   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+#'   xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
+#'   theme(panel.background = element_blank(), aspect.ratio = 1)
+#'
+#' # Example 2: Spatial-temporal model with varying coefficients
+#' data("sim_stvcPoisson")
+#' dat <- sim_stvcPoisson
+#'
+#' # split dataset into test and train
+#' dat_train <- dat[1:n_train, ]
+#' dat_pred <- dat[n_train + 1:n_pred, ]
+#'
+#' # create list of candidate models (multivariate)
+#' mod.list2 <- candidateModels(list(phi_s = list(1, 2, 3),
+#'                                   phi_t = list(1, 2, 4),
+#'                                   boundary = c(0.5, 0.75)), "cartesian")
+#'
+#' # fit a spatial-temporal varying coefficient model using predictive stacking
+#' mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
+#'                      sp_coords = as.matrix(dat_train[, c("s1", "s2")]),
+#'                      time_coords = as.matrix(dat_train[, "t_coords"]),
+#'                      cor.fn = "gneiting-decay",
+#'                      process.type = "multivariate",
+#'                      candidate.models = mod.list2,
+#'                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
+#'                      n.samples = 500)
+#'
+#' # prepare new coordinates and covariates for prediction
+#' sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
+#' tm_pred <- as.matrix(dat_pred[, "t_coords"])
+#' X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+#' mod_pred <- posteriorPredict(mod1,
+#'                              coords_new = list(sp = sp_pred, time = tm_pred),
+#'                              covars_new = list(fixed = X_new, vc = X_new),
+#'                              joint = FALSE)
+#'
+#' # sample from the stacked posterior and posterior predictive distribution
+#' post_samps <- stackedSampler(mod_pred)
 #' @export
 posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
                              nBinom_new){
@@ -668,24 +750,131 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         storage.mode(phi) <- "double"
         storage.mode(nu) <- "double"
         storage.mode(deltasq) <- "double"
-        storage.mode(joint) <- "integer"
 
-        # # Call C++ function
-        # samps <- .Call("predict_spLM", n, n_pred, p,
-        #                covars_new, sp_coords, coords_new,
-        #                cor.fn, phi, nu, deltasq,
-        #                beta_samps, z_samps, sigmaSq_samps,
-        #                n.samples, joint)
+        # Call C++ function
+        samps <- .Call("predict_spLM", n, n_pred, p,
+                       covars_new, sp_coords, coords_new,
+                       cor.fn, phi, nu, deltasq,
+                       beta_samps, z_samps, sigmaSq_samps,
+                       n.samples, joint)
 
-        # # Prepare return object
-        # mod_out$prediction <- list(coords_new = coords_new,
-        #                            covars_new = covars_new,
-        #                            joint.pred = as.logical(joint))
-        # mod_out$samples[['z.pred']] <- samps[['z.pred']]
-        # mod_out$samples[['mu.pred']] <- samps[['mu.pred']]
-        # mod_out$samples[['y.pred']] <- samps[['y.pred']]
+        # Prepare return object
+        mod_out$prediction <- list(coords_new = coords_new,
+                                   covars_new = covars_new,
+                                   joint.pred = as.logical(joint))
+        mod_out$samples[['z.pred']] <- samps[['z.pred']]
+        mod_out$samples[['mu.pred']] <- samps[['mu.pred']]
+        mod_out$samples[['y.pred']] <- samps[['y.pred']]
 
         class(mod_out) <- "pp.spLMexact"
+        return(mod_out)
+
+    }else if(inherits(mod_out, 'spLMstack')){
+
+        n <- dim(mod_out$X)[1L]                     # number of observations
+        p <- length(mod_out$X.names)                # number of fixed effects
+        storage.mode(n) <- "integer"
+        storage.mode(p) <- "integer"
+
+        if(missing(covars_new)){
+            stop("Covariates at new locations are missing.")
+        }
+        if(!is.matrix(covars_new)){
+            stop("covars_new must be a matrix.")
+        }
+        if(ncol(covars_new) != p){
+            stop("Number of columns in covars_new must match the number of fixed effects in the model.")
+        }
+        storage.mode(covars_new) <- "double"
+
+        n_pred <- nrow(covars_new)                   # number of new predictions
+        storage.mode(n_pred) <- "integer"
+
+        # Read spatial coordinates
+        sp_coords <- mod_out$coords
+        storage.mode(sp_coords) <- "double"
+
+        if(missing(coords_new)){
+            stop("Spatial coordinates at new locations are missing.")
+        }
+        if(!is.matrix(coords_new)){
+            stop("coords_new must be a matrix.")
+        }
+        if(nrow(coords_new) != n_pred){
+            stop("Number of rows in coords_new must match the number of rows of covars_new.")
+        }
+        if(ncol(coords_new) != 2){
+            stop("Spatial coordinates must have two columns.")
+        }
+        storage.mode(coords_new) <- "double"
+
+        dup_rows <- find_approx_matches(coords_new, sp_coords)
+        if(dup_rows$any_match){
+            matched_preview <- dup_rows$matched_rows
+            n_show <- min(6, nrow(matched_preview))
+            matched_preview <- matched_preview[seq_len(n_show), , drop = FALSE]
+
+            # Convert to character matrix for pretty printing
+            matched_str <- apply(matched_preview, 1, function(r) paste(format(r, digits = 6), collapse = ", "))
+            matched_str <- paste0("  [", seq_len(n_show), "] ", matched_str, collapse = "\n")
+
+            stop(sprintf(
+                "New spatial coordinates match %d existing coordinate(s).\nFirst %d matched row(s):\n%s\nPlease provide new coordinates that do not match existing ones.",
+                dup_rows$num_matches, n_show, matched_str))
+        }
+
+        n.samples <- mod_out$n.samples
+        storage.mode(n.samples) <- "integer"
+        storage.mode(joint) <- "integer"
+
+        cor.fn <- mod_out$cor.fn
+        nModels <- mod_out$n.models
+
+        for(i in 1:nModels){
+
+            phi <- 0.0
+            nu <- 0.0
+            deltasq <- 0.0
+            if(cor.fn == "matern"){
+                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
+                nu <- as.numeric(mod_out$candidate.models[i, 'nu'])
+                deltasq <- as.numeric(mod_out$candidate.models[i, 'noise_sp_ratio'])
+            }else if(cor.fn == "exponential"){
+                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
+                deltasq <- as.numeric(mod_out$candidate.models[i, 'noise_sp_ratio'])
+            }
+            storage.mode(phi) <- "double"
+            storage.mode(nu) <- "double"
+            storage.mode(deltasq) <- "double"
+
+            beta_samps <- mod_out$samples[[i]][['beta']]
+            z_samps <- mod_out$samples[[i]][['z']]
+            sigmaSq_samps <- mod_out$samples[[i]][['sigmaSq']]
+
+            # storage mode
+            storage.mode(beta_samps) <- "double"
+            storage.mode(z_samps) <- "double"
+            storage.mode(sigmaSq_samps) <- "double"
+
+            # Call C++ function
+            samps <- .Call("predict_spLM", n, n_pred, p,
+                           covars_new, sp_coords, coords_new,
+                           cor.fn, phi, nu, deltasq,
+                           beta_samps, z_samps, sigmaSq_samps,
+                           n.samples, joint)
+
+            mod_out$samples[[i]][['z.pred']] <- samps[['z.pred']]
+            mod_out$samples[[i]][['mu.pred']] <- samps[['mu.pred']]
+            mod_out$samples[[i]][['y.pred']] <- samps[['y.pred']]
+
+        }
+
+        # Prepare return object
+        mod_out$prediction <- list(coords_new = coords_new,
+                                   covars_new = covars_new,
+                                   joint.pred = as.logical(joint))
+
+        class(mod_out) <- "pp.spLMstack"
         return(mod_out)
 
     }

@@ -5,14 +5,32 @@
 #' were marginalized out during model fit. This is only applicable for spatial
 #' or, spatial-temporal generalized linear models. This function applies on
 #' outputs of functions that fits a spatial/spatial-temporal generalized linear
-#' model, such as [stvcGLMexact()], [stvcGLMstack()] etc.
-#' @param mod_out an object returned by [stvcGLMexact()], [stvcGLMstack()].
+#' model, such as [spGLMexact()], [spGLMstack()], [stvcGLMexact()], and
+#' [stvcGLMstack()].
+#' @param mod_out an object returned by a fitting a spatial or spatial-temporal
+#' GLM.
 #' @return An object of the same class as input, and updates the list tagged
-#' `samples` with the posterior samples of the scale parameters. Usually, the
-#' new tags are `sigmasq.beta` and `z.scale`.
+#' `samples` with the posterior samples of the scale parameters. The new tags
+#' are `sigmasq.beta` and `z.scale`.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @seealso [stvcGLMexact()], [stvcGLMstack()]
+#' @seealso [spGLMexact()], [spGLMstack()], [stvcGLMexact()], [stvcGLMstack()]
+#' @examples
+#' data("simPoisson")
+#' dat <- simPoisson[1:100, ]
+#' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+#'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
+#'                    params.list = list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
+#'                                       boundary = c(0.5)),
+#'                    n.samples = 100,
+#'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
+#'                    verbose = TRUE)
+#'
+#' # Recover posterior samples of scale parameters
+#' mod1.1 <- recoverGLMscale(mod1)
+#'
+#' # sample from the stacked posterior distribution
+#' post_samps <- stackedSampler(mod1.1)
 #' @export
 recoverGLMscale <- function(mod_out){
 
