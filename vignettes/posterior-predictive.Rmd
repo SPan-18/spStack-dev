@@ -1,0 +1,29 @@
+---
+title: "Posterior Predictive Inference"
+output:
+  rmarkdown::html_vignette:
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+vignette: >
+  %\VignetteIndexEntry{Posterior Predictive Inference}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+header-includes:
+  - \def\T{{ \scriptstyle \top }}
+  - \newcommand{\thetasp}{{\theta_{\text{sp}}}}
+  - \newcommand{\GP}{\mathrm{GP}}
+  - \newcommand{\N}{\mathcal{N}}
+  - \newcommand{\EF}{\mathrm{EF}}
+  - \newcommand{\Norm}{\mathrm{N}}
+  - \newcommand{\GCMc}{\mathrm{GCM}_c}
+  - \newcommand{\calL}{\mathcal{L}}
+  - \newcommand{\IG}{\mathrm{IG}}
+  - \newcommand{\IW}{\mathrm{IW}}
+  - \newcommand{\given}{\mid}
+---
+
+In this article, we discuss the function -
+
+* `posteriorPredict()`
+
+This function can be used to obtain posterior predictive inference at unobserved locations in space or time. It is applied on the output of functions `spLMexact()`, `spLMstack()`, `spGLMexact()`, `spGLMstack()`, `stvcGLMexact()`, `stvcGLMstack()` etc.
+

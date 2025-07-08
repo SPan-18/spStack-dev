@@ -1,0 +1,31 @@
+---
+title: "Spatial-Temporal Models"
+output:
+  rmarkdown::html_vignette:
+    mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
+vignette: >
+  %\VignetteIndexEntry{Spatial-Temporal Models}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+header-includes:
+  - \def\T{{ \scriptstyle \top }}
+  - \newcommand{\thetasp}{{\theta_{\text{sp}}}}
+  - \newcommand{\GP}{\mathrm{GP}}
+  - \newcommand{\N}{\mathcal{N}}
+  - \newcommand{\EF}{\mathrm{EF}}
+  - \newcommand{\Norm}{\mathrm{N}}
+  - \newcommand{\GCMc}{\mathrm{GCM}_c}
+  - \newcommand{\calL}{\mathcal{L}}
+  - \newcommand{\IG}{\mathrm{IG}}
+  - \newcommand{\IW}{\mathrm{IW}}
+  - \newcommand{\given}{\mid}
+---
+
+In this article, we discuss the following functions -
+
+* `stvcLMexact()`
+* `stvcLMstack()`
+* `stvcGLMexact()`
+* `stvcGLMstack()`
+
+These functions can be used to fit Gaussian and non-Gaussian spatial-temporal point-referenced data.
