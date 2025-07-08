@@ -19,16 +19,25 @@ development:
 reference:
 - title: Stacking
   desc: |
-    Implements Bayesian predictive stacking for spatial linear and generalized linear models.
+    Implements Bayesian predictive stacking for spatial/spatial-temporal linear and generalized linear models.
   contents:
   - spLMstack
   - spGLMstack
+  - stvcGLMstack
+  - candidateModels
 - title: Exact samplers and finds LOO-PD
   desc: |
-    Samples from the posterior distribution conditional on fixed values of spatial process parameters and finds leave-one-out predictive densities
+    Samples from the posterior distribution conditional on fixed values of spatial/spatial-temporal process parameters and finds leave-one-out predictive densities
   contents:
   - spLMexact
   - spGLMexact
+  - stvcGLMexact
+- title: Downstream posterior sampling
+  desc: |
+    Posterior recovery of scale parameters and posterior predictive inference
+  contents:
+  - recoverGLMscale
+  - posteriorPredict
 - title: Analysis of output
 - subtitle: Stacked posterior
   desc: |
@@ -53,6 +62,7 @@ reference:
   desc: |
     Various simulated spatial data sampled on unit square
   contents:
+  - sim_stvcPoisson
   - simBinary
   - simBinom
   - simGaussian

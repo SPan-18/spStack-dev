@@ -1,6 +1,6 @@
 ---
 title: "spStack: Bayesian Geostatistics Using Predictive Stacking"
-output: 
+output:
   rmarkdown::html_vignette:
     mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
 vignette: >
@@ -24,18 +24,12 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Introduction
-Geostatistics refers to the study of a spatially distributed variable of interest, which in theory is defined at every point over a bounded study region of interest.
-Statistical modelling and analysis for spatially oriented point-referenced outcomes play a crucial role in diverse scientific applications such as earth and environmental sciences, ecology, epidemiology, and economics. With the advent of Markov chain Monte Carlo (MCMC) algorithms, Bayesian hierarchical models have gained massive popularity in analyzing such point-referenced or, geostatistical data. These models involve latent spatial processes characterized by spatial process parameters, which besides lacking substantive relevance in scientific contexts, are also weakly identified and hence, impedes convergence of MCMC algorithms. Thus, even for moderately large datasets (~$10^3$ or higher), the computation for MCMC becomes too onerous for practical use.
+spStack implements Bayesian inference for a rich class of spatial and spatial-temporal geostatistical models using stacking of predictive densities. Besides delivering competitive predictive performance as compared to traditional fully Bayesian inference using MCMC, predictive stacking is embarrassingly parallel, and hence, fast. This package, to the best of our knowledge, is the first to implement stacking for Bayesian analysis of spatial and spatial-temporal data.
 
-We introduce the R package `spStack` that implements Bayesian inference for a class of geostatistical models, where we obviate the issues mentioned by sampling from analytically available posterior distributions conditional upon some candidate values of the spatial process parameters and, subsequently assimilate inference from these individual posterior distributions using Bayesian predictive stacking. Besides delivering competitive predictive performance as compared to fully Bayesian inference using MCMC, our proposed algorithm is embarrassingly parallel, thus drastically improves runtime and elevating the utility of the package for a diverse group of practitioners with limited computational resources at their disposal. This package, to the best of our knowledge, is the first to implement stacking for Bayesian analysis of spatial data.
-
-Technical details surrounding the methodology can be found in the articles @zhang2024stacking which discuss the case where the distribution of the point-referenced outcomes are Gaussian, and, in @pan2024stacking where the case of non-Gaussian outcomes is explored. The code for this package is written primarily in C/C++ with additional calls to FORTRAN routines for optimized linear algebra operations. We leverage the `F77_NAME` macro to interface with legacy FORTRAN functions in conjunction with efficient matrix computation libraries such as [BLAS](https://netlib.org/blas/) (Basic Linear Algebra Subprograms) and [LAPACK](https://netlib.org/lapack/) (Linear Algebra Package) to implement our stacking algorithm. 
-
-The remainder of the vignette evolves as follows - the next two sections discuss Bayesian hierarchical spatial models for Gaussian and non-Gaussian outcomes, which is followed by a section providing brief details on predictive stacking and a section dedicated for illustration of functions in the package.
+Technical details surrounding the methodology can be found in the articles @zhang2024stacking and @pan2024stacking.
 
 ## Bayesian Gaussian spatial regression models
-Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial locations yielding measurements $y = (y_1, \ldots, y_n)^\T$ with known values of predictors at these locations collected in the $n \times p$ full rank matrix $X = [x(s_1), \ldots, x(s_n)]^\T$. A customary geostatistical model is 
+Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial locations yielding measurements $y = (y_1, \ldots, y_n)^\T$ with known values of predictors at these locations collected in the $n \times p$ full rank matrix $X = [x(s_1), \ldots, x(s_n)]^\T$. A customary geostatistical model is
 \begin{equation}
   y_i = x(s_i)^\T \beta + z(s_i) + \epsilon_i, \quad i = 1, \ldots, n,
 \end{equation}
@@ -60,7 +54,7 @@ p(\beta \mid \sigma^2, y) \times p(z \mid \beta, \sigma^2, y).
 We proceed by first sampling $\sigma^2$ from its marginal posterior, then given the samples of $\sigma^2$, we sample $\beta$ and subsequently, we sample $z$ conditioned on the posterior samples of $\beta$ and $\sigma^2$ [@banerjee_massivespatial]. The function `spLMexact()` delivers samples from this posterior distribution. More details can be found in @zhang2024stacking.
 
 ## Bayesian non-Gaussian spatial regression models
-Analyzing non-Gaussian spatial data typically requires introducing spatial dependence in generalized linear models through the link function of an exponential family distribution. Let $y(s)$ be the outcome at location $s \in \mathcal{D}$ endowed with a probability law from the natural exponential family, which we denote by 
+Analyzing non-Gaussian spatial data typically requires introducing spatial dependence in generalized linear models through the link function of an exponential family distribution. Let $y(s)$ be the outcome at location $s \in \mathcal{D}$ endowed with a probability law from the natural exponential family, which we denote by
 \begin{equation}
     y(s) \sim \EF(x(s)^\T \beta  + z(s); b, \psi_y)
 \end{equation}
@@ -68,7 +62,7 @@ for some positive parameter $b > 0$ and unit log partition function $\psi_y$. Fi
 
 Unlike in Gaussian likelihoods, inference is considerably encumbered by the inability to analytically integrate out the random effects and reduce the dimension of the parameter space. Iterative algorithms such as Markov Chain Monte Carlo (MCMC), thus attempt to sample from a very high-dimensional posterior distribution, and convergence is often hampered by high auto-correlations and weakly identified spatial process parameters $\thetasp$.
 
-We consider the following three cases - 
+We consider the following three cases -
 
 1. Point-referenced Poisson count data: Here $b = 1$ and $\psi_y(t) = e^t$.
 \begin{equation}
@@ -151,7 +145,7 @@ prior_list <- list(beta.norm = list(muBeta, VBeta),
 nSamples <- 2000
 ```
 
-We then pass these parameters into the main function. 
+We then pass these parameters into the main function.
 ```{r spLMexactLOO_exact}
 set.seed(1729)
 mod1 <- spLMexact(y ~ x1, data = dat,
@@ -240,8 +234,8 @@ z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
 
 plotz <- ggplot(data = z_combn, aes(x = z)) +
   geom_point(aes(y = zM), size = 0.75, color = "darkblue", alpha = 0.5) +
-  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, 
-                color = "skyblue") + 
+  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15,
+                color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
   theme(panel.background = element_blank(), aspect.ratio = 1)
@@ -270,7 +264,7 @@ dat <- simPoisson[1:200, ] # work with first 200 observations
 
 ggplot(dat, aes(x = s1, y = s2)) +
   geom_point(aes(color = y), alpha = 0.75) +
-  scale_color_distiller(palette = "RdYlGn", direction = -1, 
+  scale_color_distiller(palette = "RdYlGn", direction = -1,
                         label = function(x) sprintf("%.0f", x)) +
   guides(alpha = 'none') + theme_bw() +
   theme(axis.ticks = element_line(linewidth = 0.25),
@@ -296,7 +290,7 @@ rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 ```
 
-Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD. 
+Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD.
 ```{r spGLMstack_Pois}
 mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
