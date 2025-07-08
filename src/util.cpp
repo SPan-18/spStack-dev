@@ -717,6 +717,40 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
   }
 }
 
+// Create nxn full spatial correlation matrix
+void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &corfn, double *C){
+  int i, j, k;
+  double sp_dist;
+
+  for(i = 0; i < n; i++){
+    for(j = i; j < n; j++){
+      sp_dist = 0.0;
+
+      // find spatial distance
+      for(k = 0; k < p; k++){
+        sp_dist += pow(coords_sp[k * n + i] - coords_sp[k * n + j], 2);
+      }
+      sp_dist = sqrt(sp_dist);
+
+      // evaluate correlation kernel
+      if(corfn == "exponential"){
+        C[i * n + j] = theta[0] * exp(-1.0 * theta[0] * sp_dist);
+        C[j * n + i] = C[i * n + j];
+      }else if(corfn == "matern"){
+        if(sp_dist * theta[0] > 0.0){
+          C[i * n + j] = pow(sp_dist * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(sp_dist * theta[0], theta[1], 1.0);
+          C[j * n + i] = C[i * n + j];
+        }else{
+          C[i * n + j] = 1.0;
+        }
+      }else{
+        perror("c++ error: corfn is not correctly specified");
+      }
+
+    }
+  }
+}
+
 // Create full spatial-temporal correlation matrix
 void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C){
   int i, j, k;
@@ -743,6 +777,38 @@ void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *thet
         C[j * n + i] = C[i * n + j];
       }else{
         perror("c++ error: corfn is incorrectly specified");
+      }
+
+    }
+  }
+}
+
+// Create nxn' spatial cross-correlation matrix
+void spCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_sp_prime, double *theta, std::string &corfn, double *C){
+  int i, j, k;
+  double sp_dist;
+
+  for(i = 0; i < n; i++){
+    for(j = 0; j < n_prime; j++){
+      sp_dist = 0.0;
+
+      // find spatial distance
+      for(k = 0; k < p; k++){
+        sp_dist += pow(coords_sp[k * n + i] - coords_sp_prime[k * n_prime + j], 2);
+      }
+      sp_dist = sqrt(sp_dist);
+
+      // evaluate correlation kernel
+      if(corfn == "exponential"){
+        C[j * n + i] = theta[0] * exp(-1.0 * theta[0] * sp_dist);
+      }else if(corfn == "matern"){
+        if(sp_dist * theta[0] > 0.0){
+          C[j * n + i] = pow(sp_dist * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(sp_dist * theta[0], theta[1], 1.0);
+        }else{
+          C[j * n + i] = 1.0;
+        }
+      }else{
+        perror("c++ error: corfn is not correctly specified");
       }
 
     }

@@ -31,7 +31,7 @@ m2 <- candidateModels(list(phi_s = c(1, 1), phi_t = c(1, 2)), "cartesian")
 m2
 m3 <- candidateModels(list(phi_s = list(c(1, 1), c(1, 2)),
                           phi_t = list(c(1, 3), c(2, 3)),
-                          boundary = c(0.5)),
+                          boundary = c(0.5, 0.75)),
                       "simple")
 }
 \seealso{

@@ -66,103 +66,51 @@ stackedSampler <- function(mod_out, n.samples){
   }else{
     if(n.samples > n_post){
       warning("Number of samples required exceeds number of posterior samples.
-              To prevent resampling, run spLMstack() with higher n.samples.")
+              To prevent resampling, run *stack() with higher n.samples.")
       ids <- sample(1:n_post, size = n.samples, replace = TRUE)
     }else{
     ids <- sample(1:n_post, size = n.samples, replace = FALSE)
     }
   }
 
-  if(inherits(mod_out, 'spLMstack')){
+  if(inherits(mod_out, c('spLMstack', 'spGLMstack', 'pp.spGLMstack', 'stvcGLMstack', 'pp.stvcGLMstack'))){
 
-    post_samples <- sapply(1:n.samples, function(x){
-      model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-      return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-               mod_out$samples[[model_id]]$sigmaSq[ids[x]],
-               mod_out$samples[[model_id]]$z[, ids[x]]))
-    })
-    stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                          sigmaSq = post_samples[(p_obs + 1), ],
-                          z = post_samples[(p_obs + 1) + 1:n_obs, ])
-    rownames(stacked_samps[['beta']]) = mod_out$X.names
+    nModels <- mod_out$n.models
+    model_id <- sample(seq_len(nModels), n.samples, replace = TRUE, prob = mod_out$stacking.weights)
 
-  }else if(inherits(mod_out, 'spGLMstack')){
+    param_names <- names(mod_out$samples[[1L]])
+    result <- vector("list", length(param_names))
+    names(result) <- param_names
 
-    post_samples <- sapply(1:n.samples, function(x){
-      model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-      return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-               mod_out$samples[[model_id]]$z[, ids[x]],
-               mod_out$samples[[model_id]]$xi[, ids[x]]))
-    })
-    stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                          z = post_samples[(p_obs + 1:n_obs), ],
-                          xi = post_samples[(p_obs + n_obs) + 1:n_obs, ])
-    rownames(stacked_samps[['beta']]) = mod_out$X.names
+    for(param in param_names){
 
-  }else if(inherits(mod_out, 'stvcGLMstack')){
+      # Determine shape of the parameter
+      first_param <- mod_out$samples[[1]][[param]]
+      is_matrix <- is.matrix(first_param)
+      d <- if (is_matrix) nrow(first_param) else 1
 
-    r_obs <- length(mod_out$X.stvc.names)
-    param.names <- sort(names(mod_out$samples[[1L]]))
-
-    if(identical(param.names, c('beta', 'xi', 'z'))){
-      post_samples <- sapply(1:n.samples, function(x){
-        model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-        return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-                 mod_out$samples[[model_id]]$z[, ids[x]],
-                 mod_out$samples[[model_id]]$xi[, ids[x]]))
-      })
-      stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                            z = post_samples[(p_obs + 1:(n_obs * r_obs)), ],
-                            xi = post_samples[(p_obs + (n_obs * r_obs)) + 1:n_obs, ])
-      rownames(stacked_samps[['beta']]) = mod_out$X.names
-    }else if(identical(param.names, c('beta', 'sigmasq.beta', 'xi', 'z', 'z.scale'))){
-      if(mod_out$process.type == 'independent.shared'){
-        post_samples <- sapply(1:n.samples, function(x){
-        model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-        return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-                 mod_out$samples[[model_id]]$z[, ids[x]],
-                 mod_out$samples[[model_id]]$xi[, ids[x]],
-                 mod_out$samples[[model_id]]$sigmasq.beta[ids[x]],
-                 mod_out$samples[[model_id]]$z.scale[ids[x]]))
-        })
-        stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                              z = post_samples[(p_obs + 1:(n_obs * r_obs)), ],
-                              xi = post_samples[(p_obs + (n_obs * r_obs)) + 1:n_obs, ],
-                              sigmasq.beta = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1), ],
-                              z.scale = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1) + 1, ])
-        rownames(stacked_samps[['beta']]) = mod_out$X.names
-      }else if(mod_out$process.type == 'independent'){
-        post_samples <- sapply(1:n.samples, function(x){
-        model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-        return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-                 mod_out$samples[[model_id]]$z[, ids[x]],
-                 mod_out$samples[[model_id]]$xi[, ids[x]],
-                 mod_out$samples[[model_id]]$sigmasq.beta[ids[x]],
-                 mod_out$samples[[model_id]]$z.scale[, ids[x]]))
-        })
-        stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                              z = post_samples[(p_obs + 1:(n_obs * r_obs)), ],
-                              xi = post_samples[(p_obs + (n_obs * r_obs)) + 1:n_obs, ],
-                              sigmasq.beta = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1), ],
-                              z.scale = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1) + 1:r_obs, ])
-        rownames(stacked_samps[['beta']]) = mod_out$X.names
-      }else if(mod_out$process.type == 'multivariate'){
-        post_samples <- sapply(1:n.samples, function(x){
-        model_id <- sample(1:mod_out$n.models, 1, prob = mod_out$stacking.weights)
-        return(c(mod_out$samples[[model_id]]$beta[, ids[x]],
-                 mod_out$samples[[model_id]]$z[, ids[x]],
-                 mod_out$samples[[model_id]]$xi[, ids[x]],
-                 mod_out$samples[[model_id]]$sigmasq.beta[ids[x]],
-                 mod_out$samples[[model_id]]$z.scale[, ids[x]]))
-        })
-        stacked_samps <- list(beta = post_samples[1:p_obs, ],
-                              z = post_samples[(p_obs + 1:(n_obs * r_obs)), ],
-                              xi = post_samples[(p_obs + (n_obs * r_obs)) + 1:n_obs, ],
-                              sigmasq.beta = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1), ],
-                              z.scale = post_samples[(p_obs + (n_obs * r_obs) + n_obs + 1) + 1:(r_obs*r_obs), ])
-        rownames(stacked_samps[['beta']]) = mod_out$X.names
+      # Preallocate
+      if(is_matrix){
+        result[[param]] <- matrix(NA, nrow = d, ncol = n.samples)
+      }else{
+        result[[param]] <- numeric(n.samples)
       }
 
+      for(i in seq_len(n.samples)){
+        m <- model_id[i]
+        s <- ids[i]
+        val <- mod_out$samples[[m]][[param]]
+        if(is.matrix(val)){
+          result[[param]][, i] <- val[, s]
+        }else{
+          result[[param]][i] <- val[s]
+        }
+      }
+
+    }
+
+    if("beta" %in% names(result)){
+      rownames(result[['beta']]) <- mod_out$X.names
     }
 
   }else{
@@ -170,6 +118,7 @@ stackedSampler <- function(mod_out, n.samples){
          following functions: spLMstack(), spGLMstack(), stvcGLMstack().")
   }
 
-    class(stacked_samps) <- "stacked_posterior"
-    return(stacked_samps)
+  class(result) <- "stacked_posterior"
+  return(result)
+
 }

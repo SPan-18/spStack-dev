@@ -1168,10 +1168,10 @@ extern "C" {
                 for(cv_i = 0; cv_i < nk; cv_i++){
                   z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
                 }
-                F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
-                F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
-                F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
               }
+              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+              F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
 
             }else if(processType == "independent"){
 
@@ -1191,10 +1191,10 @@ extern "C" {
                 for(cv_i = 0; cv_i < nk; cv_i++){
                   z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
                 }
-                F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
-                F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
-                F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
+                F77_NAME(dgemv)(ntran, &nk, &nk, &one, &z_tilde_cov[nknk * k], &nk, &z_tilde[nk * k], &incOne, &zero, &tmp_nkmaxr[nk * k], &incOne FCONE);
               }
+              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+              F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
 
             }else if(processType == "multivariate"){
 

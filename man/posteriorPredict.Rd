@@ -4,7 +4,7 @@
 \alias{posteriorPredict}
 \title{Prediction of latent process at new spatial or temporal locations}
 \usage{
-posteriorPredict(mod_out, coords_new, covars_new)
+posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
 }
 \arguments{
 \item{mod_out}{an object returned by \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}, etc.}
@@ -15,9 +15,20 @@ which the latent process is to be predicted.}
 \item{covars_new}{a list of new covariates at the new spatial or
 spatial-temporal coordinates. Only required if the model is either a
 spatially or a spatial-temporally varying coefficient model.}
+
+\item{joint}{a logical value indicating whether to return the joint posterior
+predictive samples of the latent process at the new locations or times.
+Defaults to \code{FALSE}.}
+
+\item{nBinom_new}{a vector of the number of trials for each new prediction
+location or time. Only required if the model family is \code{"binomial"}. Defaults
+to a vector of ones, indicating one trial for each new prediction.}
 }
 \value{
-A list with the following components:
+A modified object of class named same as that of the input object
+except now the name of the class will be preceeded by the identifier \code{pp}
+separated by a \code{.}. The entry with the tag \code{samples} will include the
+following additional components:
 \item{samples}{a list of length \code{nsamples} containing the posterior
 predictive samples of the latent process at the new locations or times.}
 \item{coords_new}{a list of new spatial or spatial-temporal coordinates at

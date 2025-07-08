@@ -39,7 +39,7 @@
 #' `V.beta`, `nu.beta`, `nu.z`, `sigmaSq.xi` and `IW.scale`. Values of `nu.beta`
 #' and `nu.z` must be at least 2.1. If not supplied, uses defaults.
 #' @param candidate.models an object of class `candidateModels` containing a
-#' list of candidate models for stacking. See `candidateModels` for details.
+#' list of candidate models for stacking. See [candidateModels()] for details.
 #' @param n.samples number of samples to be drawn from the posterior
 #' distribution.
 #' @param loopd.controls a list with details on how leave-one-out predictive
@@ -49,12 +49,12 @@
 #' value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many Monte Carlo
 #' samples will be used to evaluate the leave-one-out predictive densities,
 #' which must be at least 500 (default).
-#' #' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
-#'  if set up by the user, is ignored. If \code{parallel=TRUE}, the function
-#'  inherits the parallelization plan that is set by the user via the function
-#'  [future::plan()] only. Depending on the parallel backend available, users
-#'  may choose their own plan. More details are available at
-#'  \url{https://cran.R-project.org/package=future}.
+#' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
+#' if set up by the user, is ignored. If \code{parallel=TRUE}, the function
+#' inherits the parallelization plan that is set by the user via the function
+#' [future::plan()] only. Depending on the parallel backend available, users
+#' may choose their own plan. More details are available at
+#' \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #' to obtain optimal stacking weights for each candidate model. Default is
 #' \code{'ECOS'}. Users can use other solvers supported by the
@@ -62,7 +62,28 @@
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #' stacking weights.
 #' @param ... currently no additional argument.
-#'
+#' @return An object of class \code{stvcGLMstack}, which is a list including the
+#'  following tags -
+#' \describe{
+#' \item{`samples`}{a list of length equal to total number of candidate models
+#'  with each entry corresponding to a list of length 3, containing posterior
+#'  samples of fixed effects (\code{beta}), spatial effects (\code{z}), and
+#'  fine scale variation `xi` for that model.}
+#' \item{`loopd`}{a list of length equal to total number of candidate models with
+#' each entry containing leave-one-out predictive densities under that
+#' particular model.}
+#' \item{`n.models`}{number of candidate models that are fit.}
+#' \item{`candidate.models`}{a list of length \code{n_model} rows with each
+#' entry containing details of the model parameters.}
+#' \item{`stacking.weights`}{a numeric vector of length equal to the number of
+#' candidate models storing the optimal stacking weights.}
+#' \item{`run.time`}{a \code{proc_time} object with runtime details.}
+#' \item{`solver.status`}{solver status as returned by the optimization
+#' routine.}
+#' }
+#' This object can be further used to recover posterior samples of the scale
+#' parameters in the model, and subsequrently, to make predictions at new
+#' locations or times using the function [posteriorPredict()].
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan

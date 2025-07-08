@@ -252,7 +252,7 @@ candidate_models <- function(params_list){
 #' m2
 #' m3 <- candidateModels(list(phi_s = list(c(1, 1), c(1, 2)),
 #'                           phi_t = list(c(1, 3), c(2, 3)),
-#'                           boundary = c(0.5)),
+#'                           boundary = c(0.5, 0.75)),
 #'                       "simple")
 #' @export
 candidateModels <- function(params_list, aggregation = "simple"){
@@ -295,3 +295,32 @@ candidateModels <- function(params_list, aggregation = "simple"){
     return(models_list)
 
 }
+
+# internal function: find duplicate rows in two matrices
+find_approx_matches <- function(pred, obs, tol = 1e-6) {
+  if (ncol(pred) != ncol(obs)) {
+    stop("Prediction and observed matrices must have the same number of columns.")
+  }
+
+  match_idx <- integer(0)
+
+  for (i in seq_len(nrow(pred))) {
+    row_pred <- pred[i, ]
+    diffs <- abs(sweep(obs, 2, row_pred))      # matrix of |obs - row_pred|
+    rowwise_max_diff <- apply(diffs, 1, max)   # L∞ norm (max elementwise difference)
+
+    if (any(rowwise_max_diff <= tol)) {
+      match_idx <- c(match_idx, i)
+    }
+  }
+
+  matched <- pred[match_idx, , drop = FALSE]
+
+  list(
+    any_match = length(match_idx) > 0,
+    num_matches = length(match_idx),
+    matched_rows = matched
+  )
+}
+
+

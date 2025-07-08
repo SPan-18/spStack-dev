@@ -79,7 +79,11 @@ void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C);
 
 void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C);
 
+void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &corfn, double *C);
+
 void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C);
+
+void spCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_sp_prime, double *theta, std::string &corfn, double *C);
 
 void sptCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_tm,
                  double *coords_sp_prime, double *coords_tm_prime, double *theta, std::string &corfn, double *C);

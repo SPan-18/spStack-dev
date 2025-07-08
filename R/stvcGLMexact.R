@@ -307,7 +307,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         stop("priors[['nu.beta']] must be a single numeric value.")
       }
       if(nu.beta < 2.1){
-        warning("Supplied nu.beta is less than 2.1. Setting it to defaults.")
+        message("Supplied nu.beta is less than 2.1. Setting it to defaults.")
         nu.beta <- 2.1
       }
     }
@@ -321,12 +321,12 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
       }
       if(process.type == 'multivariate'){
         if(nu.z < 1){
-          warning("Supplied nu.z is less than 0.1. Setting it to defaults.")
+          message("Supplied nu.z is less than 0.1. Setting it to defaults.")
           nu.z <- 1
         }
       }else{
         if(nu.z < 2.1){
-          warning("Supplied nu.z is less than 2.1. Setting it to defaults.")
+          message("Supplied nu.z is less than 2.1. Setting it to defaults.")
           nu.z <- 2.1
         }
       }
@@ -356,7 +356,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
       }
     }
     if(missing.flag > 0){
-      warning("Some priors were not supplied. Using defaults.")
+      message("Some priors were not supplied. Using defaults.")
     }
   }
 
@@ -433,13 +433,13 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   }else{
     epsilon <- boundary
     if(epsilon <= 0 || epsilon >= 1){
-      warning("boundary must be in the interval (0, 1). Using default of 0.5.")
+      message("boundary must be in the interval (0, 1). Using default of 0.5.")
       epsilon <- 0.5
     }
   }
   if(family == "binary"){
     if(epsilon < 0.4){
-      warning("family = binomial'; boundary < 0.4. Setting boundary = 0.4.")
+      message("family = binomial'; boundary < 0.4. Setting boundary = 0.4.")
       epsilon <- 0.4
     }
   }
@@ -463,24 +463,24 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
     }
     if(loopd.method == "cv"){
       if(n < 100){
-        warning("Sample size too low for CV. Finding exact LOO-PD.")
+        message("Sample size too low for CV. Finding exact LOO-PD.")
         loopd.method <- "exact"
         CV.K <- as.integer(0)
       }else{
         if(CV.K < 10){
-          warning("CV.K must be at least 10. Setting it to 10.")
+          message("CV.K must be at least 10. Setting it to 10.")
           CV.K <- 10
         }else if(CV.K > 20){
-          warning("CV.K must be at most 20. Setting it to 20.")
+          message("CV.K must be at most 20. Setting it to 20.")
           CV.K <- 20
         }
         if(floor(CV.K) != CV.K){
-          warning("CV.K must be integer. Setting it to nearest integer.")
+          message("CV.K must be integer. Setting it to nearest integer.")
         }
       }
     }
     if(loopd.nMC < 500){
-      warning("Number of Monte Carlo samples too low. Using defaults.")
+      message("Number of Monte Carlo samples too low. Using defaults.")
       loopd.nMC = 500
     }
   }else{

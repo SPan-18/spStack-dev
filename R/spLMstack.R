@@ -249,13 +249,6 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
     stop("error: params.list must be supplied.")
 
-    # params.list <- vector(mode = "list", length = 3)
-    # names(params.list) <- c("phi", "nu", "noise_sp_ratio")
-    # ####### POSSIBLE AUTOMATION #######
-    # params.list[[1L]] <- c(3, 5, 10)
-    # params.list[[2L]] <- c(0.5, 1.0, 1.5)
-    # params.list[[3L]] <- c(0.25, 1.0, 2.0)
-
   }else{
 
     names(params.list) <- tolower(names(params.list))
@@ -266,19 +259,19 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
     if(cor.fn == 'matern'){
       if(!"nu" %in% names(params.list)){
-        warning("warning: candidate values of nu not specified. Using defaults
+        message("Candidate values of nu not specified. Using defaults
                 c(0.5, 1, 1.5).")
         params.list[["nu"]] <- c(0.5, 1.0, 1.5)
       }
     }else{
       if("nu" %in% names(params.list)){
-        warning("cor.fn = 'exponential'. Ignoring candidate values of nu.")
+        message("cor.fn = 'exponential'. Ignoring candidate values of nu.")
       }
       params.list[["nu"]] <- c(0.0)
     }
 
     if(!"noise_sp_ratio" %in% names(params.list)){
-      warning("warning: candidate values of noise_sp_ratio not specified. Using
+      message("Candidate values of noise_sp_ratio not specified. Using
               defaults c(0.25, 1, 2).")
       params.list[["noise_sp_ratio"]] <- c(0.25, 1.0, 2.0)
     }
@@ -295,7 +288,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   loopd <- TRUE
 
   if(missing(loopd.method)){
-    warning("loopd.method not specified. Using 'exact'.")
+    message("loopd.method not specified. Using 'exact'.")
   }
 
   loopd.method <- tolower(loopd.method)
@@ -366,7 +359,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     # Get current plan invoked by future::plan() by the user
     current_plan <- future::plan()
     if(!inherits(current_plan, "sequential")){
-      warning("Parallelization plan other than 'sequential' setup but parallel
+      message("Parallelization plan other than 'sequential' setup but parallel
       is set to FALSE. Ignoring parallelization plan.")
     }
 

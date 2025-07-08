@@ -64,7 +64,7 @@ hyperparameter name and containing hyperprior details. Valid tags include
 and \code{nu.z} must be at least 2.1. If not supplied, uses defaults.}
 
 \item{candidate.models}{an object of class \code{candidateModels} containing a
-list of candidate models for stacking. See \code{candidateModels} for details.}
+list of candidate models for stacking. See \code{\link[=candidateModels]{candidateModels()}} for details.}
 
 \item{n.samples}{number of samples to be drawn from the posterior
 distribution.}
@@ -75,8 +75,9 @@ and \code{nMC}. The tag \code{method} can be either \code{'exact'} or \code{'CV'
 is more than 100, then the default is \code{'CV'} with \code{CV.K} equal to its default
 value 10 (Gelman \emph{et al.} 2024). The tag \code{nMC} decides how many Monte Carlo
 samples will be used to evaluate the leave-one-out predictive densities,
-which must be at least 500 (default).
-#' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
+which must be at least 500 (default).}
+
+\item{parallel}{logical. If \code{parallel=FALSE}, the parallelization plan,
 if set up by the user, is ignored. If \code{parallel=TRUE}, the function
 inherits the parallelization plan that is set by the user via the function
 \code{\link[future:plan]{future::plan()}} only. Depending on the parallel backend available, users
@@ -92,6 +93,30 @@ to obtain optimal stacking weights for each candidate model. Default is
 stacking weights.}
 
 \item{...}{currently no additional argument.}
+}
+\value{
+An object of class \code{stvcGLMstack}, which is a list including the
+following tags -
+\describe{
+\item{\code{samples}}{a list of length equal to total number of candidate models
+with each entry corresponding to a list of length 3, containing posterior
+samples of fixed effects (\code{beta}), spatial effects (\code{z}), and
+fine scale variation \code{xi} for that model.}
+\item{\code{loopd}}{a list of length equal to total number of candidate models with
+each entry containing leave-one-out predictive densities under that
+particular model.}
+\item{\code{n.models}}{number of candidate models that are fit.}
+\item{\code{candidate.models}}{a list of length \code{n_model} rows with each
+entry containing details of the model parameters.}
+\item{\code{stacking.weights}}{a numeric vector of length equal to the number of
+candidate models storing the optimal stacking weights.}
+\item{\code{run.time}}{a \code{proc_time} object with runtime details.}
+\item{\code{solver.status}}{solver status as returned by the optimization
+routine.}
+}
+This object can be further used to recover posterior samples of the scale
+parameters in the model, and subsequrently, to make predictions at new
+locations or times using the function \code{\link[=posteriorPredict]{posteriorPredict()}}.
 }
 \description{
 Fits Bayesian spatial-temporal generalized linear model with
