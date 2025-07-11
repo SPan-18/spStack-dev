@@ -631,7 +631,7 @@ void printMtrx(double *m, int nRow, int nCol){
   for(i = 0; i < nRow; i++){
     Rprintf("\t");
     for(j = 0; j < nCol; j++){
-      Rprintf("% .5f\t", m[j*nRow+i]);
+      Rprintf("% .2f\t", m[j*nRow+i]);
     }
     Rprintf("\n");
   }
@@ -642,7 +642,7 @@ void printVec(double *m, int n){
 
   Rprintf("\t");
   for(int j = 0; j < n; j++){
-    Rprintf("%.5f\t", m[j]);
+    Rprintf("%.2f\t", m[j]);
   }
   Rprintf("\n");
 }

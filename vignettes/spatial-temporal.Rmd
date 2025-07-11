@@ -11,7 +11,7 @@ header-includes:
   - \def\T{{ \scriptstyle \top }}
   - \newcommand{\thetasp}{{\theta_{\text{sp}}}}
   - \newcommand{\GP}{\mathrm{GP}}
-  - \newcommand{\N}{\mathcal{N}}
+  - \newcommand{\N}{\mathrm{N}}
   - \newcommand{\EF}{\mathrm{EF}}
   - \newcommand{\Norm}{\mathrm{N}}
   - \newcommand{\GCMc}{\mathrm{GCM}_c}
@@ -29,3 +29,38 @@ In this article, we discuss the following functions -
 * `stvcGLMstack()`
 
 These functions can be used to fit Gaussian and non-Gaussian spatial-temporal point-referenced data.
+
+## Bayesian non-Gaussian spatially-temporally varying coefficient models
+
+We illustrate the spatially-temporally varying coefficient model using the synthetic spatial-temporal Poisson count data.
+
+We first load the data `sim_stvcPoisson` which consists of data at 500 spatial-temporal locations. We use the first 200 locations for the following analysis.
+```{r}
+library(spStack)
+data("sim_stvcPoisson")
+dat <- sim_stvcPoisson[1:200, ]
+```
+
+The data consists of one covariate `x1`.
+```{r}
+head(dat)
+```
+
+### Using fixed hyperparameters
+
+```{r}
+mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                     time_coords = as.matrix(dat[, "t_coords"]),
+                     cor.fn = "gneiting-decay",
+                     process.type = "multivariate",
+                     # process.type = "independent",
+                     # process.type = "independent.shared",
+                     # priors = list(iw.scale = Sigma0),
+                     sptParams = list(phi_s = 1, phi_t = 1),
+                     # sptParams = list(phi_s = c(1, 2), phi_t = c(1, 2)),
+                     verbose = FALSE,
+                     n.samples = 1000)
+```
+
+

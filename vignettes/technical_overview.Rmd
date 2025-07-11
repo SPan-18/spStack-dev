@@ -10,14 +10,14 @@ vignette: >
 header-includes:
   - \def\T{{ \scriptstyle \top }}
   - \newcommand{\thetasp}{{\theta_{\text{sp}}}}
-  - \newcommand{\GP}{\mathrm{GP}}
-  - \newcommand{\N}{\mathcal{N}}
-  - \newcommand{\EF}{\mathrm{EF}}
-  - \newcommand{\Norm}{\mathrm{N}}
-  - \newcommand{\GCMc}{\mathrm{GCM}_c}
+  - \newcommand{\GP}{\mathsf{GP}}
+  - \newcommand{\N}{\mathsf{N}}
+  - \newcommand{\EF}{\mathsf{EF}}
+  - \newcommand{\Norm}{\mathsf{N}}
+  - \newcommand{\GCMc}{\mathsf{GCM_c}}
   - \newcommand{\calL}{\mathcal{L}}
-  - \newcommand{\IG}{\mathrm{IG}}
-  - \newcommand{\IW}{\mathrm{IW}}
+  - \newcommand{\IG}{\mathsf{IG}}
+  - \newcommand{\IW}{\mathsf{IW}}
   - \newcommand{\given}{\mid}
 bibliography: refs.bib
 link-citations: true
@@ -46,14 +46,14 @@ Let $\chi = \{s_1, \ldots, s_n\} \in \mathcal{D}$ be a be a set of $n$ spatial l
   y_i = x(s_i)^\T \beta + z(s_i) + \epsilon_i, \quad i = 1, \ldots, n,
 \end{equation}
 where $\beta$ is the $p \times 1$ vector of slopes, $z(s) \sim \GP(0, R(\cdot, \cdot; \thetasp))$ is a zero-centered spatial Gaussian process on $\mathcal{D}$ with spatial correlation function $R(\cdot, \cdot; \thetasp)$ characterized by process parameters $\thetasp$, $\sigma^2$ is the spatial variance parameter ("partial sill") and $\epsilon_i \sim \N(0, \tau^2), i = 1, \ldots, n$ are i.i.d. with variance $\tau^2$ ("nugget") capturing measurement error. The spatial process $z(\cdot)$ is assumed to be independent of the measurement errors $\{\epsilon_i, i = 1, \ldots, n\}$. Let $z = (z(s_1), \ldots, z(s_n))^\T$ denotes the realization of the spatial process on $\chi$ and $n \times n$ correlation matrix $R(\chi; \thetasp) = (R(s_i, s_j \thetasp))_{1 \leq i,j \leq n}$. We build a conjugate Bayesian hierarchical spatial model,
-\begin{equation}
+\begin{aligned}
 \begin{split}
-y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \\
-z \mid \sigma^2 &\sim N(0, \sigma^2 R(\chi; \thetasp)), \\
-\beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
-\sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma),
+y \mid z, \beta, \sigma^2 &\sim \N (X\beta + z, \delta^2 \sigma^2 I_n), \\
+z \mid \sigma^2 &\sim \N (0, \sigma^2 R(\chi; \thetasp)), \\
+\beta \mid \sigma^2 &\sim \N (\mu_\beta, \sigma^2 V_\beta), \quad
+\sigma^2 \sim \IG (a_\sigma, b_\sigma),
 \end{split}
-\end{equation}
+\end{aligned}
 where we fix the noise-to-spatial variance ratio $\delta^2 = \tau^2 / \sigma^2$, the process parameters $\thetasp$ and the hyperparameters $\mu_\beta$, $V_\beta$, $a_\sigma$ and $b_\sigma$. In this package, we use the Matern covariogram specified by spatial decay parameter $\phi$ and smoothness parameter $\nu$ i.e., $\thetasp = \{\phi, \nu\}$, given by
 \begin{equation}
 R(s, s'; \thetasp) = \frac{(\phi \lvert s - s' \rvert)^\nu}{2^{\nu - 1} \Gamma(\nu)} K_\nu (\phi \lvert s - s' \rvert)).
@@ -78,30 +78,30 @@ Unlike in Gaussian likelihoods, inference is considerably encumbered by the inab
 
 This model is implemented using the function `spGLMexact()` when using fixed hyperparameters, and `spGLMstack()` when using predictive stacking.
 
-We consider the following three cases -
+We consider the following three point-referenced data -
 
-1. Point-referenced Poisson count data: Here $b = 1$ and $\psi_y(t) = e^t$.
+- **Poisson count data**: Here $b = 1$ and $\psi_y(t) = e^t$.
 \begin{equation}
 \begin{split}
-y(s_i) &\sim \mathrm{Poisson}(\lambda(s_i)), \quad i = 1, \dots, n.\\
+y(s_i) &\sim \mathsf{Poisson}(\lambda(s_i)), \quad i = 1, \dots, n.\\
 \lambda(s_i) & = \exp(x(s_i)^\T \beta + z(s_i))
 \end{split}
 \end{equation}
 This is accessed by setting `family = "poisson"` in the above functions.
 
-2. Point-referenced binomial count data: Here $b = m(s_i)$ for each $i$ and $\psi_y(t) = \log(1 + e^t)$.
+- **Binomial count data**: Here $b = m(s_i)$ for each $i$ and $\psi_y(t) = \log(1 + e^t)$.
 \begin{equation}
 \begin{split}
-y(s_i) &\sim \mathrm{Binomial}(m(s_i), \pi(s_i)), \quad i = 1, \dots, n.\\
+y(s_i) &\sim \mathsf{Binomial}(m(s_i), \pi(s_i)), \quad i = 1, \dots, n.\\
 \pi(s_i) & = \mathrm{ilogit}(x(s_i)^\T \beta + z(s_i))
 \end{split}
 \end{equation}
 This is accessed by setting `family = "binomial"` in the above functions.
 
-3. Point-referenced binary data: Here $b = 1$ and $\psi_y(t) = \log(1 + e^t)$.
+- **Binary data**: Here $b = 1$ and $\psi_y(t) = \log(1 + e^t)$.
 \begin{equation}
 \begin{split}
-y(s_i) &\sim \mathrm{Bernoulli}(\pi(s_i)), \quad i = 1, \dots, n.\\
+y(s_i) &\sim \mathsf{Bernoulli}(\pi(s_i)), \quad i = 1, \dots, n.\\
 \pi(s_i) & = \mathrm{ilogit}(x(s_i)^\T \beta + z(s_i))
 \end{split}
 \end{equation}
@@ -112,12 +112,12 @@ Following @bradleyclinch2024, we introduce a Bayesian hierarchical spatial model
 \begin{split}
 y(s_i) \mid \beta, z, \xi & \sim \EF\left(x(s_i)^\T \beta + z(s_i) +
 \xi_i - \mu_i; b_i, \psi_y\right), i = 1, \ldots, n\\
-\beta \mid \sigma^2_\beta &\sim N(0, \sigma^2_\beta V_\beta), \quad
-\sigma^2_\beta \sim \mathrm{IG}(\nu_\beta/2, \nu_\beta/2)\\
-z \mid \sigma^2_z &\sim N\left(0, \sigma^2_z R(\chi; \thetasp)\right), \quad
-\sigma^2_z \sim \mathrm{IG}(\nu_z/2, \nu_z/2),\\
+\beta \mid \sigma^2_\beta &\sim \N (0, \sigma^2_\beta V_\beta), \quad
+\sigma^2_\beta \sim \IG (\nu_\beta/2, \nu_\beta/2)\\
+z \mid \sigma^2_z &\sim \N \left(0, \sigma^2_z R(\chi; \thetasp)\right), \quad
+\sigma^2_z \sim \IG (\nu_z/2, \nu_z/2),\\
 \xi \mid \beta, z, \sigma^2_\xi, \alpha_\epsilon &\sim
-\mathrm{GCM_c}\left(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi\right),
+\GCMc \left(\tilde{\mu}_\xi, H_\xi, \epsilon, \kappa_\xi; \psi_\xi\right),
 \end{split}
 \end{equation}
 where $\mu = (\mu_1, \ldots, \mu_n)^\T$ denotes the discrepancy
@@ -141,7 +141,7 @@ where $z(\ell) = (z_1(\ell), \ldots, z_r(\ell))^\T$ is a multivariate Gaussian p
 
 This model is implemented by the function `stvcGLMexact()` under fixed hyperparameters, and `stvcGLMstack()` when using predictive stacking. We also implement different specifications for $C_z$ in this package as follows.
 
-1. Independent spatial-temporal process: We consider $r$ Gaussian spatial-temporal processes 
+1. **Independent spatial-temporal process**: We consider $r$ Gaussian spatial-temporal processes 
 \begin{equation}\label{eq:z_ind}
 \begin{split}
     \text{Independent processes: } z_j(\ell) \given \sigma_{z_j}^2, \thetasp_j & \overset{\text{ind}}{\sim} \GP (0, \sigma_{z_j}^2 R_j(\cdot, \cdot; \thetasp_j)),\\
@@ -150,9 +150,9 @@ This model is implemented by the function `stvcGLMexact()` under fixed hyperpara
 \end{equation}
 where $\sigma_{z_j}^2$ is the variance parameter corresponding to process $z_j(\ell)$. This corresponds to the covariance matrix $C_z(\calL; \thetasp, \theta_z) = \oplus_{j = 1}^r \sigma_{z_j}^2 R_j(\thetasp_j)$ with $\thetasp = \{ \thetasp_j : j = 1, \ldots, r\}$, where $\thetasp_j$ denotes covariance kernel parameters for the $j$th process, and $\theta_z = \{\sigma^2_{z_1}, \ldots, \sigma^2_{z_r}\}$. This is accessed by setting the option `process.type = "independent"` in the above functions.
 
-2. Independent shared spatial-temporal process: This corresponds to the above with $\thetasp_j = \thetasp$ and $\sigma^2_{zj} = \sigma^2_z$ for all $j = 1, \ldots, r$. This is accessed by setting the option `process.type = "independent.shared"` in the above functions.
+2. **Independent shared spatial-temporal process**: This corresponds to the above with $\thetasp_j = \thetasp$ and $\sigma^2_{zj} = \sigma^2_z$ for all $j = 1, \ldots, r$. This is accessed by setting the option `process.type = "independent.shared"` in the above functions.
 
-3. Multivariate spatial-temporal process: We can introduce dependence among the elements of the $r\times 1$ vector $z(\ell)$ using
+3. **Multivariate spatial-temporal process**: We can introduce dependence among the elements of the $r\times 1$ vector $z(\ell)$ using
 \begin{equation}\label{eq:multi_z}
     \text{Multivariate process: }z(\ell) \given \Sigma \sim \GP (0, R(\cdot, \cdot; \thetasp)\Sigma), \quad \Sigma \sim \IW(\nu_z + 2r, \Psi)\;,
 \end{equation}
