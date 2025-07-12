@@ -1,3 +1,5 @@
+# spStack (development version)
+
 # spStack 1.1.0
 
 * stvcGLMexact(), stvcGLMstack(): New functions for spatially-temporally varying coefficients GLM.
