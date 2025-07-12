@@ -41,11 +41,11 @@ proceed from these samples. Main functions are - \cr \code{\link[=spLMexact]{spL
 \code{\link[=spGLMexact]{spGLMexact()}}\cr \code{\link[=spLMstack]{spLMstack()}}\cr \code{\link[=spGLMstack]{spGLMstack()}}
 }
 \references{
-Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
+Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
 Predictive Stacking." \cr
 \doi{10.48550/arXiv.2304.12414}.
 
-Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 \doi{10.48550/arXiv.2406.04655}.
 

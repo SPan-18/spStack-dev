@@ -32,7 +32,7 @@ A modified object with the class name preceeded by the identifier
 the output of this prediction function would be \code{pp.spLMstack}. The entry
 with the tag \code{samples} is updated and will include samples from the posterior
 predictive distribution of the latent process, the mean, and the response at
-the new locations or times. The entry with the tag \code{prediction} is added
+the new locations or times. An entry with the tag \code{prediction} is added
 and contains the new coordinates and covariates, and whether the joint
 posterior predictive samples were requested.
 }
