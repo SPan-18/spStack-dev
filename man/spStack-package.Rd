@@ -32,7 +32,7 @@ posterior distributions.
 }
 \details{
 \tabular{ll}{ Package: \tab spStack\cr Type: \tab Package\cr
-Version: \tab 1.0.1\cr License: \tab GPL-3\cr }
+Version: \tab 1.1.0\cr License: \tab GPL-3\cr }
 Accepts a formula, e.g., \code{y~x1+x2}, for most regression models
 accompanied by candidate values of spatial process parameters, and returns
 posterior samples of the regression coefficients and the latent spatial
