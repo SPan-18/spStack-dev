@@ -107,7 +107,7 @@ ggplot(data = y_combn, aes(x = y)) +
   theme(panel.background = element_blank(), aspect.ratio = 1)
 ```
 
-More details about this can found in the vignette titled "Spatial Models" and "Posterior Predictive Inference".
+More details about this can found in the vignettes titled "Spatial Models" and "Posterior Predictive Inference".
 
 ## Bayesian non-Gaussian spatial regression models
 The workflow for the spatial generalized linear models are similar. Here is a quick example using the lazyloaded synthetic data `simPoisson`.

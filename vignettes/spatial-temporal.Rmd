@@ -1,10 +1,10 @@
 ---
-title: "Spatial-Temporal Models"
+title: "Spatial-Temporal Regression Models"
 output:
   rmarkdown::html_vignette:
     mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
 vignette: >
-  %\VignetteIndexEntry{Spatial-Temporal Models}
+  %\VignetteIndexEntry{Spatial-Temporal Regression Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 header-includes:
@@ -23,44 +23,266 @@ header-includes:
 
 In this article, we discuss the following functions -
 
-* `stvcLMexact()`
-* `stvcLMstack()`
-* `stvcGLMexact()`
-* `stvcGLMstack()`
+- `stvcGLMexact()`
+- `stvcGLMstack()`
+- `recoverGLMscale()`
 
-These functions can be used to fit Gaussian and non-Gaussian spatial-temporal point-referenced data.
+These functions can be used to fit non-Gaussian spatial-temporal point-referenced data.
+
+```{r}
+set.seed(1729)
+```
+
 
 ## Bayesian non-Gaussian spatially-temporally varying coefficient models
 
 We illustrate the spatially-temporally varying coefficient model using the synthetic spatial-temporal Poisson count data.
 
-We first load the data `sim_stvcPoisson` which consists of data at 500 spatial-temporal locations. We use the first 200 locations for the following analysis.
+We first load the data `sim_stvcPoisson` which consists of data at 500 spatial-temporal locations. We use the first 100 locations for the following analysis.
 ```{r}
 library(spStack)
 data("sim_stvcPoisson")
-dat <- sim_stvcPoisson[1:200, ]
+n_train <- 100
+dat <- sim_stvcPoisson[1:n_train, ]
 ```
 
-The data consists of one covariate `x1`.
+The dataset consists of one covariate `x1`, response variable `y`, spatial locations given by `s1` and `s2`, a temporal coordinate `t_coords`, and the true spatially-temporally varying coefficients `z1_true` and `z2_true` associated with an intercept and `x1`, respectively. We elaborate below. 
 ```{r}
 head(dat)
 ```
 
+### Formula for varying coefficients model
+We define the spatially-temporally varying coefficients model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Suppose $\ell = (s, t)$ refers to a space-time ccoordinate. See "Technical Overview for more details". Then, given `family = "poisson"`, the formula `y ~ x1 + (x1)` corresponds to the spatial-temporal generalized linear model 
+$$y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;,$$ where the `y` corresponds to the response variable $y(\ell)$, which is regressed on the predictor `x1` given by $x_1(\ell)$. The model variables specified outside the parentheses corresponds to predictors with fixed effects, and the model inside the parentheses correspond to variables with spatial-temporal varying coefficient. The intercept is automatically considered within both the fixed and varying coefficient components of the model, and hence `y ~ x1 + (x1)` is functionally equivalent to `y ~ 1 + x1 + (1 + x1)`. The spatially-temporally varying coefficients $z(\ell) = (z_1(\ell), z_2(\ell))^{\T}$ is multivariate Gaussian process, and we pursue the following specifications for $z(\ell)$ - independent process, independent process with shared parameters, and a multivariate process. For now, we only support the `cor.fn="gneiting-decay"` covariogram. See "Technical Overview" for more details.
+
+To implement a model, with just a spatial-temporal random effect, one may specify the formula `y ~ x1 + (1)` which corresponds to the model
+$$y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell)\;.$$
+
 ### Using fixed hyperparameters
+We use the function `stvcGLMexact()` to fit spatially-temporally varying coefficient generalized linear models. In the following code snippets, we demonstrate the uasge of the argument `process.Type` to implement different variations of spatial-temporal process specifications for the varying coefficients.
+
+#### Independent processes
+In this case, since there are two independent processes $z_1(\ell)$ and $z_2(\ell)$ the candidate values of the spatial-temporal process parameters `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 2. Here, the scale parameter $\sigma = (\sigma^2_{z1}, \sigma^2_{z2})^{\T}$ has dimension 2.
 
 ```{r}
 mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
-                     process.type = "multivariate",
-                     # process.type = "independent",
-                     # process.type = "independent.shared",
-                     # priors = list(iw.scale = Sigma0),
+                     process.type = "independent",
+                     priors = list(nu.beta = 5, nu.z = 5),
+                     sptParams = list(phi_s = c(1, 2), phi_t = c(1, 2)),
+                     verbose = FALSE, n.samples = 500)
+```
+
+Posterior samples of the scale parameters can be recovered by running `recoverGLMscale()` on `mod1`.
+```{r}
+mod1 <- recoverGLMscale(mod1)
+```
+
+We visualize the posterior distributions of the scale parameters as follows.
+
+```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the scale parameters."}
+post_scale_df <- data.frame(value = sqrt(c(mod1$samples$z.scale[1, ], mod1$samples$z.scale[2, ])),
+                            group = factor(rep(c("sigma.z1", "sigma.z2"), 
+                                    each = length(mod1$samples$z.scale[1, ]))))
+library(ggplot2)
+ggplot(post_scale_df, aes(x = value)) +
+  geom_density(fill = "lightblue", alpha = 0.6) +
+  facet_wrap(~ group, scales = "free") + labs(x = "", y = "Density") +
+  theme_bw() + theme(panel.background = element_blank(), 
+                     panel.grid = element_blank(), aspect.ratio = 1)
+```
+
+#### Independent shared processes
+In this case, the processes $z_1(\ell)$ and $z_2(\ell)$ are independent but share a common covariance matrix. Hence, `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 1. Here, the scale parameter $\sigma = \sigma_z^2$ is 1-dimensional.
+
+```{r}
+mod2 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                     time_coords = as.matrix(dat[, "t_coords"]),
+                     cor.fn = "gneiting-decay",
+                     process.type = "independent.shared",
+                     priors = list(nu.beta = 5, nu.z = 5),
                      sptParams = list(phi_s = 1, phi_t = 1),
-                     # sptParams = list(phi_s = c(1, 2), phi_t = c(1, 2)),
-                     verbose = FALSE,
+                     verbose = FALSE, n.samples = 500)
+```
+
+Posterior samples of the scale parameters can be recovered by running `recoverGLMscale()` on `mod2`.
+```{r}
+mod2 <- recoverGLMscale(mod2)
+```
+
+We visualize the posterior distributions of the scale parameters as follows.
+
+```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the scale parameters."}
+post_scale_df <- data.frame(value = sqrt(mod2$samples$z.scale), 
+                            group = factor(rep(c("sigma.z"), 
+                                               each = length(mod2$samples$z.scale))))
+ggplot(post_scale_df, aes(x = value)) +
+  geom_density(fill = "lightblue", alpha = 0.6) +
+  facet_wrap(~ group, scales = "free") + labs(x = "", y = "Density") +
+  theme_bw() + theme(panel.background = element_blank(), 
+                     panel.grid = element_blank(), aspect.ratio = 1)
+```
+
+#### Multivariate processes
+In this case, $z(\ell) = (z_1(\ell), z_2(\ell))^{\T}$ is a 2-dimensional Gaussian process with covariance matrix $\Sigma$. Further, we put an inverse-Wishart prior on $\Sigma$, which can be specified through the `priors` argument. If not supplied, uses the default $\IW (\nu_z + 2r, I_r)$, where $r = 2$ is the dimension of the multivariate process. Here, `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 1, and the scale parameter $\sigma = \Sigma$ is an $2 \times 2$ matrix.
+
+```{r}
+mod3 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                     time_coords = as.matrix(dat[, "t_coords"]),
+                     cor.fn = "gneiting-decay",
+                     process.type = "multivariate",
+                     priors = list(nu.beta = 5, nu.z = 5),
+                     sptParams = list(phi_s = 1, phi_t = 1),
+                     verbose = FALSE, n.samples = 500)
+```
+
+Posterior samples of the scale parameters can be recovered by running `recoverGLMscale()` on `mod3`.
+```{r}
+mod3 <- recoverGLMscale(mod3)
+```
+
+We visualize the posterior distribution of the scale matrix $\Sigma$ as follows.
+
+```{r fig.align='center', fig.height=5, fig.width=4, fig.cap="Posterior distributions of elements of the scale matrix."}
+post_scale_z <- mod3$samples$z.scale
+
+r <- sqrt(dim(post_scale_z)[1])
+# Function to get (i,j) index from row number (column-major)
+get_indices <- function(k, r) {
+  j <- ((k - 1) %/% r) + 1
+  i <- ((k - 1) %% r) + 1
+  c(i, j)
+}
+
+# Generate plots into a matrix
+plot_matrix <- matrix(vector("list", r * r), nrow = r, ncol = r)
+for (k in 1:(r^2)) {
+  ij <- get_indices(k, r)
+  i <- ij[1]
+  j <- ij[2]
+  
+  if (i >= j) {
+    df <- data.frame(value = post_scale_z[k, ])
+    p <- ggplot(df, aes(x = value)) +
+      geom_density(fill = "lightblue", alpha = 0.7) +
+      theme_bw(base_size = 9) +
+      labs(title = bquote(Sigma[.(i) * .(j)])) +
+      theme(axis.title = element_blank(), axis.text = element_text(size = 6),
+        plot.title = element_text(size = 9, hjust = 0.5),
+        panel.grid = element_blank(), aspect.ratio = 1)
+  } else {
+    p <- ggplot() + theme_void()
+  }
+  
+  plot_matrix[j, i] <- list(p)
+}
+
+library(patchwork)
+# Assemble with patchwork
+final_plot <- wrap_plots(plot_matrix, nrow = r)
+final_plot
+```
+
+### Using predictive stacking
+
+For implementing predictive stacking for spatially-temporally varying models, we offer a helper function `candidateModels()` to create a collection of candidate models. The grid of candidate values can be combined either using a Cartesian product or a simple element-by-element combination. We demonstrate stacking based on the multivariate spatial-temporal process model.
+
+**Step 1.** Create candidate models.
+```{r}
+mod.list <- candidateModels(list(
+  phi_s = list(1, 2, 3),
+  phi_t = list(1, 2, 4),
+  boundary = c(0.5, 0.75)), "cartesian")
+```
+
+**Step 2.** Run `stvcGLMstack()`.
+```{r}
+mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
+                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                     time_coords = as.matrix(dat[, "t_coords"]),
+                     cor.fn = "gneiting-decay",
+                     process.type = "multivariate",
+                     priors = list(nu.beta = 5, nu.z = 5),
+                     candidate.models = mod.list,
+                     loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                      n.samples = 1000)
 ```
 
+**Step 3.** Recover posterior samples of the scale parameters.
+```{r}
+mod1 <- recoverGLMscale(mod1)
+```
+
+**Step 4.** Sample from the stacked posterior distribution.
+```{r}
+post_samps <- stackedSampler(mod1)
+```
+
+Now, we analyze the posterior distribution of the latent process as obtained from the stacked posterior.
+```{r fig.align='center', fig.height=3.5, fig.width=7}
+post_z <- post_samps$z
+
+post_z1_summ <- t(apply(post_z[1:n_train,], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+post_z2_summ <- t(apply(post_z[n_train + 1:n_train,], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+
+z1_combn <- data.frame(z = dat$z1_true, zL = post_z1_summ[, 1],
+                       zM = post_z1_summ[, 2], zU = post_z1_summ[, 3])
+z2_combn <- data.frame(z = dat$z2_true, zL = post_z2_summ[, 1],
+                       zM = post_z2_summ[, 2], zU = post_z2_summ[, 3])
+
+plot_z1_summ <- ggplot(data = z1_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z2") + ylab("Posterior of z2") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+ggpubr::ggarrange(plot_z1_summ, plot_z2_summ)
+```
+
+Next, we analyze the posterior distribution of the scale matrix that models the inter-process dependence structure.
+
+```{r fig.align='center', fig.height=5, fig.width=4, fig.cap="Stacked posterior distribution of the elements of the inter-process covariance matrix."}
+post_scale_z <- post_samps$z.scale
+r <- sqrt(dim(post_scale_z)[1])
+# Generate plots into a matrix
+plot_matrix <- matrix(vector("list", r * r), nrow = r, ncol = r)
+for (k in 1:(r^2)) {
+  ij <- get_indices(k, r)
+  i <- ij[1]
+  j <- ij[2]
+  
+  if (i >= j) {
+    df <- data.frame(value = post_scale_z[k, ])
+    p <- ggplot(df, aes(x = value)) +
+      geom_density(fill = "lightblue", alpha = 0.7) +
+      theme_bw(base_size = 9) +
+      labs(title = bquote(Sigma[.(i) * .(j)])) +
+      theme(axis.title = element_blank(), axis.text = element_text(size = 6),
+        plot.title = element_text(size = 9, hjust = 0.5),
+        panel.grid = element_blank(), aspect.ratio = 1)
+  } else {
+    p <- ggplot() + theme_void()
+  }
+  
+  plot_matrix[j, i] <- list(p)
+}
+
+# Assemble with patchwork
+final_plot <- wrap_plots(plot_matrix, nrow = r)
+final_plot
+```
 

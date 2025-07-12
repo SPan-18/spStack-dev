@@ -1,10 +1,10 @@
 ---
-title: "Spatial Models"
+title: "Spatial Regression Models"
 output:
   rmarkdown::html_vignette:
     mathjax: "https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"
 vignette: >
-  %\VignetteIndexEntry{Spatial Models}
+  %\VignetteIndexEntry{Spatial Regression Models}
   %\VignetteEngine{knitr::rmarkdown}
   %\VignetteEncoding{UTF-8}
 header-includes:
@@ -15,6 +15,7 @@ header-includes:
   - \newcommand{\EF}{\mathsf{EF}}
   - \newcommand{\Norm}{\mathsf{N}}
   - \newcommand{\GCMc}{\mathsf{GCM}_c}
+  - \newcommand{\GCM}{\mathsf{GCM}}
   - \newcommand{\calL}{\mathcal{L}}
   - \newcommand{\IG}{\mathsf{IG}}
   - \newcommand{\IW}{\mathsf{IW}}
@@ -117,7 +118,8 @@ plot1 <- ggplot(data = loopd_df, aes(x = exact)) +
   geom_point(aes(y = psis), size = 1, alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", alpha = 0.5) +
   xlab("Exact") + ylab("PSIS") + theme_bw() +
-  theme(panel.background = element_blank(), aspect.ratio = 1)
+  theme(panel.background = element_blank(), 
+        panel.grid = element_blank(), aspect.ratio = 1)
 plot1
 ```
 
@@ -157,7 +159,6 @@ print(summary_beta)
 
 The synthetic data `simGaussian` was simulated using the true value $\beta = (2, 5)^\T$. We notice that the stacked posterior is concentrated around the truth.
 ```{r, fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the fixed effects"}
-library(ggplot2)
 library(tidyr)
 library(dplyr)
 
@@ -174,7 +175,8 @@ ggplot(post_beta_df, aes(x = value)) +
   geom_vline(data = truth, aes(xintercept = true_value), 
              color = "red", linetype = "dashed", linewidth = 0.5) +
   facet_wrap(~ row, scales = "free") + labs(x = "", y = "Density") +
-  theme_bw() + theme(panel.background = element_blank(), aspect.ratio = 1)
+  theme_bw() + theme(panel.background = element_blank(), 
+                     panel.grid = element_blank(), aspect.ratio = 1)
 ```
 
 Furthermore, we compare the posterior samples of the spatial random effects with their corresponding true values.
@@ -190,7 +192,8 @@ plotz <- ggplot(data = z_combn, aes(x = z)) +
                 color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
-  theme(panel.background = element_blank(), aspect.ratio = 1)
+  theme(panel.background = element_blank(), 
+        panel.grid = element_blank(), aspect.ratio = 1)
 plotz
 ```
 
@@ -226,7 +229,7 @@ ggplot(dat, aes(x = s1, y = s2)) +
 ```
 
 #### Under fixed hyperparameters
-Next, we demonstrate the function `spGLMexact()` which delivers posterior samples of the fixed effects and the spatial random effects. The option `family` must be specified correctly while using this function. For instance, in the following example, the formula `y ~ x1` and `family = "poisson"` corresponds to the spatial regression model $$y(s) \sim \mathsf{Poisson} (\lambda(s)), \quad \log \lambda(s) = \beta_0 + \beta_1 x_1(s) + z(s)$$.
+Next, we demonstrate the function `spGLMexact()` which delivers posterior samples of the fixed effects and the spatial random effects. The option `family` must be specified correctly while using this function. For instance, in the following example, the formula `y ~ x1` and `family = "poisson"` corresponds to the spatial regression model $$y(s) \sim \mathsf{Poisson} (\lambda(s)), \quad \log \lambda(s) = \beta_0 + \beta_1 x_1(s) + z(s)\;.$$
 
 We provide fixed values of the spatial process parameters and a boundary adjustment parameter, given by the argument `boundary`, which if not supplied, defaults to 0.5. For details on the priors and its default value, see function documentation.
 
@@ -234,6 +237,7 @@ We provide fixed values of the spatial process parameters and a boundary adjustm
 mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    spParams = list(phi = phi0, nu = nu0),
+                   priors = list(nu.beta = 5, nu.z = 5),
                    boundary = 0.5,
                    n.samples = 1000, verbose = TRUE)
 ```
@@ -246,6 +250,23 @@ rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 ```
 
+#### Posterior recovery of scale parameters
+The analytic tractability of the posterior distribution under the $\GCM$ framework is enabled by marginalizing out the scale parameters $\sigma^2_\beta$ and $\sigma^2_z$ associated with the fixed effects $\beta$ and the spatial random effects $z$, respectively. However, posterior samples of $\sigma^2_\beta$ and $\sigma^2_z$ can be recovered using the function `recoverGLMscale()`.
+```{r}
+mod1 <- recoverGLMscale(mod1)
+```
+We visualize the posterior distributions of $\sigma_\beta$ and $\sigma_z$ through histograms.
+```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the scale parameters of the fixed and the random effects."}
+post_scale_df <- data.frame(value = sqrt(c(mod1$samples$sigmasq.beta, mod1$samples$sigmasq.z)),
+                            group = factor(rep(c("sigma.beta", "sigma.z"), 
+                                    each = length(mod1$samples$sigmasq.beta))))
+ggplot(post_scale_df, aes(x = value)) +
+  geom_density(fill = "lightblue", alpha = 0.6) +
+  facet_wrap(~ group, scales = "free") + labs(x = "", y = "Density") +
+  theme_bw() + theme(panel.background = element_blank(), 
+                     panel.grid = element_blank(), aspect.ratio = 1)
+```
+
 #### Using predictive stacking
 Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD.
 ```{r spGLMstack_Pois}
@@ -253,7 +274,7 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    params.list = list(phi = c(3, 7, 10), nu = c(0.5, 1.5),
                                       boundary = c(0.5, 0.6)),
-                   n.samples = 1000,
+                   n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
                    parallel = TRUE, solver = "ECOS", verbose = TRUE)
 ```
@@ -262,6 +283,11 @@ We can extract information on solver status and runtime by the following.
 ```{r}
 print(mod2$solver.status)
 print(mod2$run.time)
+```
+
+Further, we can recover the posterior samples of the scale parameters by passing the output obtained by running `spGLMstack()` once again through `recoverGLMscale()`.
+```{r}
+mod2 <- recoverGLMscale(mod2)
 ```
 
 #### Sampling from stacked posterior
@@ -293,7 +319,8 @@ ggplot(post_beta_df, aes(x = value)) +
   geom_vline(data = truth, aes(xintercept = true_value), 
              color = "red", linetype = "dashed", linewidth = 0.5) +
   facet_wrap(~ row, scales = "free") + labs(x = "", y = "Density") +
-  theme_bw() + theme(panel.background = element_blank(), aspect.ratio = 1)
+  theme_bw() + theme(panel.background = element_blank(), 
+                     panel.grid = element_blank(), aspect.ratio = 1)
 ```
 
 Finally, we analyze the posterior samples of the spatial random effects.
@@ -309,7 +336,8 @@ plotz <- ggplot(data = z_combn, aes(x = z)) +
                 color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
-  theme(panel.background = element_blank(), aspect.ratio = 1)
+  theme(panel.background = element_blank(), 
+        panel.grid = element_blank(), aspect.ratio = 1)
 plotz
 ```
 
@@ -333,7 +361,6 @@ mod1 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    spParams = list(phi = 3, nu = 0.5),
                    boundary = 0.5, n.samples = 1000, verbose = FALSE)
-
 ```
 
 Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5)$.
