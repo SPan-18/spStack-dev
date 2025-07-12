@@ -84,41 +84,6 @@ ggplot(data = z_combn, aes(x = z)) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
   xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
   theme(panel.background = element_blank(), aspect.ratio = 1)
-
-# Example 2: Spatial-temporal model with varying coefficients
-data("sim_stvcPoisson")
-dat <- sim_stvcPoisson
-
-# split dataset into test and train
-dat_train <- dat[1:n_train, ]
-dat_pred <- dat[n_train + 1:n_pred, ]
-
-# create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(1, 2, 3),
-                                  phi_t = list(1, 2, 4),
-                                  boundary = c(0.5, 0.75)), "cartesian")
-
-# fit a spatial-temporal varying coefficient model using predictive stacking
-mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
-                     sp_coords = as.matrix(dat_train[, c("s1", "s2")]),
-                     time_coords = as.matrix(dat_train[, "t_coords"]),
-                     cor.fn = "gneiting-decay",
-                     process.type = "multivariate",
-                     candidate.models = mod.list2,
-                     loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
-                     n.samples = 500)
-
-# prepare new coordinates and covariates for prediction
-sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-tm_pred <- as.matrix(dat_pred[, "t_coords"])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
-mod_pred <- posteriorPredict(mod1,
-                             coords_new = list(sp = sp_pred, time = tm_pred),
-                             covars_new = list(fixed = X_new, vc = X_new),
-                             joint = FALSE)
-
-# sample from the stacked posterior and posterior predictive distribution
-post_samps <- stackedSampler(mod_pred)
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}, \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}},

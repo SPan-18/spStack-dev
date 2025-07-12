@@ -34,10 +34,10 @@
 #'
 #' @name spStack-package
 #' @useDynLib spStack, .registration = TRUE
-#' @references Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
+#' @references Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
 #' Predictive Stacking." \cr
 #' \doi{10.48550/arXiv.2304.12414}.
-#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to

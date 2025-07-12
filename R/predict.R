@@ -21,7 +21,7 @@
 #' the output of this prediction function would be `pp.spLMstack`. The entry
 #' with the tag `samples` is updated and will include samples from the posterior
 #' predictive distribution of the latent process, the mean, and the response at
-#' the new locations or times. The entry with the tag `prediction` is added
+#' the new locations or times. An entry with the tag `prediction` is added
 #' and contains the new coordinates and covariates, and whether the joint
 #' posterior predictive samples were requested.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr

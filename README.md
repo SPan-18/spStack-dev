@@ -1,8 +1,8 @@
 # spStack <a href="https://span-18.github.io/spStack-dev/"><img src="man/figures/logo.png" align="right" height="138" alt="spStack website" /></a>
 
 <!-- badges: start -->
-[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/spStack?color=blue)](https://cran.r-project.org/web/packages/spStack)
-[![Downloads](https://cranlogs.r-pkg.org/badges/spStack?color=orange)](https://cran.rstudio.com/package=spStack)
+[![CRAN_Status_Badge](https://www.r-pkg.org/badges/version/spStack?color=blue)](https://CRAN.R-project.org/package=spStack)
+[![Downloads](https://cranlogs.r-pkg.org/badges/spStack?color=orange)](https://CRAN.R-project.org/package=spStack)
 [![R-CMD-check](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml/badge.svg)](https://github.com/SPan-18/spStack-dev/actions/workflows/Standard-CI.yaml)
 <!-- badges: end -->
 
