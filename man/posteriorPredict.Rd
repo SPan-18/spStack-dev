@@ -41,6 +41,7 @@ A function to sample from the posterior predictive distribution
 of the latent spatial or spatial-temporal process.
 }
 \examples{
+set.seed(1234)
 # training and test data sizes
 n_train <- 100
 n_pred <- 10

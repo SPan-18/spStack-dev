@@ -45,6 +45,7 @@ where \eqn{\mathcal{M} = \{M_1, \ldots, M_g\}} is the collection of candidate
 models.
 }
 \examples{
+set.seed(1234)
 data(simGaussian)
 dat <- simGaussian[1:100, ]
 

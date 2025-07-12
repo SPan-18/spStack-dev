@@ -16,6 +16,7 @@
 #'   succeeded.}
 #' }
 #' @examples
+#' set.seed(1234)
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
 #'

@@ -33,6 +33,7 @@
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spLMstack()], [spGLMstack()]
 #' @examples
+#' set.seed(1234)
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]
 #'

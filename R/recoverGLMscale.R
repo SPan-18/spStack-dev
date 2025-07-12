@@ -16,6 +16,7 @@
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spGLMexact()], [spGLMstack()], [stvcGLMexact()], [stvcGLMstack()]
 #' @examples
+#' set.seed(1234)
 #' data("simPoisson")
 #' dat <- simPoisson[1:100, ]
 #' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",

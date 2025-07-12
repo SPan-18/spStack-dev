@@ -89,12 +89,14 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
+#' \donttest{
+#' set.seed(1234)
 #' data("sim_stvcPoisson")
 #' dat <- sim_stvcPoisson[1:100, ]
 #'
 #' # create list of candidate models (multivariate)
-#' mod.list2 <- candidateModels(list(phi_s = list(1, 2, 3),
-#'                                   phi_t = list(1, 2, 4),
+#' mod.list2 <- candidateModels(list(phi_s = list(2, 3),
+#'                                   phi_t = list(1, 2),
 #'                                   boundary = c(0.5, 0.75)), "cartesian")
 #'
 #' # fit a spatial-temporal varying coefficient model using predictive stacking
@@ -106,6 +108,7 @@
 #'                      candidate.models = mod.list2,
 #'                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
 #'                      n.samples = 500)
+#' }
 #' @export
 stvcGLMstack <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn, process.type, priors,
@@ -259,7 +262,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
         stop("priors[['nu.beta']] must be a single numeric value.")
       }
       if(nu.beta < 2.1){
-        warning("Supplied nu.beta is less than 2.1. Setting it to defaults.")
+        message("Supplied nu.beta is less than 2.1. Setting it to defaults.")
         nu.beta <- 2.1
       }
     }
@@ -272,7 +275,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
         stop("priors[['nu.z']] must be a single numeric value.")
       }
       if(nu.z < 2.1){
-        warning("Supplied nu.z is less than 2.1. Setting it to defaults.")
+        message("Supplied nu.z is less than 2.1. Setting it to defaults.")
         nu.z <- 2.1
       }
     }
@@ -301,7 +304,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
       }
     }
     if(missing.flag > 0){
-      warning("Some priors were not supplied. Using defaults.")
+      message("Some priors were not supplied. Using defaults.")
     }
   }
 
@@ -374,35 +377,35 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
     }
     if(loopd.method == "cv"){
       if(n < 100){
-        warning("Sample size too low for CV. Finding exact LOO-PD.")
+        message("Sample size too low for CV. Finding exact LOO-PD.")
         loopd.method <- "exact"
         CV.K <- as.integer(0)
       }else{
         if(!"cv.k" %in% names(loopd.controls)){
-          warning("warning: CV.K missing from loopd.controls. Using defaults.")
+          message("CV.K missing from loopd.controls. Using defaults.")
           CV.K <- 10
         }
         CV.K <- loopd.controls[["cv.k"]]
         if(CV.K < 10){
-          warning("CV.K must be at least 10. Setting it to 10.")
+          message("CV.K must be at least 10. Setting it to 10.")
           CV.K <- 10
         }else if(CV.K > 20){
-          warning("CV.K must be at most 20. Setting it to 20.")
+          message("CV.K must be at most 20. Setting it to 20.")
           CV.K <- 20
         }
         if(floor(CV.K) != CV.K){
-          warning("CV.K must be integer. Setting it to nearest integer.")
+          message("CV.K must be integer. Setting it to nearest integer.")
         }
       }
     }
     if(!"nmc" %in% names(loopd.controls)){
-      warning("warning: nMC missing from loopd.controls. Using defaults.")
+      message("nMC missing from loopd.controls. Using defaults.")
       loopd.nMC <- 500
     }else{
       loopd.nMC <- loopd.controls[["nmc"]]
     }
     if(loopd.nMC < 500){
-      warning("Number of Monte Carlo samples too low. Using defaults.")
+      message("Number of Monte Carlo samples too low. Using defaults.")
       loopd.nMC = 500
     }
   }
@@ -472,7 +475,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
     # Get current plan invoked by future::plan() by the user
     current_plan <- future::plan()
     if(!inherits(current_plan, "sequential")){
-      warning("Parallelization plan other than 'sequential' setup but parallel
+      message("Parallelization plan other than 'sequential' setup but parallel
       is set to FALSE. Ignoring parallelization plan.")
     }
 

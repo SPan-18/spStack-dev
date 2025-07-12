@@ -29,6 +29,7 @@
 #' @seealso [spLMexact()], [spLMstack()], [spGLMexact()], [spGLMstack()],
 #' [stvcGLMexact()], [stvcGLMstack()]
 #' @examples
+#' set.seed(1234)
 #' # training and test data sizes
 #' n_train <- 100
 #' n_pred <- 10

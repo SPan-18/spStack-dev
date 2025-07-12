@@ -29,6 +29,7 @@ Obtains optimal stacking weights given leave-one-out predictive densities for
 each candidate model.
 }
 \examples{
+set.seed(1234)
 data(simGaussian)
 dat <- simGaussian[1:100, ]
 

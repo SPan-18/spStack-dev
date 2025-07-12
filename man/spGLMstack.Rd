@@ -130,6 +130,7 @@ to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
 \donttest{
+set.seed(1234)
 data("simPoisson")
 dat <- simPoisson[1:100,]
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",

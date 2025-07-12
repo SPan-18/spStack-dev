@@ -91,6 +91,7 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
+#' set.seed(1234)
 #' # load data and work with first 100 rows
 #' data(simGaussian)
 #' dat <- simGaussian[1:100, ]

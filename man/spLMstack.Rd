@@ -116,6 +116,7 @@ solve the optimization problem
 to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
+set.seed(1234)
 # load data and work with first 100 rows
 data(simGaussian)
 dat <- simGaussian[1:100, ]
