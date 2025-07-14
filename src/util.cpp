@@ -1086,14 +1086,11 @@ void lmulv_XTilde_VC(const char *trans, int n, int r, double *XTilde, double *v,
   int i = 0, j = 0;
   const int inc_n = n;
 
-  char const *yestrans = "T";
-  char const *notrans = "N";
-
-  if(trans == notrans){
+  if(strcmp(trans, "N") == 0){
     for(i = 0; i < n; i++){
       res[i] = F77_CALL(ddot)(&r, &XTilde[i], &inc_n, &v[i], &inc_n);
     }
-  }else if(trans == yestrans){
+  }else if(strcmp(trans, "T") == 0){
     for(i = 0; i < r; i++){
       for(j = 0; j < n; j++){
         res[i*n + j] = XTilde[i*n + j] * v[j];
@@ -1111,16 +1108,13 @@ void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, dou
   int i = 0, j = 0, l = 0;
   const int inc_n = n;
 
-  char const *yestrans = "T";
-  char const *notrans = "N";
-
-  if(trans == notrans){
+  if(strcmp(trans, "N") == 0){
     for(i = 0; i < n; i++){
       for(j = 0; j < k; j++){
         res[j * n + i] = F77_CALL(ddot)(&r, &XTilde[i], &inc_n, &A[j * n * r + i], &inc_n);
       }
     }
-  }else if(trans == yestrans){
+  }else if(strcmp(trans, "T") == 0){
     for(i = 0; i < r; i++){
       for(j = 0; j < n; j++){
         for(l = 0; l < k; l++){
