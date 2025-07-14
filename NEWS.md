@@ -1,4 +1,6 @@
-# spStack (development version)
+# spStack 1.1.1
+
+* lmulm_XTilde_VC(), lmulv_XTilde_VC(): Fixed address sanitizer issue with string comparison with pointer to string literal.
 
 # spStack 1.1.0
 
