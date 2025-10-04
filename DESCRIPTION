@@ -1,6 +1,6 @@
 Package: spStack
 Type: Package
-Version: 1.1.1
+Version: 1.1.2
 Title: Bayesian Geostatistics Using Predictive Stacking
 Authors@R: c(
     person("Soumyakanti", "Pan", role = c("aut", "cre"),
