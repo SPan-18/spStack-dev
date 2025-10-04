@@ -3,7 +3,7 @@
 #' @description Fits Bayesian spatial linear model on a collection of candidate
 #' models constructed based on some candidate values of some model parameters
 #' specified by the user and subsequently combines inference by stacking
-#' predictive densities. See Zhang, Tang and Banerjee (2024) for more details.
+#' predictive densities. See Zhang, Tang and Banerjee (2025) for more details.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -83,9 +83,9 @@
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
 #'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
 #'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
-#' @references Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
-#' Predictive Stacking." \cr
-#' \doi{10.48550/arXiv.2304.12414}.
+#' @references Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
+#' Predictive Stacking." *Journal of the American Statistical Association*,
+#' **In press**. \doi{10.1080/01621459.2025.2566449}.
 #' @importFrom rstudioapi isAvailable
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan

@@ -49,7 +49,7 @@
 #' the hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z} and
 #' \eqn{\sigma^2_\xi}. The term \eqn{\xi} is known as the fine-scale variation
 #' term which is given a conditional generalized conjugate multivariate
-#' distribution as prior. For more details, see Pan *et al.* 2024. Default
+#' distribution as prior. For more details, see Pan *et al.* 2025. Default
 #' values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 #' are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 #' @param formula a symbolic description of the regression model to be fit.
@@ -114,7 +114,7 @@
 #' Directly from the Posterior Distribution for a Class of Spatial Hierarchical
 #' Models." *Journal of Computational and Graphical Statistics*, **0**(0), 1-17.
 #' \doi{10.1080/10618600.2024.2365728}.
-#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.
 #' @references Vehtari A, Gelman A, Gabry J (2017). "Practical Bayesian Model

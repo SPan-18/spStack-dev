@@ -1,16 +1,14 @@
 ## New patch submission
 This is a submission for a new patch release. In this version I have:
 
-* Addressed ASAN error in CRAN Additional Issues.
+* Updated documentation with DOI of a newly accepted publication.
 
-* Fixed the logical bug regarding string comparison with pointer to string literal.
+Previous reference: Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics 
+Using Predictive Stacking." doi:10.48550/arXiv.2304.12414
 
-## Previous CRAN Additional Issues: gcc-ASAN
-
-```
-lmulm_XTilde_VC: Invalid transpose argument.: Success
-lmulv_XTilde_VC: Invalid transpose argument.: Success
-```
+New reference: Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics 
+Using Predictive Stacking." *Journal of the American Statistical Association* 
+doi:10.1080/01621459.2025.2566449
 
 ## R CMD check results
 

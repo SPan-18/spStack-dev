@@ -1,3 +1,7 @@
+# spStack 1.1.2
+
+* Documentation Update: Zhang, Tang and Banerjee (2025) accepted at JASA.
+
 # spStack 1.1.1
 
 * `lmulm_XTilde_VC()`, `lmulv_XTilde_VC()`: Fixed address sanitizer issue with string comparison with pointer to string literal.

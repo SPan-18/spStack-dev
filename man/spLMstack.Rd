@@ -94,7 +94,7 @@ prediction, model fit evaluation and other utilities.
 Fits Bayesian spatial linear model on a collection of candidate
 models constructed based on some candidate values of some model parameters
 specified by the user and subsequently combines inference by stacking
-predictive densities. See Zhang, Tang and Banerjee (2024) for more details.
+predictive densities. See Zhang, Tang and Banerjee (2025) for more details.
 }
 \details{
 Instead of assigning a prior on the process parameters \eqn{\phi}
@@ -170,9 +170,9 @@ Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
 Smoothed Importance Sampling." \emph{Journal of Machine Learning Research},
 \strong{25}(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 
-Zhang L, Tang W, Banerjee S (2024). "Bayesian Geostatistics Using
-Predictive Stacking." \cr
-\doi{10.48550/arXiv.2304.12414}.
+Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
+Predictive Stacking." \emph{Journal of the American Statistical Association},
+\strong{In press}. \doi{10.1080/01621459.2025.2566449}.
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}

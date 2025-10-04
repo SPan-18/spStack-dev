@@ -106,7 +106,7 @@ prediction, model fit evaluation and other utilities.
 Fits Bayesian spatial generalized linear model on a collection
 of candidate models constructed based on some candidate values of some model
 parameters specified by the user and subsequently combines inference by
-stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2024)
+stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2025)
 for more details.
 }
 \details{
@@ -172,7 +172,7 @@ plot_z <- ggplot(data = z_combn, aes(x = z)) +
 }
 }
 \references{
-Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 \doi{10.48550/arXiv.2406.04655}.
 

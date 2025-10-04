@@ -19,8 +19,8 @@
 #' the weakly identified model parameters and combine the inference by stacking
 #' of predictive densities (Yao *et. al* 2018). We exploit the Bayesian
 #' conjugate linear modeling framework for the Gaussian case (Zhang, Tang and
-#' Banerjee 2024) and the generalized conjugate multivariate distribution theory
-#' (Pan, Zhang, Bradley and Banerjee 2024) to analytically derive the individual
+#' Banerjee 2025) and the generalized conjugate multivariate distribution theory
+#' (Pan, Zhang, Bradley and Banerjee 2025) to analytically derive the individual
 #' posterior distributions.
 #'
 #' @details \tabular{ll}{ Package: \tab spStack\cr Type: \tab Package\cr
@@ -35,8 +35,8 @@
 #' @name spStack-package
 #' @useDynLib spStack, .registration = TRUE
 #' @references Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
-#' Predictive Stacking." \cr
-#' \doi{10.48550/arXiv.2304.12414}.
+#' Predictive Stacking." *Journal of the American Statistical Association*,
+#' **In press**. \doi{10.1080/01621459.2025.2566449}.
 #' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.

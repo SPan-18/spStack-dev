@@ -123,7 +123,7 @@ Fits Bayesian spatial-temporal generalized linear model with
 spatially-temporally varying coefficients on a collection of candidate models
 constructed based on some candidate values of some model parameters specified
 by the user and subsequently combines inference by stacking predictive
-densities. See Pan, Zhang, Bradley, and Banerjee (2024) for more details.
+densities. See Pan, Zhang, Bradley, and Banerjee (2025) for more details.
 }
 \examples{
 \donttest{

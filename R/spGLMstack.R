@@ -3,7 +3,7 @@
 #' @description Fits Bayesian spatial generalized linear model on a collection
 #' of candidate models constructed based on some candidate values of some model
 #' parameters specified by the user and subsequently combines inference by
-#' stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2024)
+#' stacking predictive densities. See Pan, Zhang, Bradley, and Banerjee (2025)
 #' for more details.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
@@ -91,7 +91,7 @@
 #' @seealso [spGLMexact()], [spLMstack()]
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+#' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 #' \doi{10.48550/arXiv.2406.04655}.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto

@@ -178,7 +178,7 @@ parameter. We fix the spatial-temporal process parameters \eqn{\phi_s} and
 \eqn{\phi_t} and the hyperparameters \eqn{V_\beta}, \eqn{\nu_\beta},
 \eqn{\nu_z} and \eqn{\sigma^2_\xi}. The term \eqn{\xi} is known as the
 fine-scale variation term which is given a conditional generalized conjugate
-multivariate distribution as prior. For more details, see Pan \emph{et al.} 2024.
+multivariate distribution as prior. For more details, see Pan \emph{et al.} 2025.
 Default values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z},
 \eqn{\sigma^2_\xi} are diagonal with each diagonal element 100, 2.1, 2.1 and
 0.1 respectively.
@@ -207,7 +207,7 @@ spatio-temporal processes." In \emph{A.E. Gelfand, P.J. Diggle, M. Fuentes, and
 P Guttorp, editors, Handbook of Spatial Statistics}, Chapman & Hall CRC
 Handbooks of Modern Statistical Methods, p 427–436. Taylor and Francis.
 
-Pan S, Zhang L, Bradley JR, Banerjee S (2024). "Bayesian
+Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
 \doi{10.48550/arXiv.2406.04655}.
 

@@ -26,8 +26,8 @@ involves fast sampling from posterior distributions conditioned on a grid of
 the weakly identified model parameters and combine the inference by stacking
 of predictive densities (Yao \emph{et. al} 2018). We exploit the Bayesian
 conjugate linear modeling framework for the Gaussian case (Zhang, Tang and
-Banerjee 2024) and the generalized conjugate multivariate distribution theory
-(Pan, Zhang, Bradley and Banerjee 2024) to analytically derive the individual
+Banerjee 2025) and the generalized conjugate multivariate distribution theory
+(Pan, Zhang, Bradley and Banerjee 2025) to analytically derive the individual
 posterior distributions.
 }
 \details{
@@ -42,8 +42,8 @@ proceed from these samples. Main functions are - \cr \code{\link[=spLMexact]{spL
 }
 \references{
 Zhang L, Tang W, Banerjee S (2025). "Bayesian Geostatistics Using
-Predictive Stacking." \cr
-\doi{10.48550/arXiv.2304.12414}.
+Predictive Stacking." \emph{Journal of the American Statistical Association},
+\strong{In press}. \doi{10.1080/01621459.2025.2566449}.
 
 Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."

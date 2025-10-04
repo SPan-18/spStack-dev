@@ -5,7 +5,7 @@
 #' spatially-temporally varying coefficients on a collection of candidate models
 #' constructed based on some candidate values of some model parameters specified
 #' by the user and subsequently combines inference by stacking predictive
-#' densities. See Pan, Zhang, Bradley, and Banerjee (2024) for more details.
+#' densities. See Pan, Zhang, Bradley, and Banerjee (2025) for more details.
 #'
 #' @param formula a symbolic description of the regression model to be fit.
 #' Variables in parenthesis are assigned spatially-temporally varying
