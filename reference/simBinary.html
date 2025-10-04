@@ -42,7 +42,7 @@ covariogram."><meta property="og:image" content="https://span-18.github.io/spSta
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Synthetic point-referenced binary data</h1>
-      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/v1.1.1/R/simBinary.R" class="external-link"><code>R/simBinary.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/master/R/simBinary.R" class="external-link"><code>R/simBinary.R</code></a></small>
       <div class="d-none name"><code>simBinary.Rd</code></div>
     </div>
 
@@ -119,6 +119,11 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-in"><span>                   spParams <span class="op">=</span> <span class="va">spParams</span>, spvar <span class="op">=</span> <span class="va">spvar</span>, deltasq <span class="op">=</span> <span class="va">deltasq</span>,</span></span>
 <span class="r-in"><span>                   family <span class="op">=</span> <span class="st">"binary"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">plot1</span> <span class="op">&lt;-</span> <span class="fu"><a href="surfaceplot.html">surfaceplot</a></span><span class="op">(</span><span class="va">sim1</span>, coords_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span>, var_name <span class="op">=</span> <span class="st">"z_true"</span><span class="op">)</span></span></span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span class="warning">Warning: </span>`aes_string()` was deprecated in ggplot2 3.0.0.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Please use tidy evaluation idioms with `aes()`.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> See also `vignette("ggplot2-in-packages")` for more information.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> The deprecated feature was likely used in the <span style="color: #0000BB;">spStack</span> package.</span>
+<span class="r-wrn co"><span class="r-pr">#&gt;</span>   Please report the issue at <span style="color: #0000BB; font-style: italic;">&lt;https://github.com/SPan-18/spStack-dev/issues&gt;</span>.</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">plot2</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span><span class="va">sim1</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">s1</span>, y <span class="op">=</span> <span class="va">s2</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span></span>
