@@ -1,3 +1,5 @@
+# spStack (development version)
+
 # spStack 1.1.2
 
 * Documentation Update: Zhang, Tang and Banerjee (2025) accepted at JASA.
