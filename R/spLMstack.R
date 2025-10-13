@@ -90,6 +90,7 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
+#' @importFrom loo stacking_weights
 #' @examples
 #' set.seed(1234)
 #' # load data and work with first 100 rows
@@ -378,14 +379,29 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
-  out_CVXR <- get_stacking_weights(loopd_mat, solver = solver)
-  run.time <- proc.time() - ptm
+  out_CVXR <- tryCatch(
+    get_stacking_weights(loopd_mat, solver = solver),
+    error = function(e){
+      message("CVXR failed. Switching to loo::stacking_weights().")
+      return(NULL)
+    }
+  )
 
-  w_hat <- out_CVXR$weights
-  w_hat <- as.numeric(w_hat)
-  solver_status <- out_CVXR$status
-  w_hat <- sapply(w_hat, function(x) max(0, x))
-  w_hat <- w_hat / sum(w_hat)
+  if(!is.null(out_CVXR)){
+    w_hat <- out_CVXR$weights
+    w_hat <- as.numeric(w_hat)
+    solver_status <- paste("CVXR:", out_CVXR$status, sep = "")
+    w_hat <- sapply(w_hat, function(x) max(0, x))
+    w_hat <- w_hat / sum(w_hat)
+  }else{
+    out_loo <- loo::stacking_weights(loopd_mat)
+    w_hat <- as.numeric(out_loo)
+    solver_status <- "loo:optimal"
+    w_hat <- sapply(w_hat, function(x) max(0, x))
+    w_hat <- w_hat / sum(w_hat)
+  }
+
+  run.time <- proc.time() - ptm
 
   stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
   stack_out <- cbind(stack_out, round(w_hat, 3))
