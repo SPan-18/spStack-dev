@@ -88,7 +88,6 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
-#' @importFrom loo stacking_weights
 #' @examples
 #' \donttest{
 #' set.seed(1234)

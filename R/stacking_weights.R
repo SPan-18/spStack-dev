@@ -34,7 +34,8 @@
 #' w_hat <- get_stacking_weights(loopd_mat)
 #' print(round(w_hat$weights, 4))
 #' print(w_hat$status)
-#' @importFrom CVXR Maximize Problem Variable psolve Parameter installed_solvers
+#' @importFrom CVXR Maximize Problem Variable psolve Parameter installed_solvers status value
+#' @importFrom loo stacking_weights
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion)." *Bayesian
 #' Analysis*, **13**(3), 917-1007. \doi{10.1214/17-BA1091}.
@@ -89,8 +90,8 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
     if (!is.null(result)) {
 
       w_hat <- CVXR::value(w)
-      solver_status <- paste("CVXR:", CVXR::status(prob), sep = "")
-
+      solver_status <- CVXR::status(prob)
+      
       w_hat <- as.numeric(w_hat)
       w_hat[!is.finite(w_hat)] <- 0
       w_hat <- pmax(0, w_hat)

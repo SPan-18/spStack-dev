@@ -90,7 +90,6 @@
 #' @importFrom parallel detectCores
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
-#' @importFrom loo stacking_weights
 #' @examples
 #' set.seed(1234)
 #' # load data and work with first 100 rows
