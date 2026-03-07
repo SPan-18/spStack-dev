@@ -70,7 +70,7 @@ prior_list <- list(beta.norm = list(muBeta, VBeta),
 nSamples <- 1000
 ```
 
-We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y ~ x1` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + z(s) + \epsilon(s)\;,$$ where the `y` corresponds to the response variable $y(s)$, which is regressed on the predictor `x1` given by $x_1(s)$. The intercept is automatically considered within the model, and hence `y ~ x1` is functionally equivalent to `y ~ 1 + x1`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`. 
+We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y ~ x1` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + z(s) + \epsilon(s)\;,$$ where the `y` corresponds to the response variable $y(s)$, which is regressed on the predictor `x1` given by $x_1(s)$. The intercept is automatically considered within the model, and hence `y ~ x1` is functionally equivalent to `y ~ 1 + x1`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`.
 
 If interested in calculation of leave-one-out predictive densities (LOO-PD), `loopd`  must be set `TRUE` (the default is `FALSE`). Method of LOO-PD calculation can be also set by the option `loopd.method` which support the keywords `"exact"` and `"psis"`. The option `"exact"` exploits the analytically available expressions of the predictive density and implements an efficient row-deletion Cholesky factor update for fast calculation and avoids refitting the model $n$ times, where $n$ is the sample size. On the other hand, `"psis"` implements Pareto-smoothed importance sampling and finds approximate LOO-PD and is much faster than `"exact"`.
 
@@ -118,7 +118,7 @@ plot1 <- ggplot(data = loopd_df, aes(x = exact)) +
   geom_point(aes(y = psis), size = 1, alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", alpha = 0.5) +
   xlab("Exact") + ylab("PSIS") + theme_bw() +
-  theme(panel.background = element_blank(), 
+  theme(panel.background = element_blank(),
         panel.grid = element_blank(), aspect.ratio = 1)
 plot1
 ```
@@ -134,7 +134,7 @@ mod3 <- spLMstack(y ~ x1, data = dat,
                                      nu = c(0.5, 1, 1.5),
                                      noise_sp_ratio = c(0.5, 1.5)),
                   n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, solver = "ECOS", verbose = TRUE)
+                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 ```
 
 The user can check the solver status and runtime by issuing the following.
@@ -172,10 +172,10 @@ truth <- data.frame(row = c("beta0", "beta1"), true_value = c(2, 5))
 
 ggplot(post_beta_df, aes(x = value)) +
   geom_density(fill = "lightblue", alpha = 0.6) +
-  geom_vline(data = truth, aes(xintercept = true_value), 
+  geom_vline(data = truth, aes(xintercept = true_value),
              color = "red", linetype = "dashed", linewidth = 0.5) +
   facet_wrap(~ row, scales = "free") + labs(x = "", y = "Density") +
-  theme_bw() + theme(panel.background = element_blank(), 
+  theme_bw() + theme(panel.background = element_blank(),
                      panel.grid = element_blank(), aspect.ratio = 1)
 ```
 
@@ -192,7 +192,7 @@ plotz <- ggplot(data = z_combn, aes(x = z)) +
                 color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
-  theme(panel.background = element_blank(), 
+  theme(panel.background = element_blank(),
         panel.grid = element_blank(), aspect.ratio = 1)
 plotz
 ```
@@ -258,12 +258,12 @@ mod1 <- recoverGLMscale(mod1)
 We visualize the posterior distributions of $\sigma_\beta$ and $\sigma_z$ through histograms.
 ```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the scale parameters of the fixed and the random effects."}
 post_scale_df <- data.frame(value = sqrt(c(mod1$samples$sigmasq.beta, mod1$samples$sigmasq.z)),
-                            group = factor(rep(c("sigma.beta", "sigma.z"), 
+                            group = factor(rep(c("sigma.beta", "sigma.z"),
                                     each = length(mod1$samples$sigmasq.beta))))
 ggplot(post_scale_df, aes(x = value)) +
   geom_density(fill = "lightblue", alpha = 0.6) +
   facet_wrap(~ group, scales = "free") + labs(x = "", y = "Density") +
-  theme_bw() + theme(panel.background = element_blank(), 
+  theme_bw() + theme(panel.background = element_blank(),
                      panel.grid = element_blank(), aspect.ratio = 1)
 ```
 
@@ -276,7 +276,7 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                                       boundary = c(0.5, 0.6)),
                    n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                   parallel = TRUE, solver = "ECOS", verbose = TRUE)
+                   parallel = TRUE, solver = "CLARABEL", verbose = TRUE)
 ```
 
 We can extract information on solver status and runtime by the following.
@@ -316,10 +316,10 @@ truth <- data.frame(row = c("beta0", "beta1"), true_value = c(2, -0.5))
 
 ggplot(post_beta_df, aes(x = value)) +
   geom_density(fill = "lightblue", alpha = 0.6) +
-  geom_vline(data = truth, aes(xintercept = true_value), 
+  geom_vline(data = truth, aes(xintercept = true_value),
              color = "red", linetype = "dashed", linewidth = 0.5) +
   facet_wrap(~ row, scales = "free") + labs(x = "", y = "Density") +
-  theme_bw() + theme(panel.background = element_blank(), 
+  theme_bw() + theme(panel.background = element_blank(),
                      panel.grid = element_blank(), aspect.ratio = 1)
 ```
 
@@ -336,7 +336,7 @@ plotz <- ggplot(data = z_combn, aes(x = z)) +
                 color = "skyblue") +
   geom_abline(slope = 1, intercept = 0, color = "red") +
   xlab("True z") + ylab("Stacked posterior of z") + theme_bw() +
-  theme(panel.background = element_blank(), 
+  theme(panel.background = element_blank(),
         panel.grid = element_blank(), aspect.ratio = 1)
 plotz
 ```
@@ -352,7 +352,7 @@ ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
 ```
 
 ### Spatial binomial count data
-This will follow the same workflow as Poisson data with the exception that the structure of `formula` that defines the model will also contain the total number of trials at each location. Here, we present only the `spGLMexact()` function for brevity. 
+This will follow the same workflow as Poisson data with the exception that the structure of `formula` that defines the model will also contain the total number of trials at each location. Here, we present only the `spGLMexact()` function for brevity.
 ```{r}
 data("simBinom")
 dat <- simBinom[1:200, ] # work with first 200 rows

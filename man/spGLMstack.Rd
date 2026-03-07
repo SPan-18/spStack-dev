@@ -15,7 +15,7 @@ spGLMstack(
   n.samples,
   loopd.controls,
   parallel = FALSE,
-  solver = "ECOS",
+  solver = "CLARABEL",
   verbose = TRUE,
   ...
 )
@@ -67,7 +67,7 @@ may choose their own plan. More details are available at
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
 to obtain optimal stacking weights for each candidate model. Default is
-\code{'ECOS'}. Users can use other solvers supported by the
+\code{'CLARABEL'}. Users can use other solvers supported by the
 \link[CVXR]{CVXR-package} package.}
 
 \item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
@@ -139,7 +139,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                                      boundary = c(0.5, 0.6)),
                   n.samples = 1000,
                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                  parallel = TRUE, solver = "ECOS", verbose = TRUE)
+                  parallel = TRUE, solver = "CLARABEL", verbose = TRUE)
 
 # print(mod1$solver.status)
 # print(mod1$run.time)

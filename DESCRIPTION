@@ -18,7 +18,7 @@ Description: Fits Bayesian hierarchical spatial and spatial-temporal process
     <doi:10.1080/01621459.2025.2566449>, and, Pan, Zhang, Bradley, and Banerjee
     (2025) <doi:10.48550/arXiv.2406.04655> for details.
 Imports:
-    CVXR,
+    CVXR (>= 1.8.1),
     future,
     future.apply,
     ggplot2,

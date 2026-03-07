@@ -14,7 +14,7 @@ spLMstack(
   n.samples,
   loopd.method,
   parallel = FALSE,
-  solver = "ECOS",
+  solver = "CLARABEL",
   verbose = TRUE,
   ...
 )
@@ -59,7 +59,7 @@ may choose their own plan. More details are available at
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
 to obtain optimal stacking weights for each candidate model. Default is
-\code{"ECOS"}. Users can use other solvers supported by the
+\code{"CLARABEL"}. Users can use other solvers supported by the
 \link[CVXR]{CVXR-package} package.}
 
 \item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
@@ -137,7 +137,7 @@ mod1 <- spLMstack(y ~ x1, data = dat,
                                      nu = c(0.5, 1),
                                      noise_sp_ratio = c(1)),
                   n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, solver = "ECOS", verbose = TRUE)
+                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta

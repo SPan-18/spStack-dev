@@ -55,7 +55,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
                                      nu = c(0.75, 1.25),
                                      noise_sp_ratio = c(0.5, 1, 2)),
                   n.samples = 1000, loopd.method = "psis",
-                  parallel = FALSE, solver = "ECOS", verbose = TRUE)
+                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 ```
 
 Define the new coordinates, run `posteriorPredict()`, and finally sample from the *stacked posterior*.

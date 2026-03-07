@@ -6,7 +6,7 @@
 #'  containing the leave-one-out predictive densities for the \eqn{i}{i}-th
 #'  data point for the \eqn{M}{M} candidate models.
 #' @param solver specifies the solver to use for obtaining optimal weights.
-#'  Default is \code{"ECOS"}. Internally calls
+#'  Default is \code{"CLARABEL"}. Internally calls
 #'  [CVXR::psolve()].
 #' @return A list of length 2.
 #' \describe{
@@ -27,7 +27,7 @@
 #'                                      nu = c(0.5, 1),
 #'                                      noise_sp_ratio = c(1)),
 #'                   n.samples = 1000, loopd.method = "exact",
-#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#'                   parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 #'
 #' loopd_mat <- do.call('cbind', mod1$loopd)
 #' w_hat <- get_stacking_weights(loopd_mat)
@@ -41,7 +41,7 @@
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
-get_stacking_weights <- function(log_loopd, solver = "ECOS"){
+get_stacking_weights <- function(log_loopd, solver = "CLARABEL", verbose = TRUE){
 
   # rescale log leave-one-out predictuve densities for numerical stability
   log_loopd_m <- mean(log_loopd)
@@ -56,10 +56,16 @@ get_stacking_weights <- function(log_loopd, solver = "ECOS"){
   prob <- CVXR::Problem(objective = obj, constraints = constr)
 
   # solve the optimization problem using available solvers
-  result <- CVXR::psolve(prob, solver = solver)
+  result <- CVXR::psolve(prob, solver = solver, verbose = verbose)
 
-  # output
-  wts <- as.numeric(result$getValue(w))
-  return(list(weights = wts, status = result$status))
+  # # output (deprecated from CVXR 1.8.1)
+  # wts <- as.numeric(result$getValue(w))
+  # return(list(weights = wts, status = result$status))
+
+  # output (new output for CVXR >= 1.8.1)
+  wts <- CVXR::value(w)
+  solver_status <- CVXR::status(prob)
+
+  return(list(weights = wts, status = solver_status))
 
 }

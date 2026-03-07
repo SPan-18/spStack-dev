@@ -13,6 +13,7 @@
 #' the number of posterior draws used in the original function, then a message
 #' is thrown and the samples are obtained by resampling. We recommended running
 #' the original model fit/prediction with enough samples.
+#' @param verbose if `TRUE`, prints output of optimization routine.
 #' @return An object of class \code{stacked_posterior}, which is a list that
 #' includes the following tags -
 #' \describe{
@@ -44,7 +45,7 @@
 #'                                      nu = c(0.5, 1),
 #'                                      noise_sp_ratio = c(1)),
 #'                   n.samples = 1000, loopd.method = "exact",
-#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#'                   parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 #' print(mod1$solver.status)
 #' print(mod1$run.time)
 #'

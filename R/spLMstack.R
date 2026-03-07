@@ -34,7 +34,7 @@
 #'  \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #'  to obtain optimal stacking weights for each candidate model. Default is
-#'  \code{"ECOS"}. Users can use other solvers supported by the
+#'  \code{"CLARABEL"}. Users can use other solvers supported by the
 #'  \link[CVXR]{CVXR-package} package.
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #'  stacking weights.
@@ -113,7 +113,7 @@
 #'                                      nu = c(0.5, 1),
 #'                                      noise_sp_ratio = c(1)),
 #'                   n.samples = 1000, loopd.method = "exact",
-#'                   parallel = FALSE, solver = "ECOS", verbose = TRUE)
+#'                   parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
 #'
 #' post_samps <- stackedSampler(mod1)
 #' post_beta <- post_samps$beta
@@ -143,7 +143,7 @@
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors, params.list, n.samples, loopd.method,
-                      parallel = FALSE, solver = "ECOS", verbose = TRUE, ...){
+                      parallel = FALSE, solver = "CLARABEL", verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -379,9 +379,11 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
+  # add fallback option to "loo" routine if CVXR fails
   out_CVXR <- tryCatch(
-    get_stacking_weights(loopd_mat, solver = solver),
+    get_stacking_weights(loopd_mat, solver = solver, verbose = verbose),
     error = function(e){
+      message(e$message)
       message("CVXR failed. Switching to loo::stacking_weights().")
       return(NULL)
     }

@@ -57,7 +57,7 @@
 #' \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
 #' to obtain optimal stacking weights for each candidate model. Default is
-#' \code{'ECOS'}. Users can use other solvers supported by the
+#' \code{'CLARABEL'}. Users can use other solvers supported by the
 #' \link[CVXR]{CVXR-package} package.
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #' stacking weights.
@@ -114,7 +114,7 @@
 stvcGLMstack <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn, process.type, priors,
                          candidate.models, n.samples, loopd.controls,
-                         parallel = FALSE, solver = "ECOS", verbose = TRUE, ...){
+                         parallel = FALSE, solver = "CLARABEL", verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
