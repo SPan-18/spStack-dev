@@ -1,4 +1,4 @@
-# spStack (development version)
+# spStack 1.1.3
 
 # spStack 1.1.3
 
