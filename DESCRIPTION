@@ -18,7 +18,7 @@ Description: Fits Bayesian hierarchical spatial and spatial-temporal process
     <doi:10.1080/01621459.2025.2566449>, and, Pan, Zhang, Bradley, and Banerjee
     (2025) <doi:10.1214/25-BA1582> for details.
 Imports:
-    CVXR (>= 1.8.1),
+    CVXR,
     future,
     future.apply,
     ggplot2,
@@ -42,7 +42,7 @@ Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
 Depends:
-    R (>= 4.5)
+    R (>= 4.4)
 VignetteBuilder: knitr
 URL: https://span-18.github.io/spStack-dev/
 BugReports: https://github.com/SPan-18/spStack-dev/issues
