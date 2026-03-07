@@ -16,7 +16,7 @@ Description: Fits Bayesian hierarchical spatial and spatial-temporal process
     faster than traditional Markov chain Monte Carlo algorithms while delivering
     competitive predictive performance. See Zhang, Tang, and Banerjee (2025)
     <doi:10.1080/01621459.2025.2566449>, and, Pan, Zhang, Bradley, and Banerjee
-    (2025) <doi:10.48550/arXiv.2406.04655> for details.
+    (2025) <doi:10.1214/25-BA1582> for details.
 Imports:
     CVXR (>= 1.8.1),
     future,
@@ -40,9 +40,9 @@ Suggests:
     tidyr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.2
+RoxygenNote: 7.3.3
 Depends:
-    R (>= 3.5)
+    R (>= 4.5)
 VignetteBuilder: knitr
 URL: https://span-18.github.io/spStack-dev/
 BugReports: https://github.com/SPan-18/spStack-dev/issues

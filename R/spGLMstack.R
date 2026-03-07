@@ -93,7 +93,7 @@
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
-#' \doi{10.48550/arXiv.2406.04655}.
+#' *Bayesian Analysis*, **In Press**. \doi{10.1214/25-BA1582}.
 #' @references Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
 #'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
 #'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.

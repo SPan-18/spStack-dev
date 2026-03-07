@@ -39,7 +39,7 @@
 #' **In press**. \doi{10.1080/01621459.2025.2566449}.
 #' @references Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 #' Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
-#' \doi{10.48550/arXiv.2406.04655}.
+#' *Bayesian Analysis*, **In Press**. \doi{10.1214/25-BA1582}.
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion)." *Bayesian
 #' Analysis*, **13**(3), 917-1007. \doi{10.1214/17-BA1091}.

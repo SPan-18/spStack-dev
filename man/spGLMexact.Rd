@@ -200,7 +200,7 @@ Models." \emph{Journal of Computational and Graphical Statistics}, \strong{0}(0)
 
 Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
-\doi{10.48550/arXiv.2406.04655}.
+\emph{Bayesian Analysis}, \strong{In Press}. \doi{10.1214/25-BA1582}.
 
 Vehtari A, Gelman A, Gabry J (2017). "Practical Bayesian Model
 Evaluation Using Leave-One-out Cross-Validation and WAIC."
