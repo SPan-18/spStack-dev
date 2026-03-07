@@ -13,7 +13,6 @@
 #' the number of posterior draws used in the original function, then a message
 #' is thrown and the samples are obtained by resampling. We recommended running
 #' the original model fit/prediction with enough samples.
-#' @param verbose if `TRUE`, prints output of optimization routine.
 #' @return An object of class \code{stacked_posterior}, which is a list that
 #' includes the following tags -
 #' \describe{

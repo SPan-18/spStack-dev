@@ -8,6 +8,7 @@
 #' @param solver specifies the solver to use for obtaining optimal weights.
 #'  Default is \code{"CLARABEL"}. Internally calls
 #'  [CVXR::psolve()].
+#' @param verbose if `TRUE`, prints output of optimization routine.
 #' @return A list of length 2.
 #' \describe{
 #'   \item{\code{weights}}{optimal stacking weights as a numeric vector of
