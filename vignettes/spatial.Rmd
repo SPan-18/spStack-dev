@@ -203,8 +203,7 @@ postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                        var1_name = "z_true", var2_name = "z_hat")
-library(ggpubr)
-ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+ggpubr::ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
 ```
 
 ### Analysis of spatial non-Gaussian data
@@ -347,8 +346,7 @@ postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                        var1_name = "z_true", var2_name = "z_hat")
-library(ggpubr)
-ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+ggpubr::ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
 ```
 
 ### Spatial binomial count data
