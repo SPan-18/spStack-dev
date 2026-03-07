@@ -56,9 +56,9 @@
 #' may choose their own plan. More details are available at
 #' \url{https://cran.R-project.org/package=future}.
 #' @param solver (optional) Specifies the name of the solver that will be used
-#' to obtain optimal stacking weights for each candidate model. Default is
-#' \code{'CLARABEL'}. Users can use other solvers supported by the
-#' \link[CVXR]{CVXR-package} package.
+#' to obtain optimal stacking weights for each candidate model. Default order
+#' is \code{c("CLARABEL", "ECOS", "SCS")}. Users can use other solvers
+#' supported by the \link[CVXR]{CVXR-package} package.
 #' @param verbose logical. If \code{TRUE}, prints model-specific optimal
 #' stacking weights.
 #' @param ... currently no additional argument.
@@ -114,7 +114,7 @@
 stvcGLMstack <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn, process.type, priors,
                          candidate.models, n.samples, loopd.controls,
-                         parallel = FALSE, solver = "CLARABEL", verbose = TRUE, ...){
+                         parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -495,27 +495,15 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
-  out_CVXR <- tryCatch(
-    get_stacking_weights(loopd_mat, solver = solver),
-    error = function(e){
-      message("CVXR failed. Switching to loo::stacking_weights().")
-      return(NULL)
-    }
+  out <- get_stacking_weights(
+    loopd_mat,
+    solver = solver,
+    verbose = verbose
   )
 
-  if(!is.null(out_CVXR)){
-    w_hat <- out_CVXR$weights
-    w_hat <- as.numeric(w_hat)
-    solver_status <- paste("CVXR:", out_CVXR$status, sep = "")
-    w_hat <- sapply(w_hat, function(x) max(0, x))
-    w_hat <- w_hat / sum(w_hat)
-  }else{
-    out_loo <- loo::stacking_weights(loopd_mat)
-    w_hat <- as.numeric(out_loo)
-    solver_status <- "loo:optimal"
-    w_hat <- sapply(w_hat, function(x) max(0, x))
-    w_hat <- w_hat / sum(w_hat)
-  }
+  w_hat <- out$weights
+  solver_status <- out$status
+  solver_used <- out$solver
 
   run.time <- proc.time() - ptm
 
@@ -556,6 +544,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   out$stacking.summary <- stack_out
   out$stacking.weights <- w_hat
   out$run.time <- run.time
+  out$solver <- solver_used
   out$solver.status <- solver_status
 
   class(out) <- "stvcGLMstack"

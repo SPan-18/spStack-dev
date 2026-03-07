@@ -18,7 +18,7 @@ stvcGLMstack(
   n.samples,
   loopd.controls,
   parallel = FALSE,
-  solver = "CLARABEL",
+  solver = NULL,
   verbose = TRUE,
   ...
 )
@@ -85,9 +85,9 @@ may choose their own plan. More details are available at
 \url{https://cran.R-project.org/package=future}.}
 
 \item{solver}{(optional) Specifies the name of the solver that will be used
-to obtain optimal stacking weights for each candidate model. Default is
-\code{'CLARABEL'}. Users can use other solvers supported by the
-\link[CVXR]{CVXR-package} package.}
+to obtain optimal stacking weights for each candidate model. Default order
+is \code{c("CLARABEL", "ECOS", "SCS")}. Users can use other solvers
+supported by the \link[CVXR]{CVXR-package} package.}
 
 \item{verbose}{logical. If \code{TRUE}, prints model-specific optimal
 stacking weights.}

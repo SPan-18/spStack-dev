@@ -134,7 +134,7 @@ mod3 <- spLMstack(y ~ x1, data = dat,
                                      nu = c(0.5, 1, 1.5),
                                      noise_sp_ratio = c(0.5, 1.5)),
                   n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
+                  parallel = FALSE, verbose = TRUE)
 ```
 
 The user can check the solver status and runtime by issuing the following.
@@ -276,7 +276,7 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                                       boundary = c(0.5, 0.6)),
                    n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                   parallel = TRUE, solver = "CLARABEL", verbose = TRUE)
+                   parallel = TRUE, verbose = TRUE)
 ```
 
 We can extract information on solver status and runtime by the following.

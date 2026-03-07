@@ -4,7 +4,7 @@
 \alias{get_stacking_weights}
 \title{Optimal stacking weights}
 \usage{
-get_stacking_weights(log_loopd, solver = "CLARABEL", verbose = TRUE)
+get_stacking_weights(log_loopd, solver = NULL, verbose = TRUE)
 }
 \arguments{
 \item{log_loopd}{an \eqn{n \times M}{n x M} matrix with \eqn{i}{i}-th row
@@ -42,7 +42,7 @@ mod1 <- spLMstack(y ~ x1, data = dat,
                                      nu = c(0.5, 1),
                                      noise_sp_ratio = c(1)),
                   n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
+                  parallel = FALSE, verbose = TRUE)
 
 loopd_mat <- do.call('cbind', mod1$loopd)
 w_hat <- get_stacking_weights(loopd_mat)

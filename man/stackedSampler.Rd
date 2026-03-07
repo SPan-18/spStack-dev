@@ -56,7 +56,8 @@ mod1 <- spLMstack(y ~ x1, data = dat,
                                      nu = c(0.5, 1),
                                      noise_sp_ratio = c(1)),
                   n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
+                  parallel = FALSE, verbose = TRUE)
+print(mod1$solver)
 print(mod1$solver.status)
 print(mod1$run.time)
 

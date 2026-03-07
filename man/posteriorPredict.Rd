@@ -60,7 +60,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
                   params.list = list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
                                      noise_sp_ratio = c(0.5, 1, 2)),
                   n.samples = 1000, loopd.method = "psis",
-                  parallel = FALSE, solver = "CLARABEL", verbose = TRUE)
+                  parallel = FALSE, verbose = TRUE)
 
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
