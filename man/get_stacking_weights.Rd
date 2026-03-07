@@ -14,6 +14,8 @@ data point for the \eqn{M}{M} candidate models.}
 \item{solver}{specifies the solver to use for obtaining optimal weights.
 Default is \code{"CLARABEL"}. Internally calls
 \code{\link[CVXR:psolve]{CVXR::psolve()}}.}
+
+\item{verbose}{if \code{TRUE}, prints output of optimization routine.}
 }
 \value{
 A list of length 2.
