@@ -194,7 +194,6 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 # ------------------------------------------------------------------
 # Internal helper: extract solver status safely across CVXR versions
 # ------------------------------------------------------------------
-#' @import CVXR
 .get_cvxr_status <- function(prob, result) {
 
   ## Prefer CVXR status() if available
