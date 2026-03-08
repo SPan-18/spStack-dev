@@ -47,18 +47,27 @@
 #' @export
 get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
-  # rescale log predictive densities for numerical stability
+  OPTIMAL_STATUSES <- c("optimal", "optimal_inaccurate")
+
+  ## -----------------------------
+  ## Numerical stabilization
+  ## -----------------------------
+
   log_loopd_m <- mean(log_loopd)
   log_loopd <- log_loopd - log_loopd_m
   loopd <- exp(log_loopd)
 
   M <- ncol(loopd)
 
-  # CVXR optimization problem
+  ## -----------------------------
+  ## Optimization problem
+  ## -----------------------------
+
   w <- CVXR::Variable(M)
   expr <- loopd %*% w
 
   obj <- CVXR::Maximize(sum(log(expr + 1e-12)))
+
   constr <- list(
     sum(w) == 1,
     w >= 0
@@ -68,74 +77,109 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
   installed <- CVXR::installed_solvers()
 
-  # solver selection
+  ## -----------------------------
+  ## Solver selection diagnostic print
+  ## -----------------------------
+
   if (!is.null(solver)) {
-
-    if (!(solver %in% installed)) {
-      stop("Requested solver '", solver, "' is not installed in CVXR.")
-    }
-
+    requested <- solver
     solvers <- solver
 
   } else {
-
+    requested <- "DEFAULT (CLARABEL -> ECOS -> SCS)"
     preferred <- c("CLARABEL", "ECOS", "SCS")
     solvers <- intersect(preferred, installed)
-
   }
+
+  message("--------------------------------------------------")
+  message("Solver diagnostics:")
+  message("Installed solvers: ", paste(installed, collapse = ", "))
+
+  if (is.null(solver)) {
+    message("Requested solver: ", requested)
+  } else {
+    message("Requested solver: ", paste(requested, collapse = ", "))
+  }
+
+  message("Solver search order: ", paste(solvers, collapse = " -> "))
+  message("--------------------------------------------------")
+
+  ## -----------------------------
+  ## Solver cascade
+  ## -----------------------------
 
   out <- NULL
   last_error <- NULL
 
-  # try CVXR solvers
   for (s in solvers) {
 
-    result <- tryCatch({
-      CVXR::psolve(prob, solver = s, verbose = verbose)
-    }, error = function(e){
-      last_error <<- conditionMessage(e)
-      NULL
-    })
-
-    if (!is.null(result)) {
-
-      w_hat <- CVXR::value(w)
-      solver_status <- CVXR::status(prob)
-
-      w_hat <- as.numeric(w_hat)
-      w_hat[!is.finite(w_hat)] <- 0
-      w_hat <- pmax(0, w_hat)
-
-      if (sum(w_hat) > 0) {
-        w_hat <- w_hat / sum(w_hat)
-        out <- list(
-          weights = w_hat,
-          status = solver_status,
-          solver = paste("CVXR:", s, sep = "")
-        )
-        break
+    result <- tryCatch(
+      CVXR::psolve(prob, solver = s, verbose = verbose),
+      error = function(e) {
+        last_error <<- conditionMessage(e)
+        NULL
       }
+    )
+
+    if (is.null(result))
+      next
+
+    ## Solution extraction
+    w_hat <- tryCatch(
+      as.numeric(CVXR::value(w)),
+      error = function(e) NULL
+    )
+
+    w_hat[!is.finite(w_hat)] <- 0
+    w_hat <- pmax(0, w_hat)
+
+    if (sum(w_hat) <= 0)
+      next
+
+    w_hat <- w_hat / sum(w_hat)
+
+    ## Status extraction
+    solver_status <- .get_cvxr_status(prob, result)
+
+    if (is.na(solver_status))
+      solver_status <- "unknown"
+
+    if (solver_status %in% OPTIMAL_STATUSES) {
+
+      out <- list(
+        weights = w_hat,
+        status = solver_status,
+        solver = paste0("CVXR:", s)
+      )
+
+      break
     }
   }
 
-  # fallback to loo if CVXR fails
+  ## -----------------------------
+  ## Fallback solver
+  ## -----------------------------
+
   if (is.null(out)) {
 
-    message("CVXR solvers failed. Switching to loo::stacking_weights().")
+    message("CVXR solvers failed or did not reach optimality.")
+    message("Switching to loo::stacking_weights().")
 
-    w_hat <- tryCatch({
-      loo::stacking_weights(loopd)
-    }, error = function(e){
-      stop(
-        "Both CVXR and loo stacking failed. Last CVXR error: ",
-        last_error
-      )
-    })
+    w_hat <- tryCatch(
+      loo::stacking_weights(loopd),
+      error = function(e) {
+        stop(
+          "Both CVXR and loo stacking failed. Last CVXR error: ",
+          last_error
+        )
+      }
+    )
 
     w_hat <- as.numeric(w_hat)
     w_hat[!is.finite(w_hat)] <- 0
-    w_hat <- pmax(0, w_hat)
-    w_hat <- w_hat / sum(w_hat)
+
+    if (sum(w_hat) > 0)
+      w_hat <- w_hat / sum(w_hat)
 
     out <- list(
       weights = w_hat,
@@ -144,5 +188,29 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
     )
   }
 
-  return(out)
+  out
+}
+
+# ------------------------------------------------------------------
+# Internal helper: extract solver status safely across CVXR versions
+# ------------------------------------------------------------------
+#' @import CVXR
+.get_cvxr_status <- function(prob, result) {
+
+  ## Prefer CVXR status() if available
+  status_val <- tryCatch(
+    CVXR::status(prob),
+    error = function(e) NULL
+  )
+
+  if (!is.null(status_val))
+    return(as.character(status_val))
+
+  ## Legacy list-style result objects
+  if (is.list(result)) {
+    if (!is.null(result[["status"]]))
+      return(as.character(result[["status"]]))
+  }
+
+  NA_character_
 }
