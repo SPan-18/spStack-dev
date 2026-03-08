@@ -24,6 +24,7 @@ A list of length 2.
 length \eqn{M}{M}}
 \item{\code{status}}{solver status, returns \code{"optimal"} if solver
 succeeded.}
+\item{\code{solver}}{name of the solver used.}
 }
 }
 \description{
@@ -47,6 +48,7 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 loopd_mat <- do.call('cbind', mod1$loopd)
 w_hat <- get_stacking_weights(loopd_mat)
 print(round(w_hat$weights, 4))
+print(w_hat$solver)
 print(w_hat$status)
 }
 \references{

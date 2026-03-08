@@ -49,6 +49,8 @@ set.seed(1729)
 In this section, we thoroughly illustrate our method on synthetic Gaussian as well as non-Gaussian spatial data and provide code to analyze the output of our functions. We start by loading the package.
 ```{r setup}
 library(spStack)
+library(ggplot2)
+library(patchwork)
 ```
 Some synthetic spatial data are lazy-loaded which includes synthetic spatial Gaussian data `simGaussian`, Poisson data `simPoisson`, binomial data `simBinom` and binary data `simBinary`. One can use the function `sim_spData()` to simulate spatial data. We will be applying our functions on these datasets.
 
@@ -139,6 +141,7 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 
 The user can check the solver status and runtime by issuing the following.
 ```{r}
+print(mod3$solver)
 print(mod3$solver.status)
 print(mod3$run.time)
 ```
@@ -203,7 +206,9 @@ postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                        var1_name = "z_true", var2_name = "z_hat")
-ggpubr::ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+patchwork::wrap_plots(plot_z) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
 ```
 
 ### Analysis of spatial non-Gaussian data
@@ -280,6 +285,7 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 
 We can extract information on solver status and runtime by the following.
 ```{r}
+print(mod2$solver)
 print(mod2$solver.status)
 print(mod2$run.time)
 ```
@@ -346,7 +352,9 @@ postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                        var1_name = "z_true", var2_name = "z_hat")
-ggpubr::ggarrange(plotlist = plot_z, common.legend = TRUE, legend = "right")
+patchwork::wrap_plots(plot_z) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
 ```
 
 ### Spatial binomial count data

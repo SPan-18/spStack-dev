@@ -31,7 +31,6 @@ Encoding: UTF-8
 LazyData: true
 Suggests:
     dplyr,
-    ggpubr,
     knitr,
     patchwork,
     rmarkdown,

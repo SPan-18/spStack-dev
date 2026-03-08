@@ -15,6 +15,7 @@
 #'   length \eqn{M}{M}}
 #'   \item{\code{status}}{solver status, returns \code{"optimal"} if solver
 #'   succeeded.}
+#'   \item{\code{solver}}{name of the solver used.}
 #' }
 #' @examples
 #' set.seed(1234)
@@ -33,8 +34,9 @@
 #' loopd_mat <- do.call('cbind', mod1$loopd)
 #' w_hat <- get_stacking_weights(loopd_mat)
 #' print(round(w_hat$weights, 4))
+#' print(w_hat$solver)
 #' print(w_hat$status)
-#' @importFrom CVXR Maximize Problem Variable psolve Parameter installed_solvers status value
+#' @import CVXR
 #' @importFrom loo stacking_weights
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion)." *Bayesian
@@ -64,14 +66,22 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
   prob <- CVXR::Problem(objective = obj, constraints = constr)
 
-  # solver preference order
-  preferred <- c("CLARABEL", "ECOS", "SCS")
   installed <- CVXR::installed_solvers()
-  solvers <- intersect(preferred, installed)
 
-  # allow user override
+  # solver selection
   if (!is.null(solver)) {
-    solvers <- unique(c(solver, solvers))
+
+    if (!(solver %in% installed)) {
+      stop("Requested solver '", solver, "' is not installed in CVXR.")
+    }
+
+    solvers <- solver
+
+  } else {
+
+    preferred <- c("CLARABEL", "ECOS", "SCS")
+    solvers <- intersect(preferred, installed)
+
   }
 
   out <- NULL
@@ -91,7 +101,7 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
       w_hat <- CVXR::value(w)
       solver_status <- CVXR::status(prob)
-      
+
       w_hat <- as.numeric(w_hat)
       w_hat[!is.finite(w_hat)] <- 0
       w_hat <- pmax(0, w_hat)
@@ -101,7 +111,7 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
         out <- list(
           weights = w_hat,
           status = solver_status,
-          solver = s
+          solver = paste("CVXR:", s, sep = "")
         )
         break
       }
@@ -129,7 +139,7 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
     out <- list(
       weights = w_hat,
-      status = "loo:optimal",
+      status = "optimal",
       solver = "loo"
     )
   }

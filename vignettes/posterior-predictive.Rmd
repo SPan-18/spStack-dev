@@ -30,6 +30,7 @@ This function can be used to obtain posterior predictive inference at unobserved
 ```{r}
 library(spStack)
 library(ggplot2)
+library(patchwork)
 set.seed(1729)
 ```
 
@@ -93,7 +94,7 @@ plot_y_summ <- ggplot(data = y_combn, aes(x = y)) +
   xlab("True y") + ylab("Posterior of y") + theme_bw() +
   theme(panel.grid = element_blank(), aspect.ratio = 1)
 
-ggpubr::ggarrange(plot_z_summ, plot_y_summ)
+plot_z_summ + plot_y_summ
 ```
 
 
@@ -157,7 +158,7 @@ plot_y_summ <- ggplot(data = y_combn, aes(x = y)) +
   xlab("True y") + ylab("Posterior predictive of y") + theme_bw() +
   theme(panel.grid = element_blank(), aspect.ratio = 1)
 
-ggpubr::ggarrange(plot_z_summ, plot_y_summ)
+plot_z_summ + plot_y_summ
 ```
 
 
@@ -222,7 +223,6 @@ z1_combn <- data.frame(z = dat_pred$z1_true, zL = post_z1_summ[, 1],
 z2_combn <- data.frame(z = dat_pred$z2_true, zL = post_z2_summ[, 1],
                        zM = post_z2_summ[, 2], zU = post_z2_summ[, 3])
 
-library(ggplot2)
 plot_z1_summ <- ggplot(data = z1_combn, aes(x = z)) +
   geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
   geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
@@ -237,6 +237,6 @@ plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
   xlab("True z2") + ylab("Posterior predictive of z2") + theme_bw() +
   theme(panel.grid = element_blank(), aspect.ratio = 1)
 
-ggpubr::ggarrange(plot_z1_summ, plot_z2_summ)
+plot_z1_summ + plot_z2_summ
 ```
 
