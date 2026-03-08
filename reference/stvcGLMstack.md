@@ -209,13 +209,13 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.051s
+#> ℹ Compile time: 0.05s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -246.726
-#> ℹ Compile time: 0.051s
-#> ℹ Solver time: 0.008s
+#> ℹ Compile time: 0.05s
+#> ℹ Solver time: 0.007s
 #> 
 #> STACKING WEIGHTS:
 #> 

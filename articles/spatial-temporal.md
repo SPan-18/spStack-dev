@@ -317,7 +317,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.737s
+    ## ℹ Compile time: 0.72s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -327,9 +327,9 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## ✔ Optimal value: -264.899
 
-    ## ℹ Compile time: 0.737s
+    ## ℹ Compile time: 0.72s
 
-    ## ℹ Solver time: 0.046s
+    ## ℹ Solver time: 0.048s
 
     ## 
     ## STACKING WEIGHTS:

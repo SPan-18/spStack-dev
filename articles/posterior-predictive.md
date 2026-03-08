@@ -71,7 +71,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.793s
+    ## ℹ Compile time: 0.75s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -81,7 +81,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ✔ Optimal value: -85.5234
 
-    ## ℹ Compile time: 0.793s
+    ## ℹ Compile time: 0.75s
 
     ## ℹ Solver time: 0.029s
 
@@ -212,7 +212,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ℹ Compile time: 0.235s
 
-    ## ℹ Solver time: 0.043s
+    ## ℹ Solver time: 0.044s
 
     ## 
     ## STACKING WEIGHTS:

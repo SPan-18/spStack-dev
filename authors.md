@@ -10,7 +10,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/SPan-18/spStack-dev/blob/master/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/SPan-18/spStack-dev/blob/v1.1.3/DESCRIPTION)
 
 Pan S, Banerjee S (2026). *spStack: Bayesian Geostatistics Using
 Predictive Stacking*. R package version 1.1.3,

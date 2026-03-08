@@ -205,13 +205,13 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.956s
+#> ℹ Compile time: 0.923s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -113.076
-#> ℹ Compile time: 0.956s
-#> ℹ Solver time: 0.032s
+#> ℹ Compile time: 0.923s
+#> ℹ Solver time: 0.031s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -248,7 +248,7 @@ print(mod3$solver.status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.307   2.245   2.662
+#>   4.273   2.207   2.624
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -522,13 +522,13 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.206s
+#> ℹ Compile time: 0.191s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -311.489
-#> ℹ Compile time: 0.206s
-#> ℹ Solver time: 0.044s
+#> ℹ Compile time: 0.191s
+#> ℹ Solver time: 0.045s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -559,7 +559,7 @@ print(mod2$solver.status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  35.344  25.479  15.543
+#>  35.112  25.120  15.414
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
