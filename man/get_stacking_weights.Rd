@@ -18,7 +18,7 @@ Default is \code{"CLARABEL"}. Internally calls
 \item{verbose}{if \code{TRUE}, prints output of optimization routine.}
 }
 \value{
-A list of length 2.
+A list with elements:
 \describe{
 \item{\code{weights}}{optimal stacking weights as a numeric vector of
 length \eqn{M}{M}}

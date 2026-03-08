@@ -75,8 +75,8 @@ View the vignette by running `vignette("spStack")` and see example code to
 implement predictive stacking for different Bayesian hierarchical spatial models.
 
 ## Acknowledgement
-The graphics used in the logo has been obtained from the page
+The graphics used in the logo has been obtained from
 [Gaussian RF](https://www.math.umd.edu/~bnk/CLIP/clip.gauss.htm) (Boris
-Kozintsev, 1999). It represents a realization of an isotropic Gaussian random
-field under the Matérn correlation function with decay and smoothness parameters
-5 and 2, respectively.
+Kozintsev, 1999). It shows a realization of an isotropic Gaussian random field
+under the Matérn correlation function with decay and smoothness parameters 5 and
+2, respectively.
