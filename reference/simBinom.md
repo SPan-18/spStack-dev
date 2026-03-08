@@ -1,0 +1,94 @@
+# Synthetic point-referenced binomial count data
+
+Dataset of size 500, with a binomial response variable indexed by
+spatial coordinates sampled uniformly from the unit square. The model
+includes one covariate and spatial random effects induced by a Matérn
+covariogram. The number of trials at each location is sampled from a
+Poisson distribution with mean 20.
+
+## Usage
+
+``` r
+data(simBinom)
+```
+
+## Format
+
+a `data.frame` object.
+
+- `s1, s2`:
+
+  2-D coordinates; latitude and longitude.
+
+- `x1`:
+
+  a covariate sampled from the standard normal distribution.
+
+- `y`:
+
+  response vector.
+
+- `n_trials`:
+
+  Number of trials at that location.
+
+- `z_true`:
+
+  true spatial random effects that generated the data.
+
+## Details
+
+With \\n = 500\\, the count data is simulated using \$\$ \begin{aligned}
+y(s_i) &\sim \mathrm{Binomial}(m(s_i), \pi(s_i)), i = 1, \ldots, n,\\
+\pi(s_i) &= \mathrm{ilogit}(x(s_i)^\top \beta + z(s_i)) \end{aligned}
+\$\$ where the function \\\mathrm{ilogit}\\ refers to the inverse-logit
+function, the number of trials \\m(s_i)\\ is sampled from a Poisson
+distribution with mean 20, the spatial effects \\z \sim N(0, \sigma^2
+R)\\ with \\R\\ being a \\n \times n\\ correlation matrix given by the
+Matérn covariogram \$\$ R(s, s') = \frac{(\phi
+\|s-s'\|)^\nu}{\Gamma(\nu) 2^{\nu - 1}} K\_\nu(\phi \|s-s'\|), \$\$
+where \\\phi\\ is the spatial decay parameter and \\\nu\\ the spatial
+smoothness parameter. We have sampled the data with \\\beta = (0.5,
+-0.5)\\, \\\phi = 3\\, \\\nu = 0.5\\, and \\\sigma^2 = 0.4\\. This data
+can be generated with the code as given in the example below.
+
+## See also
+
+[simGaussian](https://span-18.github.io/spStack-dev/reference/simGaussian.md),
+[simPoisson](https://span-18.github.io/spStack-dev/reference/simPoisson.md),
+[simBinary](https://span-18.github.io/spStack-dev/reference/simBinary.md)
+
+## Author
+
+Soumyakanti Pan <span18@ucla.edu>,  
+Sudipto Banerjee <sudipto@ucla.edu>
+
+## Examples
+
+``` r
+set.seed(1729)
+n <- 500
+beta <- c(0.5, -0.5)
+phi0 <- 3
+nu0 <- 0.5
+spParams <- c(phi0, nu0)
+spvar <- 0.4
+sim1 <- sim_spData(n = n, beta = beta, cor.fn = "matern",
+                   spParams = spParams, spvar = spvar, deltasq = deltasq,
+                   n_binom = rpois(n, 20),
+                   family = "binomial")
+plot1 <- surfaceplot(sim1, coords_name = c("s1", "s2"), var_name = "z_true")
+
+library(ggplot2)
+plot2 <- ggplot(sim1, aes(x = s1, y = s2)) +
+  geom_point(aes(color = y), alpha = 0.75) +
+  scale_color_distiller(palette = "RdYlGn", direction = -1,
+                        label = function(x) sprintf("%.0f", x)) +
+  guides(alpha = 'none') +
+  theme_bw() +
+  theme(axis.ticks = element_line(linewidth = 0.25),
+        panel.background = element_blank(),
+        panel.grid = element_blank(),
+        legend.title = element_text(size = 10, hjust = 0.25),
+        legend.box.just = "center", aspect.ratio = 1)
+```

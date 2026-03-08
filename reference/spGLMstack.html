@@ -15,7 +15,7 @@ for more details."><meta property="og:image" content="https://span-18.github.io/
 
     <a class="navbar-brand me-2" href="../index.html">spStack</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.2</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -44,7 +44,7 @@ for more details."><meta property="og:image" content="https://span-18.github.io/
 <div class="row">
   <main id="main" class="col-md-9"><div class="page-header">
       <img src="../logo.png" class="logo" alt=""><h1>Bayesian spatial generalized linear model using predictive stacking</h1>
-      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/v1.1.2/R/spGLMstack.R" class="external-link"><code>R/spGLMstack.R</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/master/R/spGLMstack.R" class="external-link"><code>R/spGLMstack.R</code></a></small>
       <div class="d-none name"><code>spGLMstack.Rd</code></div>
     </div>
 
@@ -69,7 +69,7 @@ for more details.</p>
 <span>  <span class="va">n.samples</span>,</span>
 <span>  <span class="va">loopd.controls</span>,</span>
 <span>  parallel <span class="op">=</span> <span class="cn">FALSE</span>,</span>
-<span>  solver <span class="op">=</span> <span class="st">"ECOS"</span>,</span>
+<span>  solver <span class="op">=</span> <span class="cn">NULL</span>,</span>
 <span>  verbose <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>  <span class="va">...</span></span>
 <span><span class="op">)</span></span></code></pre></div>
@@ -145,9 +145,9 @@ may choose their own plan. More details are available at
 
 <dt id="arg-solver">solver<a class="anchor" aria-label="anchor" href="#arg-solver"></a></dt>
 <dd><p>(optional) Specifies the name of the solver that will be used
-to obtain optimal stacking weights for each candidate model. Default is
-<code>'ECOS'</code>. Users can use other solvers supported by the
-<a href="https://www.cvxgrp.org/CVXR/reference/CVXR-package.html" class="external-link">CVXR-package</a> package.</p></dd>
+to obtain optimal stacking weights for each candidate model. Default order
+is <code>c("CLARABEL", "ECOS", "SCS")</code>. Users can use other solvers
+supported by the <a href="https://www.cvxgrp.org/CVXR/reference/CVXR-package.html" class="external-link">CVXR-package</a> package.</p></dd>
 
 
 <dt id="arg-verbose">verbose<a class="anchor" aria-label="anchor" href="#arg-verbose"></a></dt>
@@ -227,7 +227,7 @@ to find the optimal stacking weights \(\hat{w}_1, \ldots, \hat{w}_G\).</p>
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>
     <p>Pan S, Zhang L, Bradley JR, Banerjee S (2025). "Bayesian
 Inference for Spatial-temporal Non-Gaussian Data Using Predictive Stacking."
-<a href="https://doi.org/10.48550/arXiv.2406.04655" class="external-link">doi:10.48550/arXiv.2406.04655</a>
+<em>Bayesian Analysis</em>, <strong>In Press</strong>. <a href="https://doi.org/10.1214/25-BA1582" class="external-link">doi:10.1214/25-BA1582</a>
 .</p>
 <p>Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto
 Smoothed Importance Sampling." <em>Journal of Machine Learning Research</em>,
@@ -255,7 +255,23 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-in"><span>                                     boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.6</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                  n.samples <span class="op">=</span> <span class="fl">1000</span>,</span></span>
 <span class="r-in"><span>                  loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                  parallel <span class="op">=</span> <span class="cn">TRUE</span>, solver <span class="op">=</span> <span class="st">"ECOS"</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>                  parallel <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --------------------------------------------------</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Solver diagnostics:</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Installed solvers: CLARABEL, SCS, OSQP, HIGHS</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> Solver search order: CLARABEL -&gt; SCS</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> --------------------------------------------------</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.038s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ─────────────────────────────── Numerical solver ───────────────────────────────</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> ──────────────────────────────────── Summary ───────────────────────────────────</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Status: optimal</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Optimal value: -157.72</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.038s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.006s</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> STACKING WEIGHTS:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -289,8 +305,8 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">beta</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   2.5%        50%      97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept) -0.3453064  2.0902024  4.7383619</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.7002986 -0.5688996 -0.4339641</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.1876210  2.1365567  4.8390871</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.6906675 -0.5686308 -0.4223164</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">post_z</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">z</span></span></span>
 <span class="r-in"><span><span class="va">post_z_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_z</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
@@ -325,7 +341,7 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.1.3.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
 </div>
 
     </footer></div>
