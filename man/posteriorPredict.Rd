@@ -54,11 +54,13 @@ dat_train <- dat[1:n_train, ]
 dat_pred <- dat[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
+cand.mod <- candidateModels(list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
+                                 noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
-                                     noise_sp_ratio = c(0.5, 1, 2)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
 

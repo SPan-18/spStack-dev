@@ -11,7 +11,7 @@ spGLMstack(
   coords,
   cor.fn,
   priors,
-  params.list,
+  candidate.models,
   n.samples,
   loopd.controls,
   parallel = FALSE,
@@ -45,8 +45,8 @@ See below for details.}
 name and containing prior details. Valid tags include \code{V.beta}, \code{nu.beta},
 \code{nu.z} and \code{sigmaSq.xi}.}
 
-\item{params.list}{a list containing candidate values of spatial process
-parameters for the \code{cor.fn} used, and, the boundary parameter.}
+\item{candidate.models}{an object of class \code{candidateModels} containing a
+list of candidate models for stacking. See \code{\link[=candidateModels]{candidateModels()}} for details.}
 
 \item{n.samples}{number of posterior samples to be generated.}
 
@@ -133,13 +133,15 @@ to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 set.seed(1234)
 data("simPoisson")
 dat <- simPoisson[1:100,]
+cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
+                                 boundary = c(0.5, 0.6)), "cartesian")
+
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                  params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
-                                     boundary = c(0.5, 0.6)),
-                  n.samples = 1000,
-                  loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                  parallel = TRUE, verbose = TRUE)
+                   candidate.models = cand.mod,
+                   n.samples = 1000,
+                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
+                   parallel = TRUE, verbose = TRUE)
 
 # print(mod1$solver.status)
 # print(mod1$run.time)

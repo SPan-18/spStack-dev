@@ -10,7 +10,7 @@ spLMstack(
   coords,
   cor.fn,
   priors,
-  params.list,
+  candidate.models,
   n.samples,
   loopd.method,
   parallel = FALSE,
@@ -39,8 +39,8 @@ See below for details.}
 \item{priors}{a list with each tag corresponding to a parameter name and
 containing prior details. If not supplied, uses defaults.}
 
-\item{params.list}{a list containing candidate values of spatial process
-parameters for the \code{cor.fn} used, and, noise-to-spatial variance ratio.}
+\item{candidate.models}{an object of class \code{candidateModels} containing a
+list of candidate models for stacking. See \code{\link[=candidateModels]{candidateModels()}} for details.}
 
 \item{n.samples}{number of posterior samples to be generated.}
 
@@ -129,13 +129,16 @@ sigmaSqIGb <- 2
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
+cand.mod <- candidateModels(list(phi = c(1.5, 3),
+                                 nu = c(0.5, 1),
+                                 noise_sp_ratio = c(1)),
+                            "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  params.list = list(phi = c(1.5, 3),
-                                     nu = c(0.5, 1),
-                                     noise_sp_ratio = c(1)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 

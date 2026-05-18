@@ -218,17 +218,6 @@ ilogit <- function(x){
   return(1.0 / (1.0 + exp(- x)))
 }
 
-# internal function: input a list of candidate values of all model parameters
-# expands list of vectors, called inside spLMstack and similar functions
-candidate_models <- function(params_list){
-
-    models <- expand.grid(params_list)
-    models_list <- apply(models, 1, function(x) as.vector(x, mode = "list"))
-
-    return(models_list)
-
-}
-
 #' Create a collection of candidate models for stacking
 #'
 #' @description Creates an object of class \code{'candidateModels'} that

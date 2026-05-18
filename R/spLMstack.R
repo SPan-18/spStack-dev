@@ -18,8 +18,8 @@
 #'  See below for details.
 #' @param priors a list with each tag corresponding to a parameter name and
 #'  containing prior details. If not supplied, uses defaults.
-#' @param params.list a list containing candidate values of spatial process
-#'  parameters for the `cor.fn` used, and, noise-to-spatial variance ratio.
+#' @param candidate.models an object of class `candidateModels` containing a
+#'  list of candidate models for stacking. See [candidateModels()] for details.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd.method character. Valid inputs are `'exact'` and `'PSIS'`. The
 #'  option `'exact'` corresponds to exact leave-one-out predictive densities.
@@ -104,13 +104,16 @@
 #' prior_list <- list(beta.norm = list(muBeta, VBeta),
 #'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 #'
+#' cand.mod <- candidateModels(list(phi = c(1.5, 3),
+#'                                  nu = c(0.5, 1),
+#'                                  noise_sp_ratio = c(1)),
+#'                             "cartesian")
+#'
 #' mod1 <- spLMstack(y ~ x1, data = dat,
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   priors = prior_list,
-#'                   params.list = list(phi = c(1.5, 3),
-#'                                      nu = c(0.5, 1),
-#'                                      noise_sp_ratio = c(1)),
+#'                   candidate.models = cand.mod,
 #'                   n.samples = 1000, loopd.method = "exact",
 #'                   parallel = FALSE, verbose = TRUE)
 #'
@@ -141,7 +144,7 @@
 #'         aspect.ratio = 1)
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
-                      priors, params.list, n.samples, loopd.method,
+                      priors, candidate.models, n.samples, loopd.method,
                       parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
@@ -244,46 +247,43 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   ## storage mode
   storage.mode(sigma.sq.IG) <- "double"
 
-  #### set-up params.list for stacking parameters ####
+  #### set-up candidate.models for stacking parameters ####
 
-  if(missing(params.list)){
-
-    stop("error: params.list must be supplied.")
-
+  if(missing(candidate.models)){
+    stop("error: candidate.models must be supplied.")
   }else{
-
-    names(params.list) <- tolower(names(params.list))
-
-    if(!"phi" %in% names(params.list)){
-      stop("error: candidate values of phi must be specified in params_list.")
+    if(!inherits(candidate.models, "candidateModels")){
+      stop("error: candidate.models must be an object of class 'candidateModels'.")
     }
-
-    if(cor.fn == 'matern'){
-      if(!"nu" %in% names(params.list)){
-        message("Candidate values of nu not specified. Using defaults
-                c(0.5, 1, 1.5).")
-        params.list[["nu"]] <- c(0.5, 1.0, 1.5)
+    if(cor.fn == "matern"){
+      check_validity <- all(vapply(candidate.models, function(x){
+        length(x) == 3 &&
+        identical(sort(names(x)), c("noise_sp_ratio", "nu", "phi")) &&
+        all(vapply(x, function(v) is.numeric(v) && length(v) == 1, logical(1)))
+      }, logical(1)))
+      if(!check_validity){
+        stop("error: each element of candidate.models must be a named list with
+             scalar numeric entries 'phi', 'nu' and 'noise_sp_ratio'.")
       }
     }else{
-      if("nu" %in% names(params.list)){
-        message("cor.fn = 'exponential'. Ignoring candidate values of nu.")
+      check_validity <- all(vapply(candidate.models, function(x){
+        length(x) == 2 &&
+        identical(sort(names(x)), c("noise_sp_ratio", "phi")) &&
+        all(vapply(x, function(v) is.numeric(v) && length(v) == 1, logical(1)))
+      }, logical(1)))
+      if(!check_validity){
+        stop("error: each element of candidate.models must be a named list with
+             scalar numeric entries 'phi' and 'noise_sp_ratio'.")
       }
-      params.list[["nu"]] <- c(0.0)
+      candidate.models <- lapply(candidate.models, function(x){
+        x[["nu"]] <- 0.0
+        x
+      })
+      class(candidate.models) <- "candidateModels"
     }
-
-    if(!"noise_sp_ratio" %in% names(params.list)){
-      message("Candidate values of noise_sp_ratio not specified. Using
-              defaults c(0.25, 1, 2).")
-      params.list[["noise_sp_ratio"]] <- c(0.25, 1.0, 2.0)
-    }
-
-    params.list <- params.list[c("phi", "nu", "noise_sp_ratio")]
-
   }
 
-  # setup parameters for candidate models based on cartesian product of
-  # candidate values of each parameter
-  list_candidate <- candidate_models(params.list)
+  list_candidate <- candidate.models
 
   #### Leave-one-out setup ####
   loopd <- TRUE

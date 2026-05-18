@@ -23,8 +23,8 @@
 #' @param priors (optional) a list with each tag corresponding to a parameter
 #' name and containing prior details. Valid tags include `V.beta`, `nu.beta`,
 #' `nu.z` and `sigmaSq.xi`.
-#' @param params.list a list containing candidate values of spatial process
-#' parameters for the `cor.fn` used, and, the boundary parameter.
+#' @param candidate.models an object of class `candidateModels` containing a
+#' list of candidate models for stacking. See [candidateModels()] for details.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd.controls a list with details on how leave-one-out predictive
 #' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`
@@ -106,13 +106,15 @@
 #' set.seed(1234)
 #' data("simPoisson")
 #' dat <- simPoisson[1:100,]
+#' cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
+#'                                  boundary = c(0.5, 0.6)), "cartesian")
+#'
 #' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-#'                   params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
-#'                                      boundary = c(0.5, 0.6)),
-#'                   n.samples = 1000,
-#'                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-#'                   parallel = TRUE, verbose = TRUE)
+#'                    candidate.models = cand.mod,
+#'                    n.samples = 1000,
+#'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
+#'                    parallel = TRUE, verbose = TRUE)
 #'
 #' # print(mod1$solver.status)
 #' # print(mod1$run.time)
@@ -146,7 +148,7 @@
 #' @export
 spGLMstack <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
-                       params.list, n.samples, loopd.controls,
+                       candidate.models, n.samples, loopd.controls,
                        parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
@@ -317,46 +319,43 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   storage.mode(nu.z) <- "double"
   storage.mode(sigmaSq.xi) <- "double"
 
-  #### set-up params.list for stacking parameters ####
+  #### set-up candidate.models for stacking parameters ####
 
-  if(missing(params.list)){
-
-    stop("error: params.list must be supplied.")
-
+  if(missing(candidate.models)){
+    stop("error: candidate.models must be supplied.")
   }else{
-
-    names(params.list) <- tolower(names(params.list))
-
-    if(!"phi" %in% names(params.list)){
-      stop("error: candidate values of phi must be specified in params_list.")
+    if(!inherits(candidate.models, "candidateModels")){
+      stop("error: candidate.models must be an object of class 'candidateModels'.")
     }
-
-    if(cor.fn == 'matern'){
-      if(!"nu" %in% names(params.list)){
-        message("Candidate values of nu not specified. Using defaults
-                c(0.5, 1, 1.5).")
-        params.list[["nu"]] <- c(0.5, 1.0, 1.5)
+    if(cor.fn == "matern"){
+      check_validity <- all(vapply(candidate.models, function(x){
+        length(x) == 3 &&
+        identical(sort(names(x)), c("boundary", "nu", "phi")) &&
+        all(vapply(x, function(v) is.numeric(v) && length(v) == 1, logical(1)))
+      }, logical(1)))
+      if(!check_validity){
+        stop("error: each element of candidate.models must be a named list with
+             scalar numeric entries 'phi', 'nu' and 'boundary'.")
       }
     }else{
-      if("nu" %in% names(params.list)){
-        message("cor.fn = 'exponential'. Ignoring candidate values of nu.")
+      check_validity <- all(vapply(candidate.models, function(x){
+        length(x) == 2 &&
+        identical(sort(names(x)), c("boundary", "phi")) &&
+        all(vapply(x, function(v) is.numeric(v) && length(v) == 1, logical(1)))
+      }, logical(1)))
+      if(!check_validity){
+        stop("error: each element of candidate.models must be a named list with
+             scalar numeric entries 'phi' and 'boundary'.")
       }
-      params.list[["nu"]] <- c(0.0)
+      candidate.models <- lapply(candidate.models, function(x){
+        x[["nu"]] <- 0.0
+        x
+      })
+      class(candidate.models) <- "candidateModels"
     }
-
-    if(!"boundary" %in% names(params.list)){
-      message("Candidate values of boundary not specified. Using
-              defaults c(0.5, 0.75).")
-      params.list[["boundary"]] <- c(0.5, 0.75)
-    }
-
-    params.list <- params.list[c("phi", "nu", "boundary")]
-
   }
 
-  # setup parameters for candidate models based on cartesian product of
-  # candidate values of each parameter
-  list_candidate <- candidate_models(params.list)
+  list_candidate <- candidate.models
 
   #### Leave-one-out setup ####
   loopd <- TRUE

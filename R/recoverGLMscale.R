@@ -19,10 +19,12 @@
 #' set.seed(1234)
 #' data("simPoisson")
 #' dat <- simPoisson[1:100, ]
+#' cand.mod <- candidateModels(list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
+#'                                  boundary = c(0.5)), "cartesian")
+#'
 #' mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-#'                    params.list = list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
-#'                                       boundary = c(0.5)),
+#'                    candidate.models = cand.mod,
 #'                    n.samples = 100,
 #'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
 #'                    verbose = TRUE)

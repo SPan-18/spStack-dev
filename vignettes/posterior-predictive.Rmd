@@ -38,7 +38,7 @@ The `joint` argument in `posteriorPredict()` indicates if the predictions at the
 
 ## Prediction in spatial linear model
 
-Define the collection of candidate parameters and fit the model using `spLMstack()`.
+Define the collection of candidate models and fit using `spLMstack()`.
 
 ```{r}
 # training and test data sizes
@@ -49,12 +49,15 @@ data("simGaussian")
 dat_train <- simGaussian[1:n_train, ]
 dat_pred <- simGaussian[n_train + 1:n_pred, ]
 
+cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
+                                 nu = c(0.75, 1.25),
+                                 noise_sp_ratio = c(0.5, 1, 2)),
+                            "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3, 5),
-                                     nu = c(0.75, 1.25),
-                                     noise_sp_ratio = c(0.5, 1, 2)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
 ```
@@ -112,10 +115,12 @@ data("simPoisson")
 dat_train <- simPoisson[1:n_train, ]
 dat_pred <- simPoisson[n_train + 1:n_pred, ]
 
+cand.mod <- candidateModels(list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
+                                 boundary = c(0.5)), "cartesian")
+
 mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
-                   params.list = list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
-                                      boundary = c(0.5)),
+                   candidate.models = cand.mod,
                    priors = list(nu.beta = 5, nu.z = 5),
                    n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
