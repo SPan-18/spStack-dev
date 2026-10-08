@@ -18,10 +18,6 @@ void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
                  double *tmp_pp, double *tmp_np1,
                  double *outp, double *outn, int LOO);
 
-void inversionLM2(double *X, int n, int p, double deltasq, double *VbetaInv,
-                  double *Vz, double *cholVy, double *v1, double *v2,
-                  double *out_p, double *out_n);
-
 int mapIndex(int i, int j, int nRowB, int nColB, int startRowB, int startColB, int nRowA);
 
 void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_beta, double *v_z,

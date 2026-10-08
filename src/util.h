@@ -75,8 +75,6 @@ void printVec(double *m, int n);
 
 void printVec(int *m, int n);
 
-void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C);
-
 void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C);
 
 void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &corfn, double *C);

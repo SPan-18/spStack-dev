@@ -66,6 +66,7 @@ Useful links:
 
 Authors:
 \itemize{
+  \item Soumyakanti Pan \email{span18@ucla.edu} (\href{https://orcid.org/0009-0005-9889-7112}{ORCID})
   \item Sudipto Banerjee \email{sudipto@ucla.edu}
 }
 

@@ -2,6 +2,7 @@
 #include <Rinternals.h>
 #include <stdlib.h> // for NULL
 #include <R_ext/Rdynload.h>
+#include <R_ext/Visibility.h>
 #include "spStack.h"
 
 static const R_CallMethodDef CallEntries[] = {
@@ -17,18 +18,15 @@ static const R_CallMethodDef CallEntries[] = {
   {"spGLMexact",              (DL_FUNC) &spGLMexact,              17},
   {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           21},
   {"spLMexact",               (DL_FUNC) &spLMexact,               14},
-  {"spLMexact2",              (DL_FUNC) &spLMexact2,              14},
   {"spLMexactLOO",            (DL_FUNC) &spLMexactLOO,            16},
   {"stvcGLMexact",            (DL_FUNC) &stvcGLMexact,            22},
-  {"stvcGLMexactLOO",         (DL_FUNC) &stvcGLMexactLOO,         26}
+  {"stvcGLMexactLOO",         (DL_FUNC) &stvcGLMexactLOO,         26},
+  {NULL, NULL, 0}
 };
 
-void
-#ifdef HAVE_VISIBILITY_ATTRIBUTE
-__attribute__ ((visibility ("default")))
-#endif
-  R_init_sp(DllInfo *dll)
-  {
-    R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
-    R_useDynamicSymbols(dll, FALSE);
-  }
+// Entry point called by R when the shared library is loaded
+extern "C" void attribute_visible R_init_spStack(DllInfo *dll){
+  R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
+  R_useDynamicSymbols(dll, FALSE);
+  R_forceSymbols(dll, TRUE);
+}

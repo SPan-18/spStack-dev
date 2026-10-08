@@ -39,10 +39,10 @@ Suggests:
     tidyr
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.3.3
 Depends:
     R (>= 4.4)
 VignetteBuilder: knitr
 URL: https://span-18.github.io/spStack-dev/
 BugReports: https://github.com/SPan-18/spStack-dev/issues
 Language: en-US
+Config/roxygen2/version: 8.1.0

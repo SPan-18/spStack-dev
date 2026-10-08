@@ -346,7 +346,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     }
 
     samps <- future_lapply(1:length(list_candidate), function(x){
-                    .Call("spLMexactLOO", y, X, p, n, coords.D,
+                    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
                           beta.prior, beta.Norm, sigma.sq.IG,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),
@@ -365,7 +365,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     }
 
     samps <- lapply(1:length(list_candidate), function(x){
-                    .Call("spLMexactLOO", y, X, p, n, coords.D,
+                    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
                           beta.prior, beta.Norm, sigma.sq.IG,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),

@@ -657,35 +657,6 @@ void printVec(int *m, int n){
   Rprintf("\n");
 }
 
-// Create lower-triangular spatial correlation matrix
-void spCorLT(double *D, int n, double *theta, std::string &corfn, double *C){
-  int i,j;
-
-  if(corfn == "exponential"){
-
-    for(i = 0; i < n; i++){
-      for(j = i; j < n; j++){
-        C[i*n + j] = theta[0] * exp(-1.0 * theta[1] * D[i*n + j]);
-      }
-    }
-
-  }else if(corfn == "matern"){
-
-    for(i = 0; i < n; i++){
-      for(j = i; j < n; j++){
-        if(D[i*n + j] * theta[0] > 0.0){
-          C[i*n + j] = pow(D[i*n + j] * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(D[i*n + j] * theta[0], theta[1], 1.0);
-        }else{
-          C[i*n + j] = 1.0;
-        }
-      }
-    }
-
-  }else{
-    perror("c++ error: corfn is not correctly specified");
-  }
-}
-
 // Create full spatial correlation matrix
 void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
   int i,j;
@@ -694,7 +665,7 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
 
     for(i = 0; i < n; i++){
       for(j = i; j < n; j++){
-        C[i*n + j] = theta[0] * exp(-1.0 * theta[0] * D[i*n + j]);
+        C[i*n + j] = exp(-1.0 * theta[0] * D[i*n + j]);
         C[j*n + i] = C[i*n + j];
       }
     }
@@ -734,7 +705,7 @@ void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &cor
 
       // evaluate correlation kernel
       if(corfn == "exponential"){
-        C[i * n + j] = theta[0] * exp(-1.0 * theta[0] * sp_dist);
+        C[i * n + j] = exp(-1.0 * theta[0] * sp_dist);
         C[j * n + i] = C[i * n + j];
       }else if(corfn == "matern"){
         if(sp_dist * theta[0] > 0.0){
@@ -800,7 +771,7 @@ void spCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_sp_
 
       // evaluate correlation kernel
       if(corfn == "exponential"){
-        C[j * n + i] = theta[0] * exp(-1.0 * theta[0] * sp_dist);
+        C[j * n + i] = exp(-1.0 * theta[0] * sp_dist);
       }else if(corfn == "matern"){
         if(sp_dist * theta[0] > 0.0){
           C[j * n + i] = pow(sp_dist * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(sp_dist * theta[0], theta[1], 1.0);

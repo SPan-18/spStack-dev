@@ -452,11 +452,11 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
-    samps <- .Call("spGLMexactLOO", y, X, p, n, family, n.binom, coords.D,
+    samps <- .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom, coords.D,
                    cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
                    n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
   }else{
-    samps <- .Call("spGLMexact", y, X, p, n, family, n.binom, coords.D, cor.fn,
+    samps <- .Call(C_spGLMexact, y, X, p, n, family, n.binom, coords.D, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
                    n.samples, verbose)
   }

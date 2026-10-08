@@ -14,7 +14,7 @@
 #' @return a `ggplot` object containing the surface plot
 #' @importFrom MBA mba.surf
 #' @importFrom ggplot2 ggplot aes_string geom_raster scale_fill_distiller
-#' geom_point scale_fill_gradientn
+#'   geom_point scale_fill_gradientn
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
@@ -91,7 +91,7 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' @return a list containing two `ggplot` objects
 #' @importFrom MBA mba.surf
 #' @importFrom ggplot2 ggplot aes_string geom_raster scale_fill_distiller
-#' geom_point scale_fill_gradientn
+#'   geom_point scale_fill_gradientn
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples

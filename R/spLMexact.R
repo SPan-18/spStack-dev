@@ -312,11 +312,11 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   ptm <- proc.time()
 
   if(loopd){
-    samps <- .Call("spLMexactLOO", y, X, p, n, coords.D, beta.prior, beta.Norm,
+    samps <- .Call(C_spLMexactLOO, y, X, p, n, coords.D, beta.prior, beta.Norm,
                    sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, loopd,
                    loopd.method, verbose)
   }else{
-    samps <- .Call("spLMexact", y, X, p, n, coords.D, beta.prior, beta.Norm,
+    samps <- .Call(C_spLMexact, y, X, p, n, coords.D, beta.prior, beta.Norm,
                    sigma.sq.IG, phi, nu, deltasq, cor.fn, n.samples, verbose)
   }
 

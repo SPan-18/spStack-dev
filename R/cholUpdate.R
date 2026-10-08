@@ -85,7 +85,7 @@ cholUpdateRankOne <- function(A, v, alpha, beta, lower = TRUE){
   storage.mode(beta) <- "double"
   storage.mode(lower) <- "integer"
 
-  .Call("R_cholRankOneUpdate", A, n, v, alpha, beta, lower)
+  .Call(C_R_cholRankOneUpdate, A, n, v, alpha, beta, lower)
 
 }
 
@@ -107,7 +107,7 @@ cholUpdateDel <- function(A, del.index, lower = TRUE){
   storage.mode(del.index) <- "integer"
   storage.mode(lower) <- "integer"
 
-  .Call("R_cholRowDelUpdate", A, n, del.index, lower)
+  .Call(C_R_cholRowDelUpdate, A, n, del.index, lower)
 
 }
 
@@ -129,6 +129,6 @@ cholUpdateDelBlock <- function(A, del.start, del.end, lower = TRUE){
   storage.mode(del.end) <- "integer"
   storage.mode(lower) <- "integer"
 
-  .Call("R_cholRowBlockDelUpdate", A, n, del.start, del.end, lower)
+  .Call(C_R_cholRowBlockDelUpdate, A, n, del.start, del.end, lower)
 
 }

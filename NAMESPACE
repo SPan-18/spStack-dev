@@ -20,34 +20,40 @@ export(surfaceplot)
 export(surfaceplot2)
 import(CVXR)
 importFrom(MBA,mba.surf)
-importFrom(future,nbrOfWorkers)
-importFrom(future,plan)
+importFrom(future,
+  nbrOfWorkers,
+  plan
+)
 importFrom(future.apply,future_lapply)
-importFrom(ggplot2,aes_string)
-importFrom(ggplot2,element_blank)
-importFrom(ggplot2,element_line)
-importFrom(ggplot2,element_text)
-importFrom(ggplot2,geom_point)
-importFrom(ggplot2,geom_raster)
-importFrom(ggplot2,ggplot)
-importFrom(ggplot2,scale_fill_distiller)
-importFrom(ggplot2,scale_fill_gradientn)
-importFrom(ggplot2,theme)
-importFrom(ggplot2,theme_bw)
+importFrom(ggplot2,
+  aes_string,
+  element_blank,
+  element_line,
+  element_text,
+  geom_point,
+  geom_raster,
+  ggplot,
+  scale_fill_distiller,
+  scale_fill_gradientn,
+  theme,
+  theme_bw
+)
 importFrom(loo,stacking_weights)
 importFrom(parallel,detectCores)
 importFrom(rstudioapi,isAvailable)
-importFrom(stats,as.formula)
-importFrom(stats,dist)
-importFrom(stats,is.empty.model)
-importFrom(stats,model.frame)
-importFrom(stats,model.matrix)
-importFrom(stats,model.response)
-importFrom(stats,na.omit)
-importFrom(stats,rbinom)
-importFrom(stats,rnorm)
-importFrom(stats,rpois)
-importFrom(stats,runif)
-importFrom(stats,terms)
+importFrom(stats,
+  as.formula,
+  dist,
+  is.empty.model,
+  model.frame,
+  model.matrix,
+  model.response,
+  na.omit,
+  rbinom,
+  rnorm,
+  rpois,
+  runif,
+  terms
+)
 importFrom(utils,getFromNamespace)
-useDynLib(spStack, .registration = TRUE)
+useDynLib(spStack, .registration = TRUE, .fixes = "C_")

@@ -470,7 +470,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     }
 
     samps <- future_lapply(1:length(list_candidate), function(x){
-                    .Call("spGLMexactLOO", y, X, p, n, family, n.binom,
+                    .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom,
                           coords.D, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),
@@ -489,7 +489,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     }
 
     samps <- lapply(1:length(list_candidate), function(x){
-                    .Call("spGLMexactLOO", y, X, p, n, family, n.binom,
+                    .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom,
                           coords.D, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
                           as.numeric(list_candidate[[x]]["phi"]),
                           as.numeric(list_candidate[[x]]["nu"]),

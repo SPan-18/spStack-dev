@@ -515,13 +515,13 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
-    samps <- .Call("stvcGLMexactLOO", y, X, X_tilde, n, p, r, family, n.binom,
+    samps <- .Call(C_stvcGLMexactLOO, y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale,
                    process.type, phi_s, phi_t, epsilon,
                    n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
   }else{
-    samps <- .Call("stvcGLMexact", y, X, X_tilde, n, p, r, family, n.binom,
+    samps <- .Call(C_stvcGLMexact, y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale,
                    process.type, phi_s, phi_t, epsilon,

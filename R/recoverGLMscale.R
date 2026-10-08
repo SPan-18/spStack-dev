@@ -86,7 +86,7 @@ recoverGLMscale <- function(mod_out){
     beta_samps <- mod_out$samples[['beta']]
     z_samps <- mod_out$samples[['z']]
 
-    scale_samps <- .Call("recoverScale_stvcGLM", n, p, r,
+    scale_samps <- .Call(C_recoverScale_stvcGLM, n, p, r,
                          sp_coords, time_coords, cor.fn,
                          mu.beta, V.beta, nu.beta, nu.z, IW.scale,
                          process.type, phi_s, phi_t, n.samples,
@@ -148,7 +148,7 @@ recoverGLMscale <- function(mod_out){
         beta_samps <- mod_out$samples[[i]][['beta']]
         z_samps <- mod_out$samples[[i]][['z']]
 
-        scale_samps <- .Call("recoverScale_stvcGLM", n, p, r,
+        scale_samps <- .Call(C_recoverScale_stvcGLM, n, p, r,
                              sp_coords, time_coords, cor.fn,
                              mu.beta, V.beta, nu.beta, nu.z, IW.scale,
                              process.type, phi_s, phi_t, n.samples,
@@ -210,7 +210,7 @@ recoverGLMscale <- function(mod_out){
     beta_samps <- mod_out$samples[['beta']]
     z_samps <- mod_out$samples[['z']]
 
-    scale_samps <- .Call("recoverScale_spGLM", n, p,
+    scale_samps <- .Call(C_recoverScale_spGLM, n, p,
                          coords.D, cor.fn,
                          mu.beta, V.beta, nu.beta, nu.z,
                          phi, nu, n.samples,
@@ -274,7 +274,7 @@ recoverGLMscale <- function(mod_out){
       beta_samps <- mod_out$samples[[i]][['beta']]
       z_samps <- mod_out$samples[[i]][['z']]
 
-      scale_samps <- .Call("recoverScale_spGLM", n, p,
+      scale_samps <- .Call(C_recoverScale_spGLM, n, p,
                            coords.D, cor.fn,
                            mu.beta, V.beta, nu.beta, nu.z,
                            phi, nu, n.samples,

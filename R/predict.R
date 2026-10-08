@@ -216,7 +216,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         storage.mode(joint) <- "integer"
 
         # Call C++ function
-        samps <- .Call("predict_stvcGLM", n, n_pred, p, r, family,
+        samps <- .Call(C_predict_stvcGLM, n, n_pred, p, r, family,
                        nBinom_new, X_new, X.tilde_new,
                        sp_coords, time_coords, sp_coords_new, time_coords_new,
                        process.type, cor.fn, phi_s, phi_t, n.samples,
@@ -371,7 +371,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
             storage.mode(z.scale_samps) <- "double"
 
             # Call C++ function
-            samps <- .Call("predict_stvcGLM", n, n_pred, p, r, family,
+            samps <- .Call(C_predict_stvcGLM, n, n_pred, p, r, family,
                            nBinom_new, X_new, X.tilde_new,
                            sp_coords, time_coords, sp_coords_new, time_coords_new,
                            process.type, cor.fn, phi_s, phi_t, n.samples,
@@ -494,7 +494,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         storage.mode(joint) <- "integer"
 
         # Call C++ function
-        samps <- .Call("predict_spGLM", n, n_pred, p, family,
+        samps <- .Call(C_predict_spGLM, n, n_pred, p, family,
                        nBinom_new, covars_new, sp_coords, coords_new,
                        cor.fn, phi, nu, n.samples,
                        beta_samps, z_samps, sigmasq.z_samps,
@@ -615,7 +615,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
             storage.mode(sigmasq.z_samps) <- "double"
 
             # Call C++ function
-            samps <- .Call("predict_spGLM", n, n_pred, p,
+            samps <- .Call(C_predict_spGLM, n, n_pred, p,
                            family, nBinom_new, covars_new, sp_coords, coords_new,
                            cor.fn, phi, nu, n.samples,
                            beta_samps, z_samps, sigmasq.z_samps,
@@ -720,7 +720,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         storage.mode(deltasq) <- "double"
 
         # Call C++ function
-        samps <- .Call("predict_spLM", n, n_pred, p,
+        samps <- .Call(C_predict_spLM, n, n_pred, p,
                        covars_new, sp_coords, coords_new,
                        cor.fn, phi, nu, deltasq,
                        beta_samps, z_samps, sigmaSq_samps,
@@ -825,7 +825,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
             storage.mode(sigmaSq_samps) <- "double"
 
             # Call C++ function
-            samps <- .Call("predict_spLM", n, n_pred, p,
+            samps <- .Call(C_predict_spLM, n, n_pred, p,
                            covars_new, sp_coords, coords_new,
                            cor.fn, phi, nu, deltasq,
                            beta_samps, z_samps, sigmaSq_samps,
