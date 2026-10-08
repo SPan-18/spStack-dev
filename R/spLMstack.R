@@ -16,8 +16,12 @@
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.
-#' @param priors a list with each tag corresponding to a parameter name and
-#'  containing prior details. If not supplied, uses defaults.
+#' @param priors either \code{"flat"} (default), which assigns the prior
+#'  \eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}, or a list with tags
+#'  \code{beta.norm} (a list containing \eqn{\mu_\beta} and \eqn{V_\beta})
+#'  and/or \code{sigma.sq.ig} (a vector containing \eqn{a_\sigma} and
+#'  \eqn{b_\sigma}). A component not supplied in the list receives its flat
+#'  prior, \eqn{p(\beta) \propto 1} or \eqn{p(\sigma^2) \propto 1/\sigma^2}.
 #' @param candidate.models an object of class `candidateModels` containing a
 #'  list of candidate models for stacking. See [candidateModels()] for details.
 #' @param n.samples number of posterior samples to be generated.
@@ -43,9 +47,10 @@
 #'  following tags -
 #' \describe{
 #' \item{`samples`}{a list of length equal to total number of candidate models
-#'  with each entry corresponding to a list of length 3, containing posterior
-#'  samples of fixed effects (\code{beta}), variance parameter
-#'  (\code{sigmaSq}), spatial effects (\code{z}) for that model.}
+#'  with each entry corresponding to a list of length 4, containing posterior
+#'  samples of fixed effects (\code{beta}), measurement error variance
+#'  (\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
+#'  (\code{z}) for that model.}
 #' \item{`loopd`}{a list of length equal to total number of candidate models with
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
@@ -144,7 +149,8 @@
 #'         aspect.ratio = 1)
 #' @export
 spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
-                      priors, candidate.models, n.samples, loopd.method,
+                      priors = "flat", candidate.models, n.samples,
+                      loopd.method,
                       parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
@@ -200,17 +206,34 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   }
 
   ##### priors #####
+  # priors = "flat" assigns p(beta, sigma.sq) proportional to 1/sigma.sq; if
+  # priors is a list, a component not supplied receives its flat prior, i.e.,
+  # p(beta) proportional to 1 or p(sigma.sq) proportional to 1/sigma.sq
   beta.prior <- "flat"
   beta.Norm <- 0
-  sigma.sq.IG <- 0
+  sigma.sq.prior <- "flat"
+  sigma.sq.IG <- c(0.0, 0.0)
 
-  if(missing(priors)){
-    beta.prior <- "normal"
-    beta.Norm <- list(rep(0.0, p), diag(100.0, p))
-    sigma.sq.IG <- c(2, 2)
-  }else{
+  if(is.character(priors)){
 
+    if(length(priors) != 1 || tolower(priors) != "flat"){
+      stop("error: priors must be either 'flat' or a named list with tags
+           'beta.norm' and/or 'sigma.sq.ig'.")
+    }
+
+  }else if(is.list(priors)){
+
+    if(is.null(names(priors))){
+      stop("error: priors must be either 'flat' or a named list with tags
+           'beta.norm' and/or 'sigma.sq.ig'.")
+    }
     names(priors) <- tolower(names(priors))
+    if(any(!names(priors) %in% c("beta.norm", "sigma.sq.ig"))){
+      stop("error: invalid tag(s) in priors: '",
+           paste(setdiff(names(priors), c("beta.norm", "sigma.sq.ig")),
+                 collapse = "', '"),
+           "'. Valid tags are 'beta.norm' and 'sigma.sq.ig'.")
+    }
 
     ## Setup prior for beta
     if("beta.norm" %in% names(priors)){
@@ -224,28 +247,41 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       }
       if(length(beta.Norm[[2]]) != p^2){
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
-                   " correlation matrix.", sep = ""))
+                   " covariance matrix.", sep = ""))
       }
+      storage.mode(beta.Norm[[1]]) <- "double"
+      storage.mode(beta.Norm[[2]]) <- "double"
       beta.prior <- "normal"
     }
 
     ## Setup prior for sigma.sq
-    if(!"sigma.sq.ig" %in% names(priors)){
-      stop("error: sigma.sq.IG must be specified")
+    if("sigma.sq.ig" %in% names(priors)){
+      sigma.sq.IG <- priors[["sigma.sq.ig"]]
+      if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
+        stop("error: sigma.sq.IG must be a vector of length 2")
+      }
+      if(any(sigma.sq.IG <= 0)){
+        stop("error: sigma.sq.IG must be a positive vector of length 2")
+      }
+      sigma.sq.prior <- "ig"
     }
-    sigma.sq.IG <- priors[["sigma.sq.ig"]]
 
-    if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
-      stop("error: sigma.sq.IG must be a vector of length 2")
-    }
-    if(any(sigma.sq.IG <= 0)){
-      stop("error: sigma.sq.IG must be a positive vector of length 2")
-    }
-
+  }else{
+    stop("error: priors must be either 'flat' or a named list with tags
+         'beta.norm' and/or 'sigma.sq.ig'.")
   }
 
   ## storage mode
   storage.mode(sigma.sq.IG) <- "double"
+
+  ## sample size check: a flat prior on beta requires n - 1 > p for the
+  ## leave-one-out predictive densities
+  if(beta.prior == "flat"){
+    if(n <= p + 1){
+      stop("error: a flat prior on beta requires n - 1 > p for leave-one-out
+           predictive densities; supply beta.norm in priors.")
+    }
+  }
 
   #### set-up candidate.models for stacking parameters ####
 
@@ -310,6 +346,17 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   verbose_child <- FALSE
   storage.mode(verbose_child) <- "integer"
 
+  # fits candidate model x
+  fit_candidate <- function(x){
+    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
+          beta.prior, beta.Norm, sigma.sq.IG,
+          as.numeric(list_candidate[[x]]["phi"]),
+          as.numeric(list_candidate[[x]]["nu"]),
+          as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
+          cor.fn, n.samples, loopd, loopd.method,
+          verbose_child)
+  }
+
   #### main function call ####
   ptm <- proc.time()
 
@@ -345,15 +392,8 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       }
     }
 
-    samps <- future_lapply(1:length(list_candidate), function(x){
-                    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
-                          beta.prior, beta.Norm, sigma.sq.IG,
-                          as.numeric(list_candidate[[x]]["phi"]),
-                          as.numeric(list_candidate[[x]]["nu"]),
-                          as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                          cor.fn, n.samples, loopd, loopd.method,
-                          verbose_child)
-                          }, future.seed = TRUE)
+    samps <- future_lapply(1:length(list_candidate), fit_candidate,
+                           future.seed = TRUE)
 
   }else{
 
@@ -364,15 +404,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       is set to FALSE. Ignoring parallelization plan.")
     }
 
-    samps <- lapply(1:length(list_candidate), function(x){
-                    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
-                          beta.prior, beta.Norm, sigma.sq.IG,
-                          as.numeric(list_candidate[[x]]["phi"]),
-                          as.numeric(list_candidate[[x]]["nu"]),
-                          as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-                          cor.fn, n.samples, loopd, loopd.method,
-                          verbose_child)
-                        })
+    samps <- lapply(1:length(list_candidate), fit_candidate)
 
   }
 
@@ -406,7 +438,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   loopd_list <- lapply(samps, function(x) x[["loopd"]])
   names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
 
-  samps <- lapply(samps, function(x) x[1:3])
+  samps <- lapply(samps, function(x) x[c("beta", "sigmaSq", "sigmaSq.z", "z")])
   names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
 
   out <- list()
@@ -415,9 +447,17 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$X.names <- X.names
   out$coords <- coords
   out$cor.fn <- cor.fn
-  out$priors <- list(beta.Norm = list(mu = beta.Norm[[1]],
-                                      V = matrix(beta.Norm[[2]], p, p)),
-                     sigma.sq.IG = sigma.sq.IG)
+  if(beta.prior == "normal"){
+    beta.Norm.out <- list(mu = beta.Norm[[1]], V = matrix(beta.Norm[[2]], p, p))
+  }else{
+    beta.Norm.out <- "flat"
+  }
+  if(sigma.sq.prior == "ig"){
+    sigma.sq.IG.out <- sigma.sq.IG
+  }else{
+    sigma.sq.IG.out <- "flat"
+  }
+  out$priors <- list(beta.Norm = beta.Norm.out, sigma.sq.IG = sigma.sq.IG.out)
   out$n.samples <- n.samples
   out$samples <- samps
   out$loopd <- loopd_list

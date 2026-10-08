@@ -104,8 +104,14 @@ extern "C" {
         Rprintf("\n");
       }
 
-      Rprintf("\tsigma.sq: Inverse-Gamma\n\tshape = %.2f, scale = %.2f.\n\n",
-              sigmaSqIGa, sigmaSqIGb);
+      // prior on the measurement error variance sigma.sq; b = 0 corresponds
+      // to the flat prior p(sigma.sq) proportional to 1/sigma.sq
+      if(sigmaSqIGb == 0.0){
+        Rprintf("\tsigma.sq: flat, proportional to 1/sigma.sq.\n\n");
+      }else{
+        Rprintf("\tsigma.sq: Inverse-Gamma\n\tshape = %.2f, scale = %.2f.\n\n",
+                sigmaSqIGa, sigmaSqIGb);
+      }
 
       Rprintf("Spatial process parameters:\n");
 
@@ -124,6 +130,20 @@ extern "C" {
 
       Rprintf("----------------------------------------\n");
 
+    }
+
+    /*****************************************
+     Priors on (beta, sigmaSqz) for sampling
+     *****************************************/
+    // The sampler below is written in terms of the spatial variance
+    // sigmaSqz = sigmaSq/deltasq, where sigmaSq is the measurement error
+    // variance. The prior sigmaSq ~ IG(a, b), beta | sigmaSq ~ N(muBeta, sigmaSq*Vbeta)
+    // is equivalent to sigmaSqz ~ IG(a, b/deltasq), beta | sigmaSqz ~ N(muBeta, sigmaSqz*deltasq*Vbeta).
+    // The flat prior p(sigmaSq) proportional to 1/sigmaSq (a = b = 0) is
+    // invariant to this rescaling and so is the flat prior on beta.
+    sigmaSqIGb = sigmaSqIGb / deltasq;                                                     // b = b/deltasq
+    if(betaPrior == "normal"){
+      F77_NAME(dscal)(&pp, &deltasq, betaV, &incOne);                                      // betaV = deltasq*Vbeta
     }
 
     /*****************************************
@@ -171,15 +191,23 @@ extern "C" {
     dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                     // dtemp = t(Y)*VyInv*Y
     sse += dtemp;                                                                            // sse = YtVyinvY
 
-    // find VbetaInvmuBeta
-    F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
-    F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, VbetaInvMuBeta, &incOne FCONE);       // VbetaInvMuBeta = VbetaInv*muBeta
+    if(betaPrior == "normal"){
+      // find VbetaInvmuBeta
+      F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
+      F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+      F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+      F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, VbetaInvMuBeta, &incOne FCONE);       // VbetaInvMuBeta = VbetaInv*muBeta
 
-    // find muBetatVbetaInvmuBeta
-    muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, VbetaInvMuBeta, &incOne);                       // t(muBeta)*VbetaInv*muBeta
-    sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
+      // find muBetatVbetaInvmuBeta
+      muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, VbetaInvMuBeta, &incOne);                       // t(muBeta)*VbetaInv*muBeta
+      sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
+    }else{
+      // flat prior on beta: VbetaInv = 0, VbetaInv*muBeta = 0 and
+      // t(muBeta)*VbetaInv*muBeta = 0 (already zero-initialized); since
+      // p(beta) does not carry the factor (sigmaSq)^(-p/2) of the conjugate
+      // prior, the posterior inverse-gamma shape is aIG + (n - p)/2
+      sigmaSqIGa -= 0.5 * p;
+    }
 
     //  find XtVyInvY
     double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);                            // allocate temporary memory for n x p matrix
@@ -217,25 +245,27 @@ extern "C" {
 
     // posterior samples of sigma-sq and beta
     SEXP samples_sigmaSq_r = PROTECT(Rf_allocVector(REALSXP, nSamples)); nProtect++;
+    SEXP samples_sigmaSqz_r = PROTECT(Rf_allocVector(REALSXP, nSamples)); nProtect++;
     SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
     SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
     // sample storage at s-th iteration temporary allocation
-    double sigmaSq = 0;
+    double sigmaSqz = 0;
     double *beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta, p);
     double *z = (double *) R_chk_calloc(n, sizeof(double)); zeros(z, n);
 
     GetRNGstate();
 
     for(s = 0; s < nSamples; s++){
-      // sample sigmaSq from its marginal posterior
+      // sample sigmaSqz (spatial variance) from its marginal posterior
       dtemp = 1.0 / sigmaSqIGbPost;
       dtemp = rgamma(sigmaSqIGaPost, dtemp);
-      sigmaSq = 1.0 / dtemp;
-      REAL(samples_sigmaSq_r)[s] = sigmaSq;
+      sigmaSqz = 1.0 / dtemp;
+      REAL(samples_sigmaSqz_r)[s] = sigmaSqz;
+      REAL(samples_sigmaSq_r)[s] = deltasq * sigmaSqz;                                       // sigmaSq = deltasq*sigmaSqz
 
       // sample fixed effects by composition sampling
-      dtemp = sqrt(sigmaSq);
+      dtemp = sqrt(sigmaSqz);
       for(j = 0; j < p; j++){
         beta[j] = rnorm(tmp_p1[j], dtemp);                                                   // beta ~ N(tmp_p1, sigmaSq*I)
       }
@@ -503,7 +533,7 @@ extern "C" {
             sigmaSq_s = pointer_sigmaSq[s];
             theta_i = F77_CALL(ddot)(&p, X_i, &incOne, beta_s, &incOne);        // theta_i = X_i * beta_s
             theta_i += z_s;                                                     // theta_i = X_i*beta_s + zi_s
-            sd = sqrt(deltasq * sigmaSq_s);
+            sd = sqrt(sigmaSq_s);                                               // sigmaSq_s is the measurement error variance
             dens_i[s] = Rf_dnorm4(Y[loo_index], theta_i, sd, 1);
             rawIR[s] = - dens_i[s];
 
@@ -530,6 +560,36 @@ extern "C" {
       }
 
       // make return object for posterior samples and leave-one-out predictive densities
+      int nResultListObjs = 5;
+
+      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+
+      // samples of beta
+      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
+      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+
+      // samples of sigma-sq
+      SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
+      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
+
+      // samples of sigma-sq-z
+      SET_VECTOR_ELT(result_r, 2, samples_sigmaSqz_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("sigmaSq.z"));
+
+      // samples of z
+      SET_VECTOR_ELT(result_r, 3, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("z"));
+
+      // leave-one-out predictive densities
+      SET_VECTOR_ELT(result_r, 4, loopd_out_r);
+      SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("loopd"));
+
+      Rf_namesgets(result_r, resultName_r);
+
+    }else{
+
+      // make return object for posterior samples of sigma-sq, beta and z
       int nResultListObjs = 4;
 
       result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -543,35 +603,13 @@ extern "C" {
       SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
       SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
 
-      // samples of z
-      SET_VECTOR_ELT(result_r, 2, samples_z_r);
-      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
-
-      // leave-one-out predictive densities
-      SET_VECTOR_ELT(result_r, 3, loopd_out_r);
-      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
-
-      Rf_namesgets(result_r, resultName_r);
-
-    }else{
-
-      // make return object for posterior samples of sigma-sq, beta and z
-      int nResultListObjs = 3;
-
-      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-      // samples of beta
-      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
-
-      // samples of sigma-sq
-      SET_VECTOR_ELT(result_r, 1, samples_sigmaSq_r);
-      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("sigmaSq"));
+      // samples of sigma-sq-z
+      SET_VECTOR_ELT(result_r, 2, samples_sigmaSqz_r);
+      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("sigmaSq.z"));
 
       // samples of z
-      SET_VECTOR_ELT(result_r, 2, samples_z_r);
-      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("z"));
+      SET_VECTOR_ELT(result_r, 3, samples_z_r);
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("z"));
 
       Rf_namesgets(result_r, resultName_r);
 

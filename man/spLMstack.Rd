@@ -9,7 +9,7 @@ spLMstack(
   data = parent.frame(),
   coords,
   cor.fn,
-  priors,
+  priors = "flat",
   candidate.models,
   n.samples,
   loopd.method,
@@ -36,8 +36,12 @@ to model the spatial dependence structure among the observations. Supported
 covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
 
-\item{priors}{a list with each tag corresponding to a parameter name and
-containing prior details. If not supplied, uses defaults.}
+\item{priors}{either \code{"flat"} (default), which assigns the prior
+\eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}, or a list with tags
+\code{beta.norm} (a list containing \eqn{\mu_\beta} and \eqn{V_\beta})
+and/or \code{sigma.sq.ig} (a vector containing \eqn{a_\sigma} and
+\eqn{b_\sigma}). A component not supplied in the list receives its flat
+prior, \eqn{p(\beta) \propto 1} or \eqn{p(\sigma^2) \propto 1/\sigma^2}.}
 
 \item{candidate.models}{an object of class \code{candidateModels} containing a
 list of candidate models for stacking. See \code{\link[=candidateModels]{candidateModels()}} for details.}
@@ -72,9 +76,10 @@ An object of class \code{spLMstack}, which is a list including the
 following tags -
 \describe{
 \item{\code{samples}}{a list of length equal to total number of candidate models
-with each entry corresponding to a list of length 3, containing posterior
-samples of fixed effects (\code{beta}), variance parameter
-(\code{sigmaSq}), spatial effects (\code{z}) for that model.}
+with each entry corresponding to a list of length 4, containing posterior
+samples of fixed effects (\code{beta}), measurement error variance
+(\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
+(\code{z}) for that model.}
 \item{\code{loopd}}{a list of length equal to total number of candidate models with
 each entry containing leave-one-out predictive densities under that
 particular model.}

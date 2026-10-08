@@ -9,7 +9,7 @@ spLMexact(
   data = parent.frame(),
   coords,
   cor.fn,
-  priors,
+  priors = "flat",
   spParams,
   noise_sp_ratio,
   n.samples,
@@ -36,8 +36,12 @@ to model the spatial dependence structure among the observations. Supported
 covariance model key words are: \code{'exponential'} and \code{'matern'}.
 See below for details.}
 
-\item{priors}{a list with each tag corresponding to a parameter name and
-containing prior details.}
+\item{priors}{either \code{"flat"} (default), which assigns the prior
+\eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}, or a list with tags
+\code{beta.norm} (a list containing \eqn{\mu_\beta} and \eqn{V_\beta})
+and/or \code{sigma.sq.ig} (a vector containing \eqn{a_\sigma} and
+\eqn{b_\sigma}). A component not supplied in the list receives its flat
+prior, \eqn{p(\beta) \propto 1} or \eqn{p(\sigma^2) \propto 1/\sigma^2}.}
 
 \item{spParams}{fixed value of spatial process parameters.}
 
@@ -64,9 +68,9 @@ Pareto-smoothed importance sampling (Gelman \emph{et al.} 2024).}
 An object of class \code{spLMexact}, which is a list with the
 following tags -
 \describe{
-\item{samples}{a list of length 3, containing posterior samples of fixed
-effects (\code{beta}), variance parameter (\code{sigmaSq}), spatial effects
-(\code{z}).}
+\item{samples}{a list of length 4, containing posterior samples of fixed
+effects (\code{beta}), measurement error variance (\code{sigmaSq}),
+spatial variance (\code{sigmaSq.z}), and spatial effects (\code{z}).}
 \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 densities.}
 \item{model.params}{Values of the fixed parameters that includes
@@ -89,15 +93,17 @@ spatial locations the response \eqn{y} is observed. With this function, we
 fit a conjugate Bayesian hierarchical spatial model
 \deqn{
 \begin{aligned}
-y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \quad
-z \mid \sigma^2 \sim N(0, \sigma^2 R(\chi; \phi, \nu)), \\
+y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \sigma^2 I_n), \quad
+z \mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \phi, \nu)), \\
 \beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
 \sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma)
 \end{aligned}
 }
-where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu}, the
-noise-to-spatial variance ratio \eqn{\delta^2} and the hyperparameters
-\eqn{\mu_\beta}, \eqn{V_\beta}, \eqn{a_\sigma} and \eqn{b_\sigma}. We utilize
+where we fix the noise-to-spatial variance ratio
+\eqn{\delta^2 = \sigma^2 / \sigma^2_z}, the spatial process parameters
+\eqn{\phi} and \eqn{\nu}, and the hyperparameters \eqn{\mu_\beta},
+\eqn{V_\beta}, \eqn{a_\sigma} and \eqn{b_\sigma}. If \code{priors = "flat"},
+we instead assign the prior \eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}. We utilize
 a composition sampling strategy to sample the model parameters from their
 joint posterior distribution which can be written as
 \deqn{
@@ -107,7 +113,8 @@ p(\beta \mid \sigma^2, y) \times p(z \mid \beta, \sigma^2, y).
 We proceed by first sampling \eqn{\sigma^2} from its marginal posterior,
 then given the samples of \eqn{\sigma^2}, we sample \eqn{\beta} and
 subsequently, we sample \eqn{z} conditioned on the posterior samples of
-\eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020).
+\eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020). Posterior samples of the
+spatial variance are obtained as \eqn{\sigma^2_z = \sigma^2 / \delta^2}.
 }
 \examples{
 # load data

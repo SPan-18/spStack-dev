@@ -709,7 +709,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         # Read samples
         beta_samps <- mod_out$samples[['beta']]
         z_samps <- mod_out$samples[['z']]
-        sigmaSq_samps <- mod_out$samples[['sigmaSq']]
+        sigmaSq_samps <- mod_out$samples[['sigmaSq.z']]
 
         # storage mode
         storage.mode(beta_samps) <- "double"
@@ -817,7 +817,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
 
             beta_samps <- mod_out$samples[[i]][['beta']]
             z_samps <- mod_out$samples[[i]][['z']]
-            sigmaSq_samps <- mod_out$samples[[i]][['sigmaSq']]
+            sigmaSq_samps <- mod_out$samples[[i]][['sigmaSq.z']]
 
             # storage mode
             storage.mode(beta_samps) <- "double"

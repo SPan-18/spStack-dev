@@ -10,15 +10,17 @@
 #' fit a conjugate Bayesian hierarchical spatial model
 #' \deqn{
 #' \begin{aligned}
-#' y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n), \quad
-#' z \mid \sigma^2 \sim N(0, \sigma^2 R(\chi; \phi, \nu)), \\
+#' y \mid z, \beta, \sigma^2 &\sim N(X\beta + z, \sigma^2 I_n), \quad
+#' z \mid \sigma^2_z \sim N(0, \sigma^2_z R(\chi; \phi, \nu)), \\
 #' \beta \mid \sigma^2 &\sim N(\mu_\beta, \sigma^2 V_\beta), \quad
 #' \sigma^2 \sim \mathrm{IG}(a_\sigma, b_\sigma)
 #' \end{aligned}
 #' }
-#' where we fix the spatial process parameters \eqn{\phi} and \eqn{\nu}, the
-#' noise-to-spatial variance ratio \eqn{\delta^2} and the hyperparameters
-#' \eqn{\mu_\beta}, \eqn{V_\beta}, \eqn{a_\sigma} and \eqn{b_\sigma}. We utilize
+#' where we fix the noise-to-spatial variance ratio
+#' \eqn{\delta^2 = \sigma^2 / \sigma^2_z}, the spatial process parameters
+#' \eqn{\phi} and \eqn{\nu}, and the hyperparameters \eqn{\mu_\beta},
+#' \eqn{V_\beta}, \eqn{a_\sigma} and \eqn{b_\sigma}. If \code{priors = "flat"},
+#' we instead assign the prior \eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}. We utilize
 #' a composition sampling strategy to sample the model parameters from their
 #' joint posterior distribution which can be written as
 #' \deqn{
@@ -28,7 +30,8 @@
 #' We proceed by first sampling \eqn{\sigma^2} from its marginal posterior,
 #' then given the samples of \eqn{\sigma^2}, we sample \eqn{\beta} and
 #' subsequently, we sample \eqn{z} conditioned on the posterior samples of
-#' \eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020).
+#' \eqn{\beta} and \eqn{\sigma^2} (Banerjee 2020). Posterior samples of the
+#' spatial variance are obtained as \eqn{\sigma^2_z = \sigma^2 / \delta^2}.
 #' @param formula a symbolic description of the regression model to be fit.
 #'  See example below.
 #' @param data an optional data frame containing the variables in the model.
@@ -41,8 +44,12 @@
 #'  to model the spatial dependence structure among the observations. Supported
 #'  covariance model key words are: \code{'exponential'} and \code{'matern'}.
 #'  See below for details.
-#' @param priors a list with each tag corresponding to a parameter name and
-#'  containing prior details.
+#' @param priors either \code{"flat"} (default), which assigns the prior
+#'  \eqn{p(\beta, \sigma^2) \propto 1/\sigma^2}, or a list with tags
+#'  \code{beta.norm} (a list containing \eqn{\mu_\beta} and \eqn{V_\beta})
+#'  and/or \code{sigma.sq.ig} (a vector containing \eqn{a_\sigma} and
+#'  \eqn{b_\sigma}). A component not supplied in the list receives its flat
+#'  prior, \eqn{p(\beta) \propto 1} or \eqn{p(\sigma^2) \propto 1/\sigma^2}.
 #' @param spParams fixed value of spatial process parameters.
 #' @param noise_sp_ratio noise-to-spatial variance ratio.
 #' @param n.samples number of posterior samples to be generated.
@@ -60,9 +67,9 @@
 #' @return An object of class \code{spLMexact}, which is a list with the
 #'  following tags -
 #' \describe{
-#' \item{samples}{a list of length 3, containing posterior samples of fixed
-#'  effects (\code{beta}), variance parameter (\code{sigmaSq}), spatial effects
-#'  (\code{z}).}
+#' \item{samples}{a list of length 4, containing posterior samples of fixed
+#'  effects (\code{beta}), measurement error variance (\code{sigmaSq}),
+#'  spatial variance (\code{sigmaSq.z}), and spatial effects (\code{z}).}
 #' \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 #'  densities.}
 #' \item{model.params}{Values of the fixed parameters that includes
@@ -117,7 +124,8 @@
 #' plot1
 #' plot2
 #' @export
-spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
+spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
+                      priors = "flat",
                       spParams, noise_sp_ratio, n.samples,
                       loopd = FALSE, loopd.method = "exact",
                       verbose = TRUE, ...){
@@ -175,17 +183,34 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   }
 
   ##### priors #####
+  # priors = "flat" assigns p(beta, sigma.sq) proportional to 1/sigma.sq; if
+  # priors is a list, a component not supplied receives its flat prior, i.e.,
+  # p(beta) proportional to 1 or p(sigma.sq) proportional to 1/sigma.sq
   beta.prior <- "flat"
   beta.Norm <- 0
-  sigma.sq.IG <- 0
+  sigma.sq.prior <- "flat"
+  sigma.sq.IG <- c(0.0, 0.0)
 
-  if(missing(priors)){
-    beta.prior <- "normal"
-    beta.Norm <- list(rep(0.0, p), diag(100.0, p))
-    sigma.sq.IG <- c(2, 2)
-  }else{
+  if(is.character(priors)){
 
+    if(length(priors) != 1 || tolower(priors) != "flat"){
+      stop("error: priors must be either 'flat' or a named list with tags
+           'beta.norm' and/or 'sigma.sq.ig'.")
+    }
+
+  }else if(is.list(priors)){
+
+    if(is.null(names(priors))){
+      stop("error: priors must be either 'flat' or a named list with tags
+           'beta.norm' and/or 'sigma.sq.ig'.")
+    }
     names(priors) <- tolower(names(priors))
+    if(any(!names(priors) %in% c("beta.norm", "sigma.sq.ig"))){
+      stop("error: invalid tag(s) in priors: '",
+           paste(setdiff(names(priors), c("beta.norm", "sigma.sq.ig")),
+                 collapse = "', '"),
+           "'. Valid tags are 'beta.norm' and 'sigma.sq.ig'.")
+    }
 
     ## Setup prior for beta
     if("beta.norm" %in% names(priors)){
@@ -201,22 +226,26 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      storage.mode(beta.Norm[[1]]) <- "double"
+      storage.mode(beta.Norm[[2]]) <- "double"
       beta.prior <- "normal"
     }
 
     ## Setup prior for sigma.sq
-    if(!"sigma.sq.ig" %in% names(priors)){
-      stop("error: sigma.sq.IG must be specified")
+    if("sigma.sq.ig" %in% names(priors)){
+      sigma.sq.IG <- priors[["sigma.sq.ig"]]
+      if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
+        stop("error: sigma.sq.IG must be a vector of length 2")
+      }
+      if(any(sigma.sq.IG <= 0)){
+        stop("error: sigma.sq.IG must be a positive vector of length 2")
+      }
+      sigma.sq.prior <- "ig"
     }
-    sigma.sq.IG <- priors[["sigma.sq.ig"]]
 
-    if(!is.vector(sigma.sq.IG) || length(sigma.sq.IG) != 2){
-      stop("error: sigma.sq.IG must be a vector of length 2")
-    }
-    if(any(sigma.sq.IG <= 0)){
-      stop("error: sigma.sq.IG must be a positive vector of length 2")
-    }
-
+  }else{
+    stop("error: priors must be either 'flat' or a named list with tags
+         'beta.norm' and/or 'sigma.sq.ig'.")
   }
 
   ## storage mode
@@ -308,6 +337,19 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
     loopd.method <- "none"
   }
 
+  ## sample size check: a flat prior on beta requires n > p for a proper
+  ## posterior, and n - 1 > p for the leave-one-out predictive densities
+  if(beta.prior == "flat"){
+    if(n <= p){
+      stop("error: a flat prior on beta requires n > p; supply beta.norm in
+           priors.")
+    }
+    if(loopd && n <= p + 1){
+      stop("error: a flat prior on beta requires n - 1 > p for leave-one-out
+           predictive densities; supply beta.norm in priors.")
+    }
+  }
+
   ##### main function call #####
   ptm <- proc.time()
 
@@ -328,11 +370,19 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn, priors,
   out$X.names <- X.names
   out$coords <- coords
   out$cor.fn <- cor.fn
-  out$priors <- list(beta.Norm = list(mu = beta.Norm[[1]],
-                                      V = matrix(beta.Norm[[2]], p, p)),
-                     sigma.sq.IG = sigma.sq.IG)
+  if(beta.prior == "normal"){
+    beta.Norm.out <- list(mu = beta.Norm[[1]], V = matrix(beta.Norm[[2]], p, p))
+  }else{
+    beta.Norm.out <- "flat"
+  }
+  if(sigma.sq.prior == "ig"){
+    sigma.sq.IG.out <- sigma.sq.IG
+  }else{
+    sigma.sq.IG.out <- "flat"
+  }
+  out$priors <- list(beta.Norm = beta.Norm.out, sigma.sq.IG = sigma.sq.IG.out)
   out$n.samples <- n.samples
-  out$samples <- samps[c("beta", "sigmaSq", "z")]
+  out$samples <- samps[c("beta", "sigmaSq", "sigmaSq.z", "z")]
   if(loopd){
     out$loopd.method <- loopd.method
     out$loopd <- samps[["loopd"]]
