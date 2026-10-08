@@ -80,6 +80,10 @@ with each entry corresponding to a list of length 4, containing posterior
 samples of fixed effects (\code{beta}), measurement error variance
 (\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
 (\code{z}) for that model.}
+\item{\code{loopd.pareto_k}}{if \code{loopd.method='PSIS'}, a list of length
+equal to total number of candidate models with each entry containing the
+Pareto \eqn{k} diagnostic values of the leave-one-out predictive densities
+under that particular model.}
 \item{\code{loopd}}{a list of length equal to total number of candidate models with
 each entry containing leave-one-out predictive densities under that
 particular model.}

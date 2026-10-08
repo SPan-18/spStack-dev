@@ -311,3 +311,35 @@ find_approx_matches <- function(pred, obs, tol = 1e-6) {
     matched_rows = matched
   )
 }
+
+# internal function: sample size specific threshold for the Pareto k diagnostic
+# of PSIS, min(1 - 1/log10(S), 0.7) (Vehtari et al. 2024; loo::ps_khat_threshold)
+psis_khat_threshold <- function(S){
+  min(1 - 1 / log10(S), 0.7)
+}
+
+# internal function: stops if any row of coords is duplicated. The spatial and
+# spatial-temporal process models assume distinct locations: repeated rows make
+# the correlation matrix singular. For spatial-temporal models, coords is the
+# matrix of spatial and temporal coordinates, so a row is a duplicate only if
+# it coincides in space and in time.
+check_distinct_coords <- function(coords, what = "spatial locations",
+                                  hint = "Average the observations at a common location, or model them as spatial-temporal data."){
+
+  dup <- which(duplicated(coords))
+  if(length(dup) > 0){
+    first <- match(data.frame(t(coords[dup, , drop = FALSE])),
+                   data.frame(t(coords)))
+    n_show <- min(6, length(dup))
+    preview <- vapply(seq_len(n_show), function(k){
+      paste0("  row ", dup[k], " duplicates row ", first[k], ": (",
+             paste(format(coords[dup[k], ], digits = 6), collapse = ", "), ")")
+    }, character(1))
+    stop(length(dup), " duplicated ", what, " found; the model requires ",
+         "distinct ", what, ". ", hint, "\nFirst ", n_show,
+         " duplicate(s):\n", paste(preview, collapse = "\n"), call. = FALSE)
+  }
+
+  invisible(TRUE)
+
+}

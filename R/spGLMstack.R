@@ -236,6 +236,8 @@ spGLMstack <- function(formula, data = parent.frame(), family,
          different than data used in the model formula")
   }
 
+  check_distinct_coords(coords)
+
   coords.D <- 0
   coords.D <- iDist(coords)
 

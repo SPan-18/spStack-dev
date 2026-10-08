@@ -1,5 +1,7 @@
 # spStack (development version)
 
+* All model-fitting functions now stop with an informative error if coordinates are duplicated; for `stvcGLMexact()` and `stvcGLMstack()`, a duplicate must coincide in both space and time.
+* PSIS leave-one-out predictive densities (`loopd.method = "PSIS"`) are reimplemented in C++ following the loo package, with O(S) memory; Pareto k diagnostics are returned as `loopd.pareto_k`.
 * `spLMexact()`, `spLMstack()`: the inverse-gamma prior is now placed on the measurement error variance `sigmaSq`; posterior samples of the spatial variance are returned as `sigmaSq.z`. The default prior is now `priors = "flat"`, i.e., p(beta, sigmaSq) proportional to 1/sigmaSq.
 
 # spStack 1.1.3

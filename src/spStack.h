@@ -19,6 +19,8 @@ extern "C" {
 
   SEXP R_cholRowBlockDelUpdate(SEXP L_r, SEXP n_r, SEXP start_r, SEXP end_r, SEXP lower_r);
 
+  SEXP R_psis(SEXP ll_r, SEXP return_weights_r);
+
   SEXP predict_spGLM(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP family_r, SEXP nBinom_new_r,
                      SEXP X_new_r, SEXP sp_coords_r, SEXP sp_coords_new_r,
                      SEXP corfn_r, SEXP phi_r, SEXP nu_r, SEXP nSamples_r,

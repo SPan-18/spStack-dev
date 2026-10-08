@@ -139,7 +139,6 @@ extern "C" {
     double sigmaSqIGaPost = 0, sigmaSqIGbPost = 0;
     double sse = 0;
     double dtemp = 0;
-    double muBetatVbetaInvmuBeta = 0;
 
     // const double deltasqInv = 1.0 / deltasq;
     const double delta = sqrt(deltasq);
@@ -168,15 +167,12 @@ extern "C" {
       cholVy[i*n + i] += deltasq;
     }
 
-    // find sse to sample sigmaSq
     // chol(Vy)
     F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
 
-    // find YtVyInvY
+    // find cholinv(Vy)*Y
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
     F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVy, &n, tmp_n, &incOne FCONE FCONE FCONE);  // tmp_n = cholinv(Vy)*Y
-    dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                     // dtemp = t(Y)*VyInv*Y
-    sse += dtemp;                                                                            // sse = YtVyinvY
 
     if(betaPrior == "normal"){
       // find VbetaInvmuBeta
@@ -184,15 +180,11 @@ extern "C" {
       F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
       F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
       F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);               // tmp_p2 = VbetaInv*muBeta
-
-      // find muBetatVbetaInvmuBeta
-      muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, tmp_p2, &incOne);                               // t(muBeta)*VbetaInv*muBeta
-      sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
     }else{
-      // flat prior on beta: VbetaInv = 0, VbetaInv*muBeta = 0 and
-      // t(muBeta)*VbetaInv*muBeta = 0 (already zero-initialized); since
-      // p(beta) does not carry the factor (sigmaSq)^(-p/2) of the conjugate
-      // prior, the posterior inverse-gamma shape is aIG + (n - p)/2
+      // flat prior on beta: VbetaInv = 0 and VbetaInv*muBeta = 0 (already
+      // zero-initialized); since p(beta) does not carry the factor
+      // (sigmaSq)^(-p/2) of the conjugate prior, the posterior inverse-gamma
+      // shape is aIG + (n - p)/2
       sigmaSqIGa -= 0.5 * p;
     }
 
@@ -206,14 +198,34 @@ extern "C" {
     F77_NAME(daxpy)(&p, &one, tmp_p2, &incOne, tmp_p1, &incOne);                                                // tmp_p1 = XtVyInvY + VbetaInvmuBeta
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
 
-    // deallocate tmp_np
-    R_chk_free(tmp_np);
-
     F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);                                             // tmp_pp = t(X)*VyInv*X + VbetaInv
     F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_pp = chol(XtVyInvX + VbetaInv)
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                    // tmp_p1 = cholinv(XtVyInvX + VbetaInv)*tmp_p1
-    dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p1, &incOne), 2);                                                       // dtemp = t(m)*M*m
-    sse -= dtemp;                                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta - mtMm
+
+    // find sse = t(Y-X*betahat)*VyInv*(Y-X*betahat) + t(betahat-muBeta)*VbetaInv*(betahat-muBeta);
+    // equal to t(Y)*VyInv*Y + t(muBeta)*VbetaInv*muBeta - t(m)*M*m, but each term is a sum of
+    // squares, hence non-negative and free of catastrophic cancellation
+    double *betahat = (double *) R_chk_calloc(p, sizeof(double)); zeros(betahat, p);                           // allocate temporary memory for p x 1 vector
+    F77_NAME(dcopy)(&p, tmp_p1, &incOne, betahat, &incOne);                                                     // betahat = cholinv(XtVyInvX + VbetaInv)*tmp_p1
+    F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, betahat, &incOne FCONE FCONE FCONE);                   // betahat = inv(XtVyInvX + VbetaInv)*(XtVyInvY + VbetaInvmuBeta)
+    F77_NAME(dgemv)(ntran, &n, &p, &negOne, tmp_np, &n, betahat, &incOne, &one, tmp_n, &incOne FCONE);          // tmp_n = cholinv(Vy)*(Y-X*betahat)
+    sse = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                                          // sse = t(Y-X*betahat)*VyInv*(Y-X*betahat)
+
+    // deallocate tmp_np
+    R_chk_free(tmp_np);
+
+    if(betaPrior == "normal"){
+      F77_NAME(daxpy)(&p, &negOne, betaMu, &incOne, betahat, &incOne);                                          // betahat = betahat - muBeta
+      F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betahat, &incOne, &zero, tmp_n, &incOne FCONE);            // tmp_n[1:p] = VbetaInv*(betahat - muBeta)
+      sse += F77_CALL(ddot)(&p, betahat, &incOne, tmp_n, &incOne);                                              // sse = sse + t(betahat-muBeta)*VbetaInv*(betahat-muBeta)
+    }
+
+    // deallocate betahat
+    R_chk_free(betahat);
+
+    if(!(sigmaSqIGb + 0.5 * sse > 0.0)){
+      Rf_error("c++ error: posterior scale of sigmaSq is not positive (sse = %g).\n", sse);
+    }
 
     // set-up for sampling spatial random effects
     double *tmp_nn2 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn2, nn);                           // calloc n x n matrix

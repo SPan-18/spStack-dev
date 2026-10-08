@@ -73,6 +73,9 @@ effects (\code{beta}), measurement error variance (\code{sigmaSq}),
 spatial variance (\code{sigmaSq.z}), and spatial effects (\code{z}).}
 \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 densities.}
+\item{loopd.pareto_k}{If \code{loopd.method='PSIS'}, contains the Pareto
+\eqn{k} diagnostic values of the leave-one-out predictive densities
+(Vehtari \emph{et al.} 2024).}
 \item{model.params}{Values of the fixed parameters that includes
 \code{phi} (spatial decay), \code{nu} (spatial smoothness) and
 \code{noise_sp_ratio} (noise-to-spatial variance ratio).}

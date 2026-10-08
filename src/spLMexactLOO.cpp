@@ -3,6 +3,7 @@
 #include <string>
 #include "util.h"
 #include "MatrixAlgos.h"
+#include "psis.h"
 #include <R.h>
 #include <Rmath.h>
 #include <Rinternals.h>
@@ -152,7 +153,6 @@ extern "C" {
     double sigmaSqIGaPost = 0, sigmaSqIGbPost = 0;
     double sse = 0;
     double dtemp = 0;
-    double muBetatVbetaInvmuBeta = 0;
 
     // const double deltasqInv = 1.0 / deltasq;
     const double delta = sqrt(deltasq);
@@ -181,15 +181,12 @@ extern "C" {
       cholVy[i*n + i] += deltasq;
     }
 
-    // find sse to sample sigmaSq
     // chol(Vy)
     F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
 
-    // find YtVyInvY
+    // find cholinv(Vy)*Y
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
     F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVy, &n, tmp_n, &incOne FCONE FCONE FCONE);  // tmp_n = cholinv(Vy)*Y
-    dtemp = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                     // dtemp = t(Y)*VyInv*Y
-    sse += dtemp;                                                                            // sse = YtVyinvY
 
     if(betaPrior == "normal"){
       // find VbetaInvmuBeta
@@ -197,15 +194,11 @@ extern "C" {
       F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
       F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
       F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, VbetaInvMuBeta, &incOne FCONE);       // VbetaInvMuBeta = VbetaInv*muBeta
-
-      // find muBetatVbetaInvmuBeta
-      muBetatVbetaInvmuBeta = F77_CALL(ddot)(&p, betaMu, &incOne, VbetaInvMuBeta, &incOne);                       // t(muBeta)*VbetaInv*muBeta
-      sse += muBetatVbetaInvmuBeta;                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta
     }else{
-      // flat prior on beta: VbetaInv = 0, VbetaInv*muBeta = 0 and
-      // t(muBeta)*VbetaInv*muBeta = 0 (already zero-initialized); since
-      // p(beta) does not carry the factor (sigmaSq)^(-p/2) of the conjugate
-      // prior, the posterior inverse-gamma shape is aIG + (n - p)/2
+      // flat prior on beta: VbetaInv = 0 and VbetaInv*muBeta = 0 (already
+      // zero-initialized); since p(beta) does not carry the factor
+      // (sigmaSq)^(-p/2) of the conjugate prior, the posterior inverse-gamma
+      // shape is aIG + (n - p)/2
       sigmaSqIGa -= 0.5 * p;
     }
 
@@ -219,14 +212,34 @@ extern "C" {
     F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, tmp_p1, &incOne);                                        // tmp_p1 = XtVyInvY + VbetaInvmuBeta
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
 
-    // deallocate tmp_np
-    R_chk_free(tmp_np);
-
     F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);                                             // tmp_pp = t(X)*VyInv*X + VbetaInv
     F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_pp = chol(XtVyInvX + VbetaInv)
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                    // tmp_p1 = cholinv(XtVyInvX + VbetaInv)*tmp_p1
-    dtemp = pow(F77_NAME(dnrm2)(&p, tmp_p1, &incOne), 2);                                                       // dtemp = t(m)*M*m
-    sse -= dtemp;                                                                                               // sse = YtVyinvY + muBetatVbetaInvmuBeta - mtMm
+
+    // find sse = t(Y-X*betahat)*VyInv*(Y-X*betahat) + t(betahat-muBeta)*VbetaInv*(betahat-muBeta);
+    // equal to t(Y)*VyInv*Y + t(muBeta)*VbetaInv*muBeta - t(m)*M*m, but each term is a sum of
+    // squares, hence non-negative and free of catastrophic cancellation
+    double *betahat = (double *) R_chk_calloc(p, sizeof(double)); zeros(betahat, p);                           // allocate temporary memory for p x 1 vector
+    F77_NAME(dcopy)(&p, tmp_p1, &incOne, betahat, &incOne);                                                     // betahat = cholinv(XtVyInvX + VbetaInv)*tmp_p1
+    F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, betahat, &incOne FCONE FCONE FCONE);                   // betahat = inv(XtVyInvX + VbetaInv)*(XtVyInvY + VbetaInvmuBeta)
+    F77_NAME(dgemv)(ntran, &n, &p, &negOne, tmp_np, &n, betahat, &incOne, &one, tmp_n, &incOne FCONE);          // tmp_n = cholinv(Vy)*(Y-X*betahat)
+    sse = pow(F77_NAME(dnrm2)(&n, tmp_n, &incOne), 2);                                                          // sse = t(Y-X*betahat)*VyInv*(Y-X*betahat)
+
+    // deallocate tmp_np
+    R_chk_free(tmp_np);
+
+    if(betaPrior == "normal"){
+      F77_NAME(daxpy)(&p, &negOne, betaMu, &incOne, betahat, &incOne);                                          // betahat = betahat - muBeta
+      F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betahat, &incOne, &zero, tmp_n, &incOne FCONE);            // tmp_n[1:p] = VbetaInv*(betahat - muBeta)
+      sse += F77_CALL(ddot)(&p, betahat, &incOne, tmp_n, &incOne);                                              // sse = sse + t(betahat-muBeta)*VbetaInv*(betahat-muBeta)
+    }
+
+    // deallocate betahat
+    R_chk_free(betahat);
+
+    if(!(sigmaSqIGb + 0.5 * sse > 0.0)){
+      Rf_error("c++ error: posterior scale of sigmaSq is not positive (sse = %g).\n", sse);
+    }
 
     // set-up for sampling spatial random effects
     double *tmp_nn2 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn2, nn);                           // calloc n x n matrix
@@ -305,6 +318,7 @@ extern "C" {
       int n1p = n1 * p;
 
       SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
+      SEXP loopd_k_r = R_NilValue;                                    // Pareto k diagnostics (PSIS only)
 
       // Exact leave-one-out predictive densities calculation
       if(loopd_method == exact_str){
@@ -343,9 +357,6 @@ extern "C" {
 
             location = F77_CALL(ddot)(&n1, looJ, &incOne, looY, &incOne);                               // location = t(J)*inv(Vy)*Y
 
-            loo_sse = pow(F77_NAME(dnrm2)(&n1, looY, &incOne), 2);                                      // loo_sse = t(Y[-i])*looVyInv*Y[-i]
-            loo_sse += muBetatVbetaInvmuBeta;                                                           // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta
-
             F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n1, &p, &one, looCholVy, &n1, looX, &n1 FCONE FCONE FCONE FCONE);  // looX = cholinv(looVy)*looX
             F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looB, &p FCONE FCONE);            // looB = t(X)*VyInv*X
             F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, looB, &incOne);                                                   // looB = t(X)*VyInv*X + VbetaInv
@@ -353,10 +364,18 @@ extern "C" {
             F77_NAME(dgemv)(ytran, &n1, &p, &one, looX, &n1, looY, &incOne, &zero, looBb, &incOne FCONE);                   // looBb = t(X)*VyInv*Y
             F77_NAME(daxpy)(&p, &one, VbetaInvMuBeta, &incOne, looBb, &incOne);                                             // looBb = XtVyInvY + VbetaInvmuBeta
             F77_NAME(dtrsv)(lower, ntran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = cholinv(looB)*b
-
-            loo_sse -= pow(F77_NAME(dnrm2)(&p, looBb, &incOne), 2);                                                        // loo_sse = t(Y)*inv(Vy)*Y + muBeta*inv(VBeta)*muBeta - t(b)*B*b
-
             F77_NAME(dtrsv)(lower, ytran, nUnit, &p, looB, &p, looBb, &incOne FCONE FCONE FCONE);                           // looBb = inv(looB)*b = Bb
+
+            // loo_sse in residual form (see sse above): no cancellation, always non-negative
+            F77_NAME(dgemv)(ntran, &n1, &p, &negOne, looX, &n1, looBb, &incOne, &one, looY, &incOne FCONE);                 // looY = cholinv(looVy)*(Y[-i]-X[-i,]*Bb)
+            loo_sse = pow(F77_NAME(dnrm2)(&n1, looY, &incOne), 2);                                                          // loo_sse = t(Y[-i]-X[-i,]*Bb)*looVyInv*(Y[-i]-X[-i,]*Bb)
+            if(betaPrior == "normal"){
+              F77_NAME(dcopy)(&p, looBb, &incOne, looH, &incOne);                                                           // looH = Bb
+              F77_NAME(daxpy)(&p, &negOne, betaMu, &incOne, looH, &incOne);                                                 // looH = Bb - muBeta
+              F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, looH, &incOne, &zero, tmp_n11, &incOne FCONE);                 // tmp_n11[1:p] = VbetaInv*(Bb - muBeta)
+              loo_sse += F77_CALL(ddot)(&p, looH, &incOne, tmp_n11, &incOne);                                               // loo_sse = loo_sse + t(Bb-muBeta)*VbetaInv*(Bb-muBeta)
+            }
+
             F77_NAME(dcopy)(&p, X_tilde, &incOne, looH, &incOne);                                                           // looH = X_tilde
             F77_NAME(dgemv)(ytran, &n1, &p, &negOne, looX, &n1, looJ, &incOne, &one, looH, &incOne FCONE);                  // looH = X_tilde - t(J)*VyInv*X
 
@@ -494,29 +513,21 @@ extern "C" {
       if(loopd_method == psis_str){
 
         int loo_index = 0, s = 0;
-        double theta_i = 0.0, z_s = 0.0, sigmaSq_s = 0.0, sd = 0.0;
+        double theta_i = 0.0;
+
+        // PSIS workspace, O(nSamples), allocated once for all observations
+        int psis_L = psis_tail_length(nSamples);
+        int psis_M = psis_gpd_grid_length(psis_L);
 
         double *X_i = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_i, p);
-        double *beta_s = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta_s, p);
+        double *ll_i = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(ll_i, nSamples);
+        double *lw_i = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(lw_i, nSamples);
+        int *idx_i = (int *) R_chk_calloc(nSamples, sizeof(int)); zeros(idx_i, nSamples);
+        double *xtail_i = (double *) R_chk_calloc(psis_L, sizeof(double)); zeros(xtail_i, psis_L);
+        double *theta_gpd = (double *) R_chk_calloc(psis_M, sizeof(double)); zeros(theta_gpd, psis_M);
+        double *ltheta_gpd = (double *) R_chk_calloc(psis_M, sizeof(double)); zeros(ltheta_gpd, psis_M);
 
-        double *dens_i = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(dens_i, nSamples);
-        double *rawIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(rawIR, nSamples);
-        double *sortedIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(sortedIR, nSamples);
-        double *stableIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(stableIR, nSamples);
-        int *orderIR = (int *) R_chk_calloc(nSamples, sizeof(int)); zeros(orderIR, nSamples);
-
-        // find M = floor(min(0.2*S, 3*sqrt(S)))
-        double val1 = 0.0, val2 = 0.0, min_val = 0.0;
-        int M = 0;
-        val1 = 0.2 * nSamples;
-        val2 = 3 * sqrt(nSamples);
-        min_val = fmin2(val1, val2);
-        M = (int)floor(min_val);
-
-        double *tmp_M1 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M1, M);
-        double *tmp_M2 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M2, M);
-        double *tmp_M3 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M3, M);
-        double *ksigma = (double *) R_chk_calloc(2, sizeof(double)); zeros(ksigma, 2);
+        loopd_k_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
 
         double *pointer_beta = REAL(samples_beta_r);
         double *pointer_z = REAL(samples_z_r);
@@ -524,43 +535,32 @@ extern "C" {
 
         for(loo_index = 0; loo_index < n; loo_index++){
 
-          copyMatrixRowToVec(X, n, p, X_i, loo_index);                          // X_i = X[i,1:p]
+          copyMatrixRowToVec(X, n, p, X_i, loo_index);                                          // X_i = X[i,1:p]
 
+          // log-likelihood of the i-th observation at each posterior draw
           for(s = 0; s < nSamples; s++){
-
-            copyMatrixColToVec(pointer_beta, p, nSamples, beta_s, s);           // beta_s = beta[s], s-th sample
-            z_s = pointer_z[n*s + loo_index];                                   // z_s = z_i[s], s-th sample of i-th spatial effect
-            sigmaSq_s = pointer_sigmaSq[s];
-            theta_i = F77_CALL(ddot)(&p, X_i, &incOne, beta_s, &incOne);        // theta_i = X_i * beta_s
-            theta_i += z_s;                                                     // theta_i = X_i*beta_s + zi_s
-            sd = sqrt(sigmaSq_s);                                               // sigmaSq_s is the measurement error variance
-            dens_i[s] = Rf_dnorm4(Y[loo_index], theta_i, sd, 1);
-            rawIR[s] = - dens_i[s];
-
+            theta_i = F77_CALL(ddot)(&p, X_i, &incOne, &pointer_beta[s*p], &incOne);            // theta_i = X_i * beta_s
+            theta_i += pointer_z[n*s + loo_index];                                              // theta_i = X_i*beta_s + zi_s
+            ll_i[s] = Rf_dnorm4(Y[loo_index], theta_i, sqrt(pointer_sigmaSq[s]), 1);           // sigmaSq_s is the measurement error variance
           }
 
-          ParetoSmoothedIR(rawIR, M, nSamples, sortedIR, orderIR, stableIR, ksigma, tmp_M1, tmp_M2, tmp_M3);
-
-          REAL(loopd_out_r)[loo_index] = logWeightedSumExp(dens_i, stableIR, nSamples);
+          psis_loo(ll_i, nSamples, psis_L, lw_i, idx_i, xtail_i, theta_gpd, ltheta_gpd,
+                   &REAL(loopd_out_r)[loo_index], &REAL(loopd_k_r)[loo_index]);
 
         }
 
         R_chk_free(X_i);
-        R_chk_free(beta_s);
-        R_chk_free(dens_i);
-        R_chk_free(rawIR);
-        R_chk_free(sortedIR);
-        R_chk_free(stableIR);
-        R_chk_free(orderIR);
-        R_chk_free(tmp_M1);
-        R_chk_free(tmp_M2);
-        R_chk_free(tmp_M3);
-        R_chk_free(ksigma);
+        R_chk_free(ll_i);
+        R_chk_free(lw_i);
+        R_chk_free(idx_i);
+        R_chk_free(xtail_i);
+        R_chk_free(theta_gpd);
+        R_chk_free(ltheta_gpd);
 
       }
 
       // make return object for posterior samples and leave-one-out predictive densities
-      int nResultListObjs = 5;
+      int nResultListObjs = (loopd_method == psis_str) ? 6 : 5;
 
       result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
       resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
@@ -584,6 +584,12 @@ extern "C" {
       // leave-one-out predictive densities
       SET_VECTOR_ELT(result_r, 4, loopd_out_r);
       SET_VECTOR_ELT(resultName_r, 4, Rf_mkChar("loopd"));
+
+      // Pareto k diagnostics of PSIS
+      if(loopd_method == psis_str){
+        SET_VECTOR_ELT(result_r, 5, loopd_k_r);
+        SET_VECTOR_ELT(resultName_r, 5, Rf_mkChar("loopd.pareto_k"));
+      }
 
       Rf_namesgets(result_r, resultName_r);
 

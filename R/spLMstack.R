@@ -51,6 +51,10 @@
 #'  samples of fixed effects (\code{beta}), measurement error variance
 #'  (\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
 #'  (\code{z}) for that model.}
+#' \item{`loopd.pareto_k`}{if \code{loopd.method='PSIS'}, a list of length
+#' equal to total number of candidate models with each entry containing the
+#' Pareto \eqn{k} diagnostic values of the leave-one-out predictive densities
+#' under that particular model.}
 #' \item{`loopd`}{a list of length equal to total number of candidate models with
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
@@ -192,6 +196,8 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     stop("error: either the coords have more than two columns or,
     number of rows is different than data used in the model formula")
   }
+
+  check_distinct_coords(coords)
 
   coords.D <- 0
   coords.D <- iDist(coords)
@@ -438,6 +444,21 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   loopd_list <- lapply(samps, function(x) x[["loopd"]])
   names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
 
+  if(loopd.method == "psis"){
+    pareto_k_list <- lapply(samps, function(x) x[["loopd.pareto_k"]])
+    names(pareto_k_list) <- names(loopd_list)
+    k_threshold <- psis_khat_threshold(n.samples)
+    n_high_k <- vapply(pareto_k_list, function(k) sum(k > k_threshold),
+                       integer(1))
+    if(any(n_high_k > 0)){
+      warning("Pareto k diagnostic values exceed ", round(k_threshold, 2),
+              " for some observations in ", sum(n_high_k > 0),
+              " candidate model(s); PSIS estimates of the corresponding",
+              " leave-one-out predictive densities may be unreliable. Consider",
+              " loopd.method = 'exact'.", call. = FALSE)
+    }
+  }
+
   samps <- lapply(samps, function(x) x[c("beta", "sigmaSq", "sigmaSq.z", "z")])
   names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
 
@@ -462,6 +483,9 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$samples <- samps
   out$loopd <- loopd_list
   out$loopd.method <- loopd.method
+  if(loopd.method == "psis"){
+    out$loopd.pareto_k <- pareto_k_list
+  }
   out$n.models <- length(list_candidate)
   out$candidate.models <- stack_out
   out$stacking.weights <- w_hat

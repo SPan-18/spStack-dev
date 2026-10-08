@@ -72,6 +72,9 @@
 #'  spatial variance (\code{sigmaSq.z}), and spatial effects (\code{z}).}
 #' \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 #'  densities.}
+#' \item{loopd.pareto_k}{If \code{loopd.method='PSIS'}, contains the Pareto
+#'  \eqn{k} diagnostic values of the leave-one-out predictive densities
+#'  (Vehtari *et al.* 2024).}
 #' \item{model.params}{Values of the fixed parameters that includes
 #'  \code{phi} (spatial decay), \code{nu} (spatial smoothness) and
 #'  \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
@@ -169,6 +172,8 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
     stop("error: either the coords have more than two columns or,
     number of rows is different than data used in the model formula")
   }
+
+  check_distinct_coords(coords)
 
   coords.D <- 0
   coords.D <- iDist(coords)
@@ -386,6 +391,17 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
   if(loopd){
     out$loopd.method <- loopd.method
     out$loopd <- samps[["loopd"]]
+    if(loopd.method == "psis"){
+      out$loopd.pareto_k <- samps[["loopd.pareto_k"]]
+      k_threshold <- psis_khat_threshold(n.samples)
+      n_high_k <- sum(out$loopd.pareto_k > k_threshold)
+      if(n_high_k > 0){
+        warning(n_high_k, " Pareto k diagnostic value(s) exceed ",
+                round(k_threshold, 2), "; PSIS estimates of the corresponding",
+                " leave-one-out predictive densities may be unreliable. Consider",
+                " loopd.method = 'exact'.", call. = FALSE)
+      }
+    }
   }
   if(cor.fn == 'matern'){
     out$model.params <- list(phi = phi, nu = nu, noise_sp_ratio = deltasq)

@@ -219,6 +219,10 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   storage.mode(sp_coords) <- "double"
   storage.mode(time_coords) <- "double"
 
+  check_distinct_coords(cbind(sp_coords, time_coords),
+                        what = "spatial-temporal coordinates",
+                        hint = "Average the observations that share both location and time.")
+
   ##### correlation function #####
   if(missing(cor.fn)){
     stop("cor.fn must be specified")

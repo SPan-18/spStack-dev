@@ -679,6 +679,7 @@ void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
           C[j*n + i] = C[i*n + j];
         }else{
           C[i*n + j] = 1.0;
+          C[j*n + i] = 1.0;
         }
       }
     }
@@ -713,6 +714,7 @@ void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &cor
           C[j * n + i] = C[i * n + j];
         }else{
           C[i * n + j] = 1.0;
+          C[j * n + i] = 1.0;
         }
       }else{
         perror("c++ error: corfn is not correctly specified");
