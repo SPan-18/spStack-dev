@@ -275,13 +275,13 @@ models constructed using <code><a href="../reference/candidateModels.html">candi
 <span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 4.081s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.897s</span></span>
 <span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
 <span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -109.16</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 4.081s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.014s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.897s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.01s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -315,7 +315,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   4.870   1.112   4.881</span></span></code></pre></div>
+<span><span class="co">#&gt;   4.510   0.797   4.533</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="analyzing-samples-from-the-stacked-posterior">Analyzing samples from the stacked posterior<a class="anchor" aria-label="anchor" href="#analyzing-samples-from-the-stacked-posterior"></a>
@@ -497,8 +497,8 @@ The true value of the fixed effects with which the data was simulated is
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept)  0.7767448  2.0431825  3.1654221</span></span>
-<span><span class="co">#&gt; x1          -0.6480264 -0.5517039 -0.4539841</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept)  0.8436412  2.0218572  3.2383492</span></span>
+<span><span class="co">#&gt; x1          -0.6469215 -0.5543459 -0.4650622</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="posterior-recovery-of-scale-parameters">Posterior recovery of scale parameters<a class="anchor" aria-label="anchor" href="#posterior-recovery-of-scale-parameters"></a>
@@ -568,13 +568,13 @@ Monte Carlo samples to be used to find the LOO-PD.</p>
 <span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.278s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.146s</span></span>
 <span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
 <span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -312.22</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.278s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.053s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -312.661</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.146s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.03s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -584,14 +584,14 @@ Monte Carlo samples to be used to find the LOO-PD.</p>
 <span><span class="co">#&gt; | Model 2  |    7|  0.5|       0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 3  |   10|  0.5|       0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 4  |    3|  1.5|       0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 5  |    7|  1.5|       0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 5  |    7|  1.5|       0.5| 0.346  |</span></span>
 <span><span class="co">#&gt; | Model 6  |   10|  1.5|       0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 7  |    3|  0.5|       0.6| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 8  |    7|  0.5|       0.6| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 9  |   10|  0.5|       0.6| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 10 |    3|  1.5|       0.6| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 11 |    7|  1.5|       0.6| 0.758  |</span></span>
-<span><span class="co">#&gt; | Model 12 |   10|  1.5|       0.6| 0.242  |</span></span>
+<span><span class="co">#&gt; | Model 10 |    3|  1.5|       0.6| 0.017  |</span></span>
+<span><span class="co">#&gt; | Model 11 |    7|  1.5|       0.6| 0.271  |</span></span>
+<span><span class="co">#&gt; | Model 12 |   10|  1.5|       0.6| 0.366  |</span></span>
 <span><span class="co">#&gt; +----------+-----+-----+----------+--------+</span></span></code></pre></div>
 <p>We can extract information on solver status and runtime by the
 following.</p>
@@ -602,7 +602,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  20.389  30.731  13.094</span></span></code></pre></div>
+<span><span class="co">#&gt;   9.851  18.761   7.332</span></span></code></pre></div>
 <p>Further, we can recover the posterior samples of the scale parameters
 by passing the output obtained by running <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code> once
 again through <code><a href="../reference/recoverGLMscale.html">recoverGLMscale()</a></code>.</p>
@@ -623,9 +623,9 @@ effects.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod3</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept)  1.0542622  2.0847265  3.0922761</span></span>
-<span><span class="co">#&gt; x1          -0.6248075 -0.5464667 -0.4685643</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%     97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  0.8932646  2.1134528  3.124745</span></span>
+<span><span class="co">#&gt; x1          -0.6251605 -0.5506389 -0.472398</span></span></code></pre></div>
 <p>The synthetic data <code>simPoisson</code> was simulated using
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mi>−</mi><mn>0.5</mn><msup><mo stretchy="false" form="postfix">)</mo><mi>⊤</mi></msup></mrow><annotation encoding="application/x-tex">\beta = (2, -0.5)^{ \scriptstyle \top }</annotation></semantics></math>.</p>
 <div class="sourceCode" id="cb25"><pre class="downlit sourceCode r">
@@ -700,9 +700,9 @@ was simulated is
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -1.190050  0.7271262  2.3942790</span></span>
-<span><span class="co">#&gt; x1          -0.559403 -0.4056053 -0.2394892</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept) -1.0059624  0.7207733  2.4464109</span></span>
+<span><span class="co">#&gt; x1          -0.5661417 -0.4006356 -0.2206868</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="spatial-binary-data">Spatial binary data<a class="anchor" aria-label="anchor" href="#spatial-binary-data"></a>
@@ -729,8 +729,8 @@ was simulated is
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -1.2459420  0.2937991 1.92306216</span></span>
-<span><span class="co">#&gt; x1          -0.6741716 -0.3077403 0.04356718</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept) -1.4991649  0.2961064 1.78403129</span></span>
+<span><span class="co">#&gt; x1          -0.6703245 -0.3055731 0.03549851</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2 unnumbered">

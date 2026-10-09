@@ -209,26 +209,26 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.032s
+#> ℹ Compile time: 0.018s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -246.726
-#> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.007s
+#> ✔ Optimal value: -241.35
+#> ℹ Compile time: 0.018s
+#> ℹ Solver time: 0.004s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi_s | phi_t | boundary | weight |
 #> +---------+-------+-------+----------+--------+
-#> | Model 1 |      2|      1|      0.50| 0.000  |
-#> | Model 2 |      3|      1|      0.50| 0.244  |
+#> | Model 1 |      2|      1|      0.50| 0.056  |
+#> | Model 2 |      3|      1|      0.50| 0.000  |
 #> | Model 3 |      2|      2|      0.50| 0.000  |
-#> | Model 4 |      3|      2|      0.50| 0.100  |
+#> | Model 4 |      3|      2|      0.50| 0.503  |
 #> | Model 5 |      2|      1|      0.75| 0.000  |
-#> | Model 6 |      3|      1|      0.75| 0.000  |
+#> | Model 6 |      3|      1|      0.75| 0.441  |
 #> | Model 7 |      2|      2|      0.75| 0.000  |
-#> | Model 8 |      3|      2|      0.75| 0.657  |
+#> | Model 8 |      3|      2|      0.75| 0.000  |
 #> +---------+-------+-------+----------+--------+
 #> 
 # }

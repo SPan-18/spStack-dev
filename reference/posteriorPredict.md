@@ -104,13 +104,13 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.031s
+#> ℹ Compile time: 0.019s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -61.1673
-#> ℹ Compile time: 0.031s
-#> ℹ Solver time: 0.007s
+#> ℹ Compile time: 0.019s
+#> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:
 #> 

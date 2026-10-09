@@ -91,13 +91,13 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.032s
+#> ℹ Compile time: 0.02s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -54.6976
-#> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.006s
+#> ℹ Compile time: 0.02s
+#> ℹ Solver time: 0.003s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -115,7 +115,7 @@ print(mod1$solver.status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.181   0.306   0.123 
+#>   0.094   0.199   0.074 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta

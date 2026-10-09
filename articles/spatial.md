@@ -221,13 +221,13 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 4.081s
+#> ℹ Compile time: 3.897s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -109.16
-#> ℹ Compile time: 4.081s
-#> ℹ Solver time: 0.014s
+#> ℹ Compile time: 3.897s
+#> ℹ Solver time: 0.01s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -265,7 +265,7 @@ print(mod3$solver.status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.870   1.112   4.881
+#>   4.510   0.797   4.533
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -485,8 +485,8 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  0.7767448  2.0431825  3.1654221
-#> x1          -0.6480264 -0.5517039 -0.4539841
+#> (Intercept)  0.8436412  2.0218572  3.2383492
+#> x1          -0.6469215 -0.5543459 -0.4650622
 ```
 
 #### Posterior recovery of scale parameters
@@ -554,13 +554,13 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.278s
+#> ℹ Compile time: 0.146s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -312.22
-#> ℹ Compile time: 0.278s
-#> ℹ Solver time: 0.053s
+#> ✔ Optimal value: -312.661
+#> ℹ Compile time: 0.146s
+#> ℹ Solver time: 0.03s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -570,14 +570,14 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 2  |    7|  0.5|       0.5| 0.000  |
 #> | Model 3  |   10|  0.5|       0.5| 0.000  |
 #> | Model 4  |    3|  1.5|       0.5| 0.000  |
-#> | Model 5  |    7|  1.5|       0.5| 0.000  |
+#> | Model 5  |    7|  1.5|       0.5| 0.346  |
 #> | Model 6  |   10|  1.5|       0.5| 0.000  |
 #> | Model 7  |    3|  0.5|       0.6| 0.000  |
 #> | Model 8  |    7|  0.5|       0.6| 0.000  |
 #> | Model 9  |   10|  0.5|       0.6| 0.000  |
-#> | Model 10 |    3|  1.5|       0.6| 0.000  |
-#> | Model 11 |    7|  1.5|       0.6| 0.758  |
-#> | Model 12 |   10|  1.5|       0.6| 0.242  |
+#> | Model 10 |    3|  1.5|       0.6| 0.017  |
+#> | Model 11 |    7|  1.5|       0.6| 0.271  |
+#> | Model 12 |   10|  1.5|       0.6| 0.366  |
 #> +----------+-----+-----+----------+--------+
 ```
 
@@ -592,7 +592,7 @@ print(mod2$solver.status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  20.389  30.731  13.094
+#>   9.851  18.761   7.332
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -624,9 +624,9 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
-#>                   2.5%        50%      97.5%
-#> (Intercept)  1.0542622  2.0847265  3.0922761
-#> x1          -0.6248075 -0.5464667 -0.4685643
+#>                   2.5%        50%     97.5%
+#> (Intercept)  0.8932646  2.1134528  3.124745
+#> x1          -0.6251605 -0.5506389 -0.472398
 ```
 
 The synthetic data `simPoisson` was simulated using
@@ -721,9 +721,9 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                  2.5%        50%      97.5%
-#> (Intercept) -1.190050  0.7271262  2.3942790
-#> x1          -0.559403 -0.4056053 -0.2394892
+#>                   2.5%        50%      97.5%
+#> (Intercept) -1.0059624  0.7207733  2.4464109
+#> x1          -0.5661417 -0.4006356 -0.2206868
 ```
 
 ### Spatial binary data
@@ -756,8 +756,8 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.2459420  0.2937991 1.92306216
-#> x1          -0.6741716 -0.3077403 0.04356718
+#> (Intercept) -1.4991649  0.2961064 1.78403129
+#> x1          -0.6703245 -0.3055731 0.03549851
 ```
 
 ## References

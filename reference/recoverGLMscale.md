@@ -65,13 +65,13 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.031s
+#> ℹ Compile time: 0.014s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -154.519
-#> ℹ Compile time: 0.031s
-#> ℹ Solver time: 0.006s
+#> ℹ Compile time: 0.014s
+#> ℹ Solver time: 0.003s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -81,8 +81,8 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 2 |    5|  0.5|       0.5| 0.000  |
 #> | Model 3 |    7|  0.5|       0.5| 0.000  |
 #> | Model 4 |    3|  1.5|       0.5| 0.398  |
-#> | Model 5 |    5|  1.5|       0.5| 0.083  |
-#> | Model 6 |    7|  1.5|       0.5| 0.519  |
+#> | Model 5 |    5|  1.5|       0.5| 0.082  |
+#> | Model 6 |    7|  1.5|       0.5| 0.520  |
 #> +---------+-----+-----+----------+--------+
 #> 
 

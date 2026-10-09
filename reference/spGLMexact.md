@@ -311,9 +311,9 @@ mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
 # summarize posterior samples
 post_beta <- mod2$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>            2.5%        50%     97.5%
-#> [1,] -0.6230326  1.0619639 2.6529332
-#> [2,] -1.9705288 -0.5585171 0.4772962
+#>           2.5%        50%    97.5%
+#> [1,] -1.152229  1.0638569 3.177919
+#> [2,] -1.948063 -0.6444146 1.765978
 
 # Example 3: Analyze spatial binary data
 data(simBinary)
@@ -356,7 +356,7 @@ mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
 # summarize posterior samples
 post_beta <- mod3$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>           2.5%        50%    97.5%
-#> [1,] -1.099885  0.9949421 3.572417
-#> [2,] -2.135907 -0.3900626 1.299150
+#>           2.5%        50%     97.5%
+#> [1,] -2.286179  1.0835017 4.2971743
+#> [2,] -1.947643 -0.4570675 0.8338287
 ```

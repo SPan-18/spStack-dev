@@ -18,6 +18,40 @@
   distances are computed from `coords` in C++, and
   [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
   builds each correlation matrix once per (phi, nu).
+- [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  faster GLM backend. The pre-processing of the conjugate sampler needs
+  one n x n Cholesky factorization instead of several, and is about 3x
+  faster for
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md).
+  In
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md)
+  and
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  exact leave-one-out and K-fold cross-validation update the full-data
+  pre-processing for each held-out site or fold (O(n^2) per site)
+  instead of recomputing it (O(n^3)). Results are unchanged up to
+  floating-point rounding.
+- GLMs: the latent pseudo-data are now drawn on the log scale, as log
+  G1 - log G2 with gamma variates G1, G2 (binomial, binary) and as log G
+  with an underflow-safe draw for shape \< 1 (Poisson). Previously, a
+  beta draw that rounded to 1, or a gamma draw that underflowed to 0,
+  produced infinite or NaN samples and leave-one-out predictive
+  densities; this happened with positive probability for small
+  `boundary` (e.g. about 1 in 2 million draws at `boundary = 0.4` for
+  binary data). The sampled distribution is unchanged, but results for a
+  given seed differ from earlier versions at the Monte Carlo level
+  (binomial and binary data; Poisson data with zero counts).
+- [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md):
+  `boundary` is no longer raised to 0.4 for binary data. A message is
+  given when `boundary < 0.1`.
+- [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  each candidate `boundary` must lie in (0, 1), and a message is given
+  when any is below 0.1.
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
   the posterior scale of the variance is computed in residual form,
