@@ -26,7 +26,7 @@ surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
 
   integer; (optional) controls smoothness of the spatial interpolation
   as appearing in the
-  [`MBA::mba.surf()`](https://rdrr.io/pkg/MBA/man/mba.surf.html)
+  [`MBA::mba.surf()`](https://finleya.github.io/MBA/reference/mba.surf.html)
   function. Default is 8.
 
 - col.pal:

@@ -22,6 +22,7 @@ Zhang, Bradley, and, Banerjee 2025](https://doi.org/10.1214/25-BA1582).
 If installing from CRAN, use the following.
 
 ``` r
+
 install.packages("spStack")
 ```
 
@@ -29,6 +30,7 @@ For a quick installation of the development version, run the following
 command in R.
 
 ``` r
+
 # Install development version from GitHub
 # install.packages("pak")
 pak::pak("SPan-18/spStack-dev")
@@ -42,6 +44,7 @@ file location, either issue `R CMD install spStack_X.X.XX.tar.gz` in the
 terminal, or run the following command in R to install the package.
 
 ``` r
+
 install.packages("spStack_X.X.XX.tar.gz", type = "source", repos = NULL)
 ```
 
@@ -74,6 +77,7 @@ otherwise the path for `gfortran` needs to set correctly.
 Once successfully installed, load the library in R.
 
 ``` r
+
 library(spStack)
 ```
 

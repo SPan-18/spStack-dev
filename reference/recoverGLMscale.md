@@ -47,10 +47,12 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data("simPoisson")
 dat <- simPoisson[1:100, ]
+cand.mod <- candidateModels(list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
+                                 boundary = c(0.5)), "cartesian")
+
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   params.list = list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
-                                      boundary = c(0.5)),
+                   candidate.models = cand.mod,
                    n.samples = 100,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                    verbose = TRUE)
@@ -60,16 +62,16 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.05s
+#> ℹ Compile time: 0.032s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -154.519
-#> ℹ Compile time: 0.05s
-#> ℹ Solver time: 0.004s
+#> ℹ Compile time: 0.032s
+#> ℹ Solver time: 0.006s
 #> 
 #> STACKING WEIGHTS:
 #> 

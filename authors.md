@@ -10,16 +10,16 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/SPan-18/spStack-dev/blob/v1.1.3/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/SPan-18/spStack-dev/blob/master/DESCRIPTION)
 
 Pan S, Banerjee S (2026). *spStack: Bayesian Geostatistics Using
-Predictive Stacking*. R package version 1.1.3,
+Predictive Stacking*. R package version 1.1.3.99,
 <https://span-18.github.io/spStack-dev/>.
 
     @Manual{,
       title = {spStack: Bayesian Geostatistics Using Predictive Stacking},
       author = {Soumyakanti Pan and Sudipto Banerjee},
       year = {2026},
-      note = {R package version 1.1.3},
+      note = {R package version 1.1.3.99},
       url = {https://span-18.github.io/spStack-dev/},
     }

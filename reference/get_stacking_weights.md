@@ -68,12 +68,14 @@ set.seed(1234)
 data(simGaussian)
 dat <- simGaussian[1:100, ]
 
+cand.mod <- candidateModels(list(phi = c(1.5, 3),
+                                 nu = c(0.5, 1),
+                                 noise_sp_ratio = c(1)), "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3),
-                                     nu = c(0.5, 1),
-                                     noise_sp_ratio = c(1)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 #> --------------------------------------------------
@@ -82,25 +84,25 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.789s
+#> ℹ Compile time: 3.955s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -50.8551
-#> ℹ Compile time: 0.789s
-#> ℹ Solver time: 0.026s
+#> ✔ Optimal value: -54.6976
+#> ℹ Compile time: 3.955s
+#> ℹ Solver time: 0.007s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | noise_sp_ratio | weight |
 #> +---------+-----+-----+----------------+--------+
 #> | Model 1 |  1.5|  0.5|               1| 0.000  |
-#> | Model 2 |  3.0|  0.5|               1| 0.284  |
+#> | Model 2 |  3.0|  0.5|               1| 0.333  |
 #> | Model 3 |  1.5|  1.0|               1| 0.000  |
-#> | Model 4 |  3.0|  1.0|               1| 0.716  |
+#> | Model 4 |  3.0|  1.0|               1| 0.667  |
 #> +---------+-----+-----+----------------+--------+
 #> 
 
@@ -112,18 +114,18 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.21s
+#> ℹ Compile time: 0.291s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -50.8551
-#> ℹ Compile time: 0.21s
-#> ℹ Solver time: 0.056s
+#> ✔ Optimal value: -54.6976
+#> ℹ Compile time: 0.291s
+#> ℹ Solver time: 0.06s
 print(round(w_hat$weights, 4))
-#> [1] 0.0000 0.2845 0.0000 0.7155
+#> [1] 0.0000 0.3333 0.0000 0.6667
 print(w_hat$solver)
 #> [1] "CVXR:CLARABEL"
 print(w_hat$status)

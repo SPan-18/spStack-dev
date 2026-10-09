@@ -7,8 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 <title>Posterior Predictive Inference • spStack</title>
 <script src="../deps/jquery-3.6.0/jquery-3.6.0.min.js"></script><meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-<link href="../deps/bootstrap-5.3.1/bootstrap.min.css" rel="stylesheet">
-<script src="../deps/bootstrap-5.3.1/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
+<link href="../deps/bootstrap-5.3.8/bootstrap.min.css" rel="stylesheet">
+<script src="../deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="../deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="../deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="../deps/headroom-0.11.0/headroom.min.js"></script><script src="../deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="../deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="../deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="../deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="../deps/search-1.0.0/fuse.min.js"></script><script src="../deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="../pkgdown.js"></script><meta property="og:title" content="Posterior Predictive Inference">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" integrity="sha384-nB0miv6/jRmo5UMMR1wu3Gz6NLsoTkbqJghGIsx//Rlm+ZU03BU6SQNC66uf4l5+" crossorigin="anonymous">
@@ -22,7 +22,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">spStack</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="Released version">1.1.3.99</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -64,7 +64,7 @@
       <img src="../logo.png" class="logo" alt=""><h1>Posterior Predictive Inference</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/v1.1.3/vignettes/posterior-predictive.Rmd" class="external-link"><code>vignettes/posterior-predictive.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/SPan-18/spStack-dev/blob/master/vignettes/posterior-predictive.Rmd" class="external-link"><code>vignettes/posterior-predictive.Rmd</code></a></small>
       <div class="d-none name"><code>posterior-predictive.Rmd</code></div>
     </div>
 
@@ -92,7 +92,7 @@ their corresponding posterior predictive distributions.</p>
 <div class="section level2">
 <h2 id="prediction-in-spatial-linear-model">Prediction in spatial linear model<a class="anchor" aria-label="anchor" href="#prediction-in-spatial-linear-model"></a>
 </h2>
-<p>Define the collection of candidate parameters and fit the model using
+<p>Define the collection of candidate models and fit using
 <code><a href="../reference/spLMstack.html">spLMstack()</a></code>.</p>
 <div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># training and test data sizes</span></span>
@@ -103,12 +103,15 @@ their corresponding posterior predictive distributions.</p>
 <span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simGaussian</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
 <span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simGaussian</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span>
 <span></span>
+<span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">3</span>, <span class="fl">5</span><span class="op">)</span>,</span>
+<span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.75</span>, <span class="fl">1.25</span><span class="op">)</span>,</span>
+<span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                            <span class="st">"cartesian"</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spLMstack.html">spLMstack</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat_train</span>,</span>
 <span>                  coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_train</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>                  cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span>
-<span>                  params.list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">3</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span>                                     nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.75</span>, <span class="fl">1.25</span><span class="op">)</span>,</span>
-<span>                                     noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                  candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span>
 <span>                  n.samples <span class="op">=</span> <span class="fl">1000</span>, loopd.method <span class="op">=</span> <span class="st">"psis"</span>,</span>
 <span>                  parallel <span class="op">=</span> <span class="cn">FALSE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
 <pre><code><span><span class="co">## --------------------------------------------------</span></span></code></pre>
@@ -117,43 +120,46 @@ their corresponding posterior predictive distributions.</p>
 <pre><code><span><span class="co">## Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span></span></code></pre>
 <pre><code><span><span class="co">## Solver search order: CLARABEL -&gt; SCS</span></span></code></pre>
 <pre><code><span><span class="co">## --------------------------------------------------</span></span></code></pre>
-<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────</span></span></code></pre>
+<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.75s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 3.332s</span></span></code></pre>
 <pre><code><span><span class="co">## ─────────────────────────────── Numerical solver ───────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## ──────────────────────────────────── Summary ───────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Status: optimal</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -85.5234</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.75s</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Solver time: 0.029s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -84.439</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 3.332s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Solver time: 0.013s</span></span></code></pre>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## STACKING WEIGHTS:</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">##            | phi | nu   | noise_sp_ratio | weight |</span></span>
 <span><span class="co">## +----------+-----+------+----------------+--------+</span></span>
-<span><span class="co">## | Model 1  |  1.5|  0.75|             0.5| 0.72   |</span></span>
-<span><span class="co">## | Model 2  |  3.0|  0.75|             0.5| 0.00   |</span></span>
-<span><span class="co">## | Model 3  |  5.0|  0.75|             0.5| 0.28   |</span></span>
-<span><span class="co">## | Model 4  |  1.5|  1.25|             0.5| 0.00   |</span></span>
-<span><span class="co">## | Model 5  |  3.0|  1.25|             0.5| 0.00   |</span></span>
-<span><span class="co">## | Model 6  |  5.0|  1.25|             0.5| 0.00   |</span></span>
-<span><span class="co">## | Model 7  |  1.5|  0.75|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 8  |  3.0|  0.75|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 9  |  5.0|  0.75|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 10 |  1.5|  1.25|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 11 |  3.0|  1.25|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 12 |  5.0|  1.25|             1.0| 0.00   |</span></span>
-<span><span class="co">## | Model 13 |  1.5|  0.75|             2.0| 0.00   |</span></span>
-<span><span class="co">## | Model 14 |  3.0|  0.75|             2.0| 0.00   |</span></span>
-<span><span class="co">## | Model 15 |  5.0|  0.75|             2.0| 0.00   |</span></span>
-<span><span class="co">## | Model 16 |  1.5|  1.25|             2.0| 0.00   |</span></span>
-<span><span class="co">## | Model 17 |  3.0|  1.25|             2.0| 0.00   |</span></span>
-<span><span class="co">## | Model 18 |  5.0|  1.25|             2.0| 0.00   |</span></span>
+<span><span class="co">## | Model 1  |  1.5|  0.75|             0.5| 0.000  |</span></span>
+<span><span class="co">## | Model 2  |  3.0|  0.75|             0.5| 0.000  |</span></span>
+<span><span class="co">## | Model 3  |  5.0|  0.75|             0.5| 0.717  |</span></span>
+<span><span class="co">## | Model 4  |  1.5|  1.25|             0.5| 0.283  |</span></span>
+<span><span class="co">## | Model 5  |  3.0|  1.25|             0.5| 0.000  |</span></span>
+<span><span class="co">## | Model 6  |  5.0|  1.25|             0.5| 0.000  |</span></span>
+<span><span class="co">## | Model 7  |  1.5|  0.75|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 8  |  3.0|  0.75|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 9  |  5.0|  0.75|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 10 |  1.5|  1.25|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 11 |  3.0|  1.25|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 12 |  5.0|  1.25|             1.0| 0.000  |</span></span>
+<span><span class="co">## | Model 13 |  1.5|  0.75|             2.0| 0.000  |</span></span>
+<span><span class="co">## | Model 14 |  3.0|  0.75|             2.0| 0.000  |</span></span>
+<span><span class="co">## | Model 15 |  5.0|  0.75|             2.0| 0.000  |</span></span>
+<span><span class="co">## | Model 16 |  1.5|  1.25|             2.0| 0.000  |</span></span>
+<span><span class="co">## | Model 17 |  3.0|  1.25|             2.0| 0.000  |</span></span>
+<span><span class="co">## | Model 18 |  5.0|  1.25|             2.0| 0.000  |</span></span>
 <span><span class="co">## +----------+-----+------+----------------+--------+</span></span></code></pre>
+<pre><code><span><span class="co">## Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6</span></span>
+<span><span class="co">## candidate model(s); PSIS estimates of the corresponding leave-one-out</span></span>
+<span><span class="co">## predictive densities may be unreliable. Consider loopd.method = 'exact'.</span></span></code></pre>
 <p>Define the new coordinates, run <code><a href="../reference/posteriorPredict.html">posteriorPredict()</a></code>, and
 finally sample from the <em>stacked posterior</em>.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sp_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">n_pred</span><span class="op">)</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">mod.pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/posteriorPredict.html">posteriorPredict</a></span><span class="op">(</span><span class="va">mod1</span>, coords_new <span class="op">=</span> <span class="va">sp_pred</span>, covars_new <span class="op">=</span> <span class="va">X_new</span>, joint <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -161,7 +167,7 @@ finally sample from the <em>stacked posterior</em>.</p>
 <p>Finally, we analyze the posterior predictive distributions of the
 spatial process as well as the responses against their corresponding
 true values in order to assess how well the predictions are made.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">postpred_z</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">z.pred</span></span>
 <span><span class="va">post_z_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">postpred_z</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">z_combn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>z <span class="op">=</span> <span class="va">dat_pred</span><span class="op">$</span><span class="va">z_true</span>, zL <span class="op">=</span> <span class="va">post_z_summ</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
@@ -194,7 +200,7 @@ true values in order to assess how well the predictions are made.</p>
 <p>Define the collection of candidate parameters and fit the model using
 <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code>. We use spatial Poisson count data
 <code>simPoisson</code> for this example.</p>
-<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># training and test data sizes</span></span>
 <span><span class="va">n_train</span> <span class="op">&lt;-</span> <span class="fl">150</span></span>
 <span><span class="va">n_pred</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
@@ -204,10 +210,12 @@ true values in order to assess how well the predictions are made.</p>
 <span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
 <span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span>
 <span></span>
+<span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">5</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
+<span>                                 boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span>
+<span></span>
 <span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spGLMstack.html">spGLMstack</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat_train</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span>
 <span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_train</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span>
-<span>                   params.list <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">5</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
-<span>                                      boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,</span>
+<span>                   candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span>
 <span>                   priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>nu.beta <span class="op">=</span> <span class="fl">5</span>, nu.z <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
 <span>                   n.samples <span class="op">=</span> <span class="fl">1000</span>,</span>
 <span>                   loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
@@ -219,32 +227,32 @@ true values in order to assess how well the predictions are made.</p>
 <pre><code><span><span class="co">## Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span></span></code></pre>
 <pre><code><span><span class="co">## Solver search order: CLARABEL -&gt; SCS</span></span></code></pre>
 <pre><code><span><span class="co">## --------------------------------------------------</span></span></code></pre>
-<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────</span></span></code></pre>
+<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.235s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.262s</span></span></code></pre>
 <pre><code><span><span class="co">## ─────────────────────────────── Numerical solver ───────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## ──────────────────────────────────── Summary ───────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Status: optimal</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -236.802</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.235s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -236.035</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.262s</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Solver time: 0.044s</span></span></code></pre>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## STACKING WEIGHTS:</span></span>
 <span><span class="co">## </span></span>
 <span><span class="co">##           | phi | nu  | boundary | weight |</span></span>
 <span><span class="co">## +---------+-----+-----+----------+--------+</span></span>
-<span><span class="co">## | Model 1 |    3|  0.5|       0.5| 0.000  |</span></span>
-<span><span class="co">## | Model 2 |    4|  0.5|       0.5| 0.000  |</span></span>
-<span><span class="co">## | Model 3 |    5|  0.5|       0.5| 0.000  |</span></span>
-<span><span class="co">## | Model 4 |    3|  1.0|       0.5| 0.079  |</span></span>
-<span><span class="co">## | Model 5 |    4|  1.0|       0.5| 0.000  |</span></span>
-<span><span class="co">## | Model 6 |    5|  1.0|       0.5| 0.921  |</span></span>
+<span><span class="co">## | Model 1 |    3|  0.5|       0.5| 0      |</span></span>
+<span><span class="co">## | Model 2 |    4|  0.5|       0.5| 0      |</span></span>
+<span><span class="co">## | Model 3 |    5|  0.5|       0.5| 0      |</span></span>
+<span><span class="co">## | Model 4 |    3|  1.0|       0.5| 0      |</span></span>
+<span><span class="co">## | Model 5 |    4|  1.0|       0.5| 0      |</span></span>
+<span><span class="co">## | Model 6 |    5|  1.0|       0.5| 1      |</span></span>
 <span><span class="co">## +---------+-----+-----+----------+--------+</span></span></code></pre>
 <p>Define the new coordinates, run <code><a href="../reference/posteriorPredict.html">posteriorPredict()</a></code>, and
 finally sample from the <em>stacked posterior</em>. To demonstrate the
 usage, we specify <code>joint=FALSE</code> for the prediction task.</p>
-<div class="sourceCode" id="cb41"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sp_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">n_pred</span><span class="op">)</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">mod.pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/posteriorPredict.html">posteriorPredict</a></span><span class="op">(</span><span class="va">mod1</span>, coords_new <span class="op">=</span> <span class="va">sp_pred</span>, covars_new <span class="op">=</span> <span class="va">X_new</span>, joint <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
@@ -252,7 +260,7 @@ usage, we specify <code>joint=FALSE</code> for the prediction task.</p>
 <p>Finally, we analyze the posterior predictive distributions of the
 spatial process as well as the responses against their corresponding
 true values in order to assess how well the predictions are made.</p>
-<div class="sourceCode" id="cb42"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">postpred_z</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">z.pred</span></span>
 <span><span class="va">post_z_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">postpred_z</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="va">z_combn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>z <span class="op">=</span> <span class="va">dat_pred</span><span class="op">$</span><span class="va">z_true</span>, zL <span class="op">=</span> <span class="va">post_z_summ</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
@@ -286,7 +294,7 @@ true values in order to assess how well the predictions are made.</p>
 <p>Define the collection of candidate parameters and fit the model using
 <code><a href="../reference/stvcGLMstack.html">stvcGLMstack()</a></code>. We use spatial Poisson count data
 <code>sim_stvcPoisson</code> for this example.</p>
-<div class="sourceCode" id="cb43"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb44"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># Example 2: Spatial-temporal model with varying coefficients</span></span>
 <span><span class="va">n_train</span> <span class="op">&lt;-</span> <span class="fl">150</span></span>
 <span><span class="va">n_pred</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
@@ -317,16 +325,16 @@ true values in order to assess how well the predictions are made.</p>
 <pre><code><span><span class="co">## Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span></span></code></pre>
 <pre><code><span><span class="co">## Solver search order: CLARABEL -&gt; SCS</span></span></code></pre>
 <pre><code><span><span class="co">## --------------------------------------------------</span></span></code></pre>
-<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────</span></span></code></pre>
+<pre><code><span><span class="co">## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.049s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.032s</span></span></code></pre>
 <pre><code><span><span class="co">## ─────────────────────────────── Numerical solver ───────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## ──────────────────────────────────── Summary ───────────────────────────────────</span></span></code></pre>
 <pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Status: optimal</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -484.461</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.049s</span></span></code></pre>
-<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Solver time: 0.011s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BB00;">✔</span> Optimal value: -479.995</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Compile time: 0.032s</span></span></code></pre>
+<pre><code><span><span class="co">## <span style="color: #00BBBB;">ℹ</span> Solver time: 0.016s</span></span></code></pre>
 <pre><code><span><span class="co">## </span></span>
 <span><span class="co">## STACKING WEIGHTS:</span></span>
 <span><span class="co">## </span></span>
@@ -334,13 +342,13 @@ true values in order to assess how well the predictions are made.</p>
 <span><span class="co">## +----------+-------+-------+----------+--------+</span></span>
 <span><span class="co">## | Model 1  |      1|      1|      0.50| 0.000  |</span></span>
 <span><span class="co">## | Model 2  |      2|      1|      0.50| 0.000  |</span></span>
-<span><span class="co">## | Model 3  |      3|      1|      0.50| 0.152  |</span></span>
+<span><span class="co">## | Model 3  |      3|      1|      0.50| 0.000  |</span></span>
 <span><span class="co">## | Model 4  |      1|      2|      0.50| 0.000  |</span></span>
 <span><span class="co">## | Model 5  |      2|      2|      0.50| 0.000  |</span></span>
-<span><span class="co">## | Model 6  |      3|      2|      0.50| 0.172  |</span></span>
+<span><span class="co">## | Model 6  |      3|      2|      0.50| 0.199  |</span></span>
 <span><span class="co">## | Model 7  |      1|      4|      0.50| 0.000  |</span></span>
 <span><span class="co">## | Model 8  |      2|      4|      0.50| 0.000  |</span></span>
-<span><span class="co">## | Model 9  |      3|      4|      0.50| 0.339  |</span></span>
+<span><span class="co">## | Model 9  |      3|      4|      0.50| 0.705  |</span></span>
 <span><span class="co">## | Model 10 |      1|      1|      0.75| 0.000  |</span></span>
 <span><span class="co">## | Model 11 |      2|      1|      0.75| 0.000  |</span></span>
 <span><span class="co">## | Model 12 |      3|      1|      0.75| 0.000  |</span></span>
@@ -349,12 +357,12 @@ true values in order to assess how well the predictions are made.</p>
 <span><span class="co">## | Model 15 |      3|      2|      0.75| 0.000  |</span></span>
 <span><span class="co">## | Model 16 |      1|      4|      0.75| 0.000  |</span></span>
 <span><span class="co">## | Model 17 |      2|      4|      0.75| 0.000  |</span></span>
-<span><span class="co">## | Model 18 |      3|      4|      0.75| 0.336  |</span></span>
+<span><span class="co">## | Model 18 |      3|      4|      0.75| 0.097  |</span></span>
 <span><span class="co">## +----------+-------+-------+----------+--------+</span></span></code></pre>
 <p>Define the new coordinates, run <code><a href="../reference/posteriorPredict.html">posteriorPredict()</a></code>, and
 finally sample from the <em>stacked posterior</em>. We use
 <code>joint=FALSE</code> for this particular example.</p>
-<div class="sourceCode" id="cb61"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb62"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># prepare new coordinates and covariates for prediction</span></span>
 <span><span class="va">sp_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="va">tm_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="st">"t_coords"</span><span class="op">]</span><span class="op">)</span></span>
@@ -369,7 +377,7 @@ finally sample from the <em>stacked posterior</em>. We use
 <p>Finally, we analyze the posterior predictive distributions of the
 spatial-temporal process by plotting them against their corresponding
 true values.</p>
-<div class="sourceCode" id="cb62"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb63"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">postpred_z</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">z.pred</span></span>
 <span><span class="va">post_z1_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">postpred_z</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>,<span class="op">]</span>, <span class="fl">1</span>,</span>
 <span>                        <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
@@ -409,7 +417,7 @@ true values.</p>
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer>

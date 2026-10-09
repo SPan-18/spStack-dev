@@ -72,13 +72,14 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data(simGaussian)
 dat <- simGaussian[1:100, ]
+cand.mod <- candidateModels(list(phi = c(1.5, 3),
+                                 nu = c(0.5, 1),
+                                 noise_sp_ratio = c(1)), "cartesian")
 
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3),
-                                     nu = c(0.5, 1),
-                                     noise_sp_ratio = c(1)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 #> --------------------------------------------------
@@ -87,25 +88,25 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.05s
+#> ℹ Compile time: 0.032s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -50.8551
-#> ℹ Compile time: 0.05s
-#> ℹ Solver time: 0.007s
+#> ✔ Optimal value: -54.6976
+#> ℹ Compile time: 0.032s
+#> ℹ Solver time: 0.006s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | noise_sp_ratio | weight |
 #> +---------+-----+-----+----------------+--------+
 #> | Model 1 |  1.5|  0.5|               1| 0.000  |
-#> | Model 2 |  3.0|  0.5|               1| 0.284  |
+#> | Model 2 |  3.0|  0.5|               1| 0.333  |
 #> | Model 3 |  1.5|  1.0|               1| 0.000  |
-#> | Model 4 |  3.0|  1.0|               1| 0.716  |
+#> | Model 4 |  3.0|  1.0|               1| 0.667  |
 #> +---------+-----+-----+----------------+--------+
 #> 
 print(mod1$solver)
@@ -114,12 +115,12 @@ print(mod1$solver.status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.411   0.288   0.189 
+#>   0.181   0.304   0.122 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                 2.5%      50%    97.5%
-#> (Intercept) 1.678837 2.388175 3.129074
-#> x1          4.845494 4.984023 5.102624
+#> (Intercept) 1.697664 2.395785 3.090683
+#> x1          4.865601 4.979866 5.093619
 ```

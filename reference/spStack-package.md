@@ -78,4 +78,7 @@ Useful links:
 
 Authors:
 
+- Soumyakanti Pan <span18@ucla.edu>
+  ([ORCID](https://orcid.org/0009-0005-9889-7112))
+
 - Sudipto Banerjee <sudipto@ucla.edu>

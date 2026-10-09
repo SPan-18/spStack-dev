@@ -14,7 +14,7 @@ spLMexact(
   data = parent.frame(),
   coords,
   cor.fn,
-  priors,
+  priors = "flat",
   spParams,
   noise_sp_ratio,
   n.samples,
@@ -52,8 +52,12 @@ spLMexact(
 
 - priors:
 
-  a list with each tag corresponding to a parameter name and containing
-  prior details.
+  either `"flat"` (default), which assigns the prior \\p(\beta,
+  \sigma^2) \propto 1/\sigma^2\\, or a list with tags `beta.norm` (a
+  list containing \\\mu\_\beta\\ and \\V\_\beta\\) and/or `sigma.sq.ig`
+  (a vector containing \\a\_\sigma\\ and \\b\_\sigma\\). A component not
+  supplied in the list receives its flat prior, \\p(\beta) \propto 1\\
+  or \\p(\sigma^2) \propto 1/\sigma^2\\.
 
 - spParams:
 
@@ -96,12 +100,18 @@ An object of class `spLMexact`, which is a list with the following tags
 
 - samples:
 
-  a list of length 3, containing posterior samples of fixed effects
-  (`beta`), variance parameter (`sigmaSq`), spatial effects (`z`).
+  a list of length 4, containing posterior samples of fixed effects
+  (`beta`), measurement error variance (`sigmaSq`), spatial variance
+  (`sigmaSq.z`), and spatial effects (`z`).
 
 - loopd:
 
   If `loopd=TRUE`, contains leave-one-out predictive densities.
+
+- loopd.pareto_k:
+
+  If `loopd.method='PSIS'`, contains the Pareto \\k\\ diagnostic values
+  of the leave-one-out predictive densities (Vehtari *et al.* 2024).
 
 - model.params:
 
@@ -117,21 +127,24 @@ prediction and/or model fit evaluation.
 Suppose \\\chi = (s_1, \ldots, s_n)\\ denotes the \\n\\ spatial
 locations the response \\y\\ is observed. With this function, we fit a
 conjugate Bayesian hierarchical spatial model \$\$ \begin{aligned} y
-\mid z, \beta, \sigma^2 &\sim N(X\beta + z, \delta^2 \sigma^2 I_n),
-\quad z \mid \sigma^2 \sim N(0, \sigma^2 R(\chi; \phi, \nu)), \\ \beta
-\mid \sigma^2 &\sim N(\mu\_\beta, \sigma^2 V\_\beta), \quad \sigma^2
-\sim \mathrm{IG}(a\_\sigma, b\_\sigma) \end{aligned} \$\$ where we fix
-the spatial process parameters \\\phi\\ and \\\nu\\, the
-noise-to-spatial variance ratio \\\delta^2\\ and the hyperparameters
-\\\mu\_\beta\\, \\V\_\beta\\, \\a\_\sigma\\ and \\b\_\sigma\\. We
-utilize a composition sampling strategy to sample the model parameters
-from their joint posterior distribution which can be written as \$\$
-p(\sigma^2, \beta, z \mid y) = p(\sigma^2 \mid y) \times p(\beta \mid
-\sigma^2, y) \times p(z \mid \beta, \sigma^2, y). \$\$ We proceed by
-first sampling \\\sigma^2\\ from its marginal posterior, then given the
-samples of \\\sigma^2\\, we sample \\\beta\\ and subsequently, we sample
-\\z\\ conditioned on the posterior samples of \\\beta\\ and \\\sigma^2\\
-(Banerjee 2020).
+\mid z, \beta, \sigma^2 &\sim N(X\beta + z, \sigma^2 I_n), \quad z \mid
+\sigma^2_z \sim N(0, \sigma^2_z R(\chi; \phi, \nu)), \\ \beta \mid
+\sigma^2 &\sim N(\mu\_\beta, \sigma^2 V\_\beta), \quad \sigma^2 \sim
+\mathrm{IG}(a\_\sigma, b\_\sigma) \end{aligned} \$\$ where we fix the
+noise-to-spatial variance ratio \\\delta^2 = \sigma^2 / \sigma^2_z\\,
+the spatial process parameters \\\phi\\ and \\\nu\\, and the
+hyperparameters \\\mu\_\beta\\, \\V\_\beta\\, \\a\_\sigma\\ and
+\\b\_\sigma\\. If `priors = "flat"`, we instead assign the prior
+\\p(\beta, \sigma^2) \propto 1/\sigma^2\\. We utilize a composition
+sampling strategy to sample the model parameters from their joint
+posterior distribution which can be written as \$\$ p(\sigma^2, \beta, z
+\mid y) = p(\sigma^2 \mid y) \times p(\beta \mid \sigma^2, y) \times p(z
+\mid \beta, \sigma^2, y). \$\$ We proceed by first sampling \\\sigma^2\\
+from its marginal posterior, then given the samples of \\\sigma^2\\, we
+sample \\\beta\\ and subsequently, we sample \\z\\ conditioned on the
+posterior samples of \\\beta\\ and \\\sigma^2\\ (Banerjee 2020).
+Posterior samples of the spatial variance are obtained as \\\sigma^2_z =
+\sigma^2 / \delta^2\\.
 
 ## References
 

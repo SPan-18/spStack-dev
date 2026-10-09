@@ -14,8 +14,8 @@ spLMstack(
   data = parent.frame(),
   coords,
   cor.fn,
-  priors,
-  params.list,
+  priors = "flat",
+  candidate.models,
   n.samples,
   loopd.method,
   parallel = FALSE,
@@ -52,13 +52,19 @@ spLMstack(
 
 - priors:
 
-  a list with each tag corresponding to a parameter name and containing
-  prior details. If not supplied, uses defaults.
+  either `"flat"` (default), which assigns the prior \\p(\beta,
+  \sigma^2) \propto 1/\sigma^2\\, or a list with tags `beta.norm` (a
+  list containing \\\mu\_\beta\\ and \\V\_\beta\\) and/or `sigma.sq.ig`
+  (a vector containing \\a\_\sigma\\ and \\b\_\sigma\\). A component not
+  supplied in the list receives its flat prior, \\p(\beta) \propto 1\\
+  or \\p(\sigma^2) \propto 1/\sigma^2\\.
 
-- params.list:
+- candidate.models:
 
-  a list containing candidate values of spatial process parameters for
-  the `cor.fn` used, and, noise-to-spatial variance ratio.
+  an object of class `candidateModels` containing a list of candidate
+  models for stacking. See
+  [`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md)
+  for details.
 
 - n.samples:
 
@@ -107,9 +113,17 @@ tags -
 - `samples`:
 
   a list of length equal to total number of candidate models with each
-  entry corresponding to a list of length 3, containing posterior
-  samples of fixed effects (`beta`), variance parameter (`sigmaSq`),
-  spatial effects (`z`) for that model.
+  entry corresponding to a list of length 4, containing posterior
+  samples of fixed effects (`beta`), measurement error variance
+  (`sigmaSq`), spatial variance (`sigmaSq.z`), and spatial effects (`z`)
+  for that model.
+
+- `loopd.pareto_k`:
+
+  if `loopd.method='PSIS'`, a list of length equal to total number of
+  candidate models with each entry containing the Pareto \\k\\
+  diagnostic values of the leave-one-out predictive densities under that
+  particular model.
 
 - `loopd`:
 
@@ -196,13 +210,16 @@ sigmaSqIGb <- 2
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
+cand.mod <- candidateModels(list(phi = c(1.5, 3),
+                                 nu = c(0.5, 1),
+                                 noise_sp_ratio = c(1)),
+                            "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  params.list = list(phi = c(1.5, 3),
-                                     nu = c(0.5, 1),
-                                     noise_sp_ratio = c(1)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 #> --------------------------------------------------
@@ -211,15 +228,15 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.048s
+#> ℹ Compile time: 0.03s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -29.233
-#> ℹ Compile time: 0.048s
+#> ℹ Compile time: 0.03s
 #> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:

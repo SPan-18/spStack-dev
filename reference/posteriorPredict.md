@@ -86,11 +86,13 @@ dat_train <- dat[1:n_train, ]
 dat_pred <- dat[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
+cand.mod <- candidateModels(list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
+                                 noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
-                                     noise_sp_ratio = c(0.5, 1, 2)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
 #> --------------------------------------------------
@@ -99,29 +101,29 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.411s
+#> ℹ Compile time: 0.031s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -59.2883
-#> ℹ Compile time: 0.411s
-#> ℹ Solver time: 0.005s
+#> ✔ Optimal value: -61.1673
+#> ℹ Compile time: 0.031s
+#> ℹ Solver time: 0.008s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>            | phi | nu   | noise_sp_ratio | weight |
 #> +----------+-----+------+----------------+--------+
 #> | Model 1  |  1.5|  0.75|             0.5| 0.000  |
-#> | Model 2  |  3.0|  0.75|             0.5| 0.000  |
-#> | Model 3  |  5.0|  0.75|             0.5| 0.404  |
-#> | Model 4  |  1.5|  1.25|             0.5| 0.076  |
-#> | Model 5  |  3.0|  1.25|             0.5| 0.520  |
+#> | Model 2  |  3.0|  0.75|             0.5| 0.499  |
+#> | Model 3  |  5.0|  0.75|             0.5| 0.022  |
+#> | Model 4  |  1.5|  1.25|             0.5| 0.000  |
+#> | Model 5  |  3.0|  1.25|             0.5| 0.000  |
 #> | Model 6  |  5.0|  1.25|             0.5| 0.000  |
 #> | Model 7  |  1.5|  0.75|             1.0| 0.000  |
-#> | Model 8  |  3.0|  0.75|             1.0| 0.000  |
+#> | Model 8  |  3.0|  0.75|             1.0| 0.479  |
 #> | Model 9  |  5.0|  0.75|             1.0| 0.000  |
 #> | Model 10 |  1.5|  1.25|             1.0| 0.000  |
 #> | Model 11 |  3.0|  1.25|             1.0| 0.000  |
@@ -134,6 +136,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 #> | Model 18 |  5.0|  1.25|             2.0| 0.000  |
 #> +----------+-----+------+----------------+--------+
 #> 
+#> Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6 candidate model(s); PSIS estimates of the corresponding leave-one-out predictive densities may be unreliable. Consider loopd.method = 'exact'.
 
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])

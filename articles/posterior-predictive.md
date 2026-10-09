@@ -16,6 +16,7 @@ functions
 etc.
 
 ``` r
+
 library(spStack)
 library(ggplot2)
 library(patchwork)
@@ -31,10 +32,11 @@ corresponding posterior predictive distributions.
 
 ## Prediction in spatial linear model
 
-Define the collection of candidate parameters and fit the model using
+Define the collection of candidate models and fit using
 [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md).
 
 ``` r
+
 # training and test data sizes
 n_train <- 150
 n_pred <- 50
@@ -43,12 +45,15 @@ data("simGaussian")
 dat_train <- simGaussian[1:n_train, ]
 dat_pred <- simGaussian[n_train + 1:n_pred, ]
 
+cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
+                                 nu = c(0.75, 1.25),
+                                 noise_sp_ratio = c(0.5, 1, 2)),
+                            "cartesian")
+
 mod1 <- spLMstack(y ~ x1, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  params.list = list(phi = c(1.5, 3, 5),
-                                     nu = c(0.75, 1.25),
-                                     noise_sp_ratio = c(0.5, 1, 2)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
 ```
@@ -65,13 +70,13 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## --------------------------------------------------
 
-    ## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 
     ## ℹ Problem: 1 variable, 2 constraints (DCP)
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.75s
+    ## ℹ Compile time: 3.332s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -79,42 +84,47 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ✔ Status: optimal
 
-    ## ✔ Optimal value: -85.5234
+    ## ✔ Optimal value: -84.439
 
-    ## ℹ Compile time: 0.75s
+    ## ℹ Compile time: 3.332s
 
-    ## ℹ Solver time: 0.029s
+    ## ℹ Solver time: 0.013s
 
     ## 
     ## STACKING WEIGHTS:
     ## 
     ##            | phi | nu   | noise_sp_ratio | weight |
     ## +----------+-----+------+----------------+--------+
-    ## | Model 1  |  1.5|  0.75|             0.5| 0.72   |
-    ## | Model 2  |  3.0|  0.75|             0.5| 0.00   |
-    ## | Model 3  |  5.0|  0.75|             0.5| 0.28   |
-    ## | Model 4  |  1.5|  1.25|             0.5| 0.00   |
-    ## | Model 5  |  3.0|  1.25|             0.5| 0.00   |
-    ## | Model 6  |  5.0|  1.25|             0.5| 0.00   |
-    ## | Model 7  |  1.5|  0.75|             1.0| 0.00   |
-    ## | Model 8  |  3.0|  0.75|             1.0| 0.00   |
-    ## | Model 9  |  5.0|  0.75|             1.0| 0.00   |
-    ## | Model 10 |  1.5|  1.25|             1.0| 0.00   |
-    ## | Model 11 |  3.0|  1.25|             1.0| 0.00   |
-    ## | Model 12 |  5.0|  1.25|             1.0| 0.00   |
-    ## | Model 13 |  1.5|  0.75|             2.0| 0.00   |
-    ## | Model 14 |  3.0|  0.75|             2.0| 0.00   |
-    ## | Model 15 |  5.0|  0.75|             2.0| 0.00   |
-    ## | Model 16 |  1.5|  1.25|             2.0| 0.00   |
-    ## | Model 17 |  3.0|  1.25|             2.0| 0.00   |
-    ## | Model 18 |  5.0|  1.25|             2.0| 0.00   |
+    ## | Model 1  |  1.5|  0.75|             0.5| 0.000  |
+    ## | Model 2  |  3.0|  0.75|             0.5| 0.000  |
+    ## | Model 3  |  5.0|  0.75|             0.5| 0.717  |
+    ## | Model 4  |  1.5|  1.25|             0.5| 0.283  |
+    ## | Model 5  |  3.0|  1.25|             0.5| 0.000  |
+    ## | Model 6  |  5.0|  1.25|             0.5| 0.000  |
+    ## | Model 7  |  1.5|  0.75|             1.0| 0.000  |
+    ## | Model 8  |  3.0|  0.75|             1.0| 0.000  |
+    ## | Model 9  |  5.0|  0.75|             1.0| 0.000  |
+    ## | Model 10 |  1.5|  1.25|             1.0| 0.000  |
+    ## | Model 11 |  3.0|  1.25|             1.0| 0.000  |
+    ## | Model 12 |  5.0|  1.25|             1.0| 0.000  |
+    ## | Model 13 |  1.5|  0.75|             2.0| 0.000  |
+    ## | Model 14 |  3.0|  0.75|             2.0| 0.000  |
+    ## | Model 15 |  5.0|  0.75|             2.0| 0.000  |
+    ## | Model 16 |  1.5|  1.25|             2.0| 0.000  |
+    ## | Model 17 |  3.0|  1.25|             2.0| 0.000  |
+    ## | Model 18 |  5.0|  1.25|             2.0| 0.000  |
     ## +----------+-----+------+----------------+--------+
+
+    ## Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6
+    ## candidate model(s); PSIS estimates of the corresponding leave-one-out
+    ## predictive densities may be unreliable. Consider loopd.method = 'exact'.
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),
 and finally sample from the *stacked posterior*.
 
 ``` r
+
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
 X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new, joint = TRUE)
@@ -126,6 +136,7 @@ spatial process as well as the responses against their corresponding
 true values in order to assess how well the predictions are made.
 
 ``` r
+
 postpred_z <- post_samps$z.pred
 post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
@@ -161,6 +172,7 @@ Define the collection of candidate parameters and fit the model using
 We use spatial Poisson count data `simPoisson` for this example.
 
 ``` r
+
 # training and test data sizes
 n_train <- 150
 n_pred <- 50
@@ -170,10 +182,12 @@ data("simPoisson")
 dat_train <- simPoisson[1:n_train, ]
 dat_pred <- simPoisson[n_train + 1:n_pred, ]
 
+cand.mod <- candidateModels(list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
+                                 boundary = c(0.5)), "cartesian")
+
 mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
-                   params.list = list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
-                                      boundary = c(0.5)),
+                   candidate.models = cand.mod,
                    priors = list(nu.beta = 5, nu.z = 5),
                    n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
@@ -194,13 +208,13 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## --------------------------------------------------
 
-    ## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 
     ## ℹ Problem: 1 variable, 2 constraints (DCP)
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.235s
+    ## ℹ Compile time: 0.262s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -208,9 +222,9 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ✔ Status: optimal
 
-    ## ✔ Optimal value: -236.802
+    ## ✔ Optimal value: -236.035
 
-    ## ℹ Compile time: 0.235s
+    ## ℹ Compile time: 0.262s
 
     ## ℹ Solver time: 0.044s
 
@@ -219,12 +233,12 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
     ## 
     ##           | phi | nu  | boundary | weight |
     ## +---------+-----+-----+----------+--------+
-    ## | Model 1 |    3|  0.5|       0.5| 0.000  |
-    ## | Model 2 |    4|  0.5|       0.5| 0.000  |
-    ## | Model 3 |    5|  0.5|       0.5| 0.000  |
-    ## | Model 4 |    3|  1.0|       0.5| 0.079  |
-    ## | Model 5 |    4|  1.0|       0.5| 0.000  |
-    ## | Model 6 |    5|  1.0|       0.5| 0.921  |
+    ## | Model 1 |    3|  0.5|       0.5| 0      |
+    ## | Model 2 |    4|  0.5|       0.5| 0      |
+    ## | Model 3 |    5|  0.5|       0.5| 0      |
+    ## | Model 4 |    3|  1.0|       0.5| 0      |
+    ## | Model 5 |    4|  1.0|       0.5| 0      |
+    ## | Model 6 |    5|  1.0|       0.5| 1      |
     ## +---------+-----+-----+----------+--------+
 
 Define the new coordinates, run
@@ -233,6 +247,7 @@ and finally sample from the *stacked posterior*. To demonstrate the
 usage, we specify `joint=FALSE` for the prediction task.
 
 ``` r
+
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
 X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new, joint = FALSE)
@@ -244,6 +259,7 @@ spatial process as well as the responses against their corresponding
 true values in order to assess how well the predictions are made.
 
 ``` r
+
 postpred_z <- post_samps$z.pred
 post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
@@ -280,6 +296,7 @@ Define the collection of candidate parameters and fit the model using
 We use spatial Poisson count data `sim_stvcPoisson` for this example.
 
 ``` r
+
 # Example 2: Spatial-temporal model with varying coefficients
 n_train <- 150
 n_pred <- 50
@@ -318,13 +335,13 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## --------------------------------------------------
 
-    ## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 
     ## ℹ Problem: 1 variable, 2 constraints (DCP)
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.049s
+    ## ℹ Compile time: 0.032s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -332,11 +349,11 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## ✔ Status: optimal
 
-    ## ✔ Optimal value: -484.461
+    ## ✔ Optimal value: -479.995
 
-    ## ℹ Compile time: 0.049s
+    ## ℹ Compile time: 0.032s
 
-    ## ℹ Solver time: 0.011s
+    ## ℹ Solver time: 0.016s
 
     ## 
     ## STACKING WEIGHTS:
@@ -345,13 +362,13 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
     ## +----------+-------+-------+----------+--------+
     ## | Model 1  |      1|      1|      0.50| 0.000  |
     ## | Model 2  |      2|      1|      0.50| 0.000  |
-    ## | Model 3  |      3|      1|      0.50| 0.152  |
+    ## | Model 3  |      3|      1|      0.50| 0.000  |
     ## | Model 4  |      1|      2|      0.50| 0.000  |
     ## | Model 5  |      2|      2|      0.50| 0.000  |
-    ## | Model 6  |      3|      2|      0.50| 0.172  |
+    ## | Model 6  |      3|      2|      0.50| 0.199  |
     ## | Model 7  |      1|      4|      0.50| 0.000  |
     ## | Model 8  |      2|      4|      0.50| 0.000  |
-    ## | Model 9  |      3|      4|      0.50| 0.339  |
+    ## | Model 9  |      3|      4|      0.50| 0.705  |
     ## | Model 10 |      1|      1|      0.75| 0.000  |
     ## | Model 11 |      2|      1|      0.75| 0.000  |
     ## | Model 12 |      3|      1|      0.75| 0.000  |
@@ -360,7 +377,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
     ## | Model 15 |      3|      2|      0.75| 0.000  |
     ## | Model 16 |      1|      4|      0.75| 0.000  |
     ## | Model 17 |      2|      4|      0.75| 0.000  |
-    ## | Model 18 |      3|      4|      0.75| 0.336  |
+    ## | Model 18 |      3|      4|      0.75| 0.097  |
     ## +----------+-------+-------+----------+--------+
 
 Define the new coordinates, run
@@ -369,6 +386,7 @@ and finally sample from the *stacked posterior*. We use `joint=FALSE`
 for this particular example.
 
 ``` r
+
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
 tm_pred <- as.matrix(dat_pred[, "t_coords"])
@@ -387,6 +405,7 @@ spatial-temporal process by plotting them against their corresponding
 true values.
 
 ``` r
+
 postpred_z <- post_samps$z.pred
 post_z1_summ <- t(apply(postpred_z[1:n_pred,], 1,
                         function(x) quantile(x, c(0.025, 0.5, 0.975))))

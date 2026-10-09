@@ -10,6 +10,7 @@ These functions can be used to fit non-Gaussian spatial-temporal
 point-referenced data.
 
 ``` r
+
 library(patchwork)
 set.seed(1729)
 ```
@@ -24,6 +25,7 @@ spatial-temporal locations. We use the first 100 locations for the
 following analysis.
 
 ``` r
+
 library(spStack)
 data("sim_stvcPoisson")
 n_train <- 100
@@ -37,6 +39,7 @@ spatial locations given by `s1` and `s2`, a temporal coordinate
 respectively. We elaborate below.
 
 ``` r
+
 head(dat)
 ```
 
@@ -53,30 +56,34 @@ head(dat)
 We define the spatially-temporally varying coefficients model using a
 `formula`, similar to that in the widely used
 [`lm()`](https://rdrr.io/r/stats/lm.html) function in the `stats`
-package. Suppose $\ell = (s,t)$ refers to a space-time ccoordinate. See
-“Technical Overview for more details”. Then, given `family = "poisson"`,
-the formula `y ~ x1 + (x1)` corresponds to the spatial-temporal
-generalized linear model
-$$y\left( \ell \right) \sim {\mathsf{P}\mathsf{o}\mathsf{i}\mathsf{s}\mathsf{s}\mathsf{o}\mathsf{n}}\left( \lambda\left( \ell \right) \right),\quad\log\lambda\left( \ell \right) = \beta_{0} + \beta_{1}x_{1}\left( \ell \right) + z_{1}\left( \ell \right) + x_{1}\left( \ell \right)z_{2}\left( \ell \right)\;,$$
-where the `y` corresponds to the response variable
-$y\left( \ell \right)$, which is regressed on the predictor `x1` given
-by $x_{1}\left( \ell \right)$. The model variables specified outside the
-parentheses corresponds to predictors with fixed effects, and the model
-inside the parentheses correspond to variables with spatial-temporal
-varying coefficient. The intercept is automatically considered within
-both the fixed and varying coefficient components of the model, and
-hence `y ~ x1 + (x1)` is functionally equivalent to
-`y ~ 1 + x1 + (1 + x1)`. The spatially-temporally varying coefficients
-$z\left( \ell \right) = \left( z_{1}\left( \ell \right),z_{2}\left( \ell \right) \right)^{\top}$
-is multivariate Gaussian process, and we pursue the following
-specifications for $z\left( \ell \right)$ - independent process,
-independent process with shared parameters, and a multivariate process.
-For now, we only support the `cor.fn="gneiting-decay"` covariogram. See
-“Technical Overview” for more details.
+package. Suppose $`\ell = (s, t)`$ refers to a space-time ccoordinate.
+See “Technical Overview for more details”. Then, given
+`family = "poisson"`, the formula `y ~ x1 + (x1)` corresponds to the
+spatial-temporal generalized linear model
+``` math
+y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;,
+```
+where the `y` corresponds to the response variable $`y(\ell)`$, which is
+regressed on the predictor `x1` given by $`x_1(\ell)`$. The model
+variables specified outside the parentheses corresponds to predictors
+with fixed effects, and the model inside the parentheses correspond to
+variables with spatial-temporal varying coefficient. The intercept is
+automatically considered within both the fixed and varying coefficient
+components of the model, and hence `y ~ x1 + (x1)` is functionally
+equivalent to `y ~ 1 + x1 + (1 + x1)`. The spatially-temporally varying
+coefficients
+$`z(\ell) = (z_1(\ell), z_2(\ell))^{{ \scriptstyle \top }}`$ is
+multivariate Gaussian process, and we pursue the following
+specifications for $`z(\ell)`$ - independent process, independent
+process with shared parameters, and a multivariate process. For now, we
+only support the `cor.fn="gneiting-decay"` covariogram. See “Technical
+Overview” for more details.
 
 To implement a model, with just a spatial-temporal random effect, one
 may specify the formula `y ~ x1 + (1)` which corresponds to the model
-$$y\left( \ell \right) \sim {\mathsf{P}\mathsf{o}\mathsf{i}\mathsf{s}\mathsf{s}\mathsf{o}\mathsf{n}}\left( \lambda\left( \ell \right) \right),\quad\log\lambda\left( \ell \right) = \beta_{0} + \beta_{1}x_{1}\left( \ell \right) + z_{1}\left( \ell \right)\;.$$
+``` math
+y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell)\;.
+```
 
 ### Using fixed hyperparameters
 
@@ -89,15 +96,15 @@ spatial-temporal process specifications for the varying coefficients.
 
 #### Independent processes
 
-In this case, since there are two independent processes
-$z_{1}\left( \ell \right)$ and $z_{2}\left( \ell \right)$ the candidate
-values of the spatial-temporal process parameters `sptParams` is a list
-with tags `phi_s` and `phi_t`, with each tag being of length 2. Here,
-the scale parameter
-$\sigma = \left( \sigma_{z1}^{2},\sigma_{z2}^{2} \right)^{\top}$ has
+In this case, since there are two independent processes $`z_1(\ell)`$
+and $`z_2(\ell)`$ the candidate values of the spatial-temporal process
+parameters `sptParams` is a list with tags `phi_s` and `phi_t`, with
+each tag being of length 2. Here, the scale parameter
+$`\sigma = (\sigma^2_{z1}, \sigma^2_{z2})^{{ \scriptstyle \top }}`$ has
 dimension 2.
 
 ``` r
+
 mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
@@ -115,6 +122,7 @@ Posterior samples of the scale parameters can be recovered by running
 on `mod1`.
 
 ``` r
+
 mod1 <- recoverGLMscale(mod1)
 ```
 
@@ -122,6 +130,7 @@ We visualize the posterior distributions of the scale parameters as
 follows.
 
 ``` r
+
 post_scale_df <- data.frame(value = sqrt(c(mod1$samples$z.scale[1, ], mod1$samples$z.scale[2, ])),
                             group = factor(rep(c("sigma.z1", "sigma.z2"),
                                     each = length(mod1$samples$z.scale[1, ]))))
@@ -138,13 +147,13 @@ parameters.](spatial-temporal_files/figure-html/unnamed-chunk-6-1.png)
 
 #### Independent shared processes
 
-In this case, the processes $z_{1}\left( \ell \right)$ and
-$z_{2}\left( \ell \right)$ are independent but share a common covariance
-matrix. Hence, `sptParams` is a list with tags `phi_s` and `phi_t`, with
-each tag being of length 1. Here, the scale parameter
-$\sigma = \sigma_{z}^{2}$ is 1-dimensional.
+In this case, the processes $`z_1(\ell)`$ and $`z_2(\ell)`$ are
+independent but share a common covariance matrix. Hence, `sptParams` is
+a list with tags `phi_s` and `phi_t`, with each tag being of length 1.
+Here, the scale parameter $`\sigma = \sigma_z^2`$ is 1-dimensional.
 
 ``` r
+
 mod2 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
@@ -162,6 +171,7 @@ Posterior samples of the scale parameters can be recovered by running
 on `mod2`.
 
 ``` r
+
 mod2 <- recoverGLMscale(mod2)
 ```
 
@@ -169,6 +179,7 @@ We visualize the posterior distributions of the scale parameters as
 follows.
 
 ``` r
+
 post_scale_df <- data.frame(value = sqrt(mod2$samples$z.scale),
                             group = factor(rep(c("sigma.z"),
                                                each = length(mod2$samples$z.scale))))
@@ -185,16 +196,17 @@ parameters.](spatial-temporal_files/figure-html/unnamed-chunk-9-1.png)
 #### Multivariate processes
 
 In this case,
-$z\left( \ell \right) = \left( z_{1}\left( \ell \right),z_{2}\left( \ell \right) \right)^{\top}$
-is a 2-dimensional Gaussian process with covariance matrix $\Sigma$.
-Further, we put an inverse-Wishart prior on $\Sigma$, which can be
+$`z(\ell) = (z_1(\ell), z_2(\ell))^{{ \scriptstyle \top }}`$ is a
+2-dimensional Gaussian process with covariance matrix $`\Sigma`$.
+Further, we put an inverse-Wishart prior on $`\Sigma`$, which can be
 specified through the `priors` argument. If not supplied, uses the
-default ${IW}\left( \nu_{z} + 2r,I_{r} \right)$, where $r = 2$ is the
+default $`\mathrm{IW}(\nu_z + 2r, I_r)`$, where $`r = 2`$ is the
 dimension of the multivariate process. Here, `sptParams` is a list with
 tags `phi_s` and `phi_t`, with each tag being of length 1, and the scale
-parameter $\sigma = \Sigma$ is an $2 \times 2$ matrix.
+parameter $`\sigma = \Sigma`$ is an $`2 \times 2`$ matrix.
 
 ``` r
+
 mod3 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
@@ -212,13 +224,15 @@ Posterior samples of the scale parameters can be recovered by running
 on `mod3`.
 
 ``` r
+
 mod3 <- recoverGLMscale(mod3)
 ```
 
-We visualize the posterior distribution of the scale matrix $\Sigma$ as
-follows.
+We visualize the posterior distribution of the scale matrix $`\Sigma`$
+as follows.
 
 ``` r
+
 post_scale_z <- mod3$samples$z.scale
 
 r <- sqrt(dim(post_scale_z)[1])
@@ -276,6 +290,7 @@ multivariate spatial-temporal process model.
 **Step 1.** Create candidate models.
 
 ``` r
+
 mod.list <- candidateModels(list(
   phi_s = list(1, 2, 3),
   phi_t = list(1, 2, 4),
@@ -286,6 +301,7 @@ mod.list <- candidateModels(list(
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md).
 
 ``` r
+
 mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
@@ -311,13 +327,13 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## --------------------------------------------------
 
-    ## ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 
     ## ℹ Problem: 1 variable, 2 constraints (DCP)
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.72s
+    ## ℹ Compile time: 3.658s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -327,9 +343,9 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## ✔ Optimal value: -264.899
 
-    ## ℹ Compile time: 0.72s
+    ## ℹ Compile time: 3.658s
 
-    ## ℹ Solver time: 0.048s
+    ## ℹ Solver time: 0.01s
 
     ## 
     ## STACKING WEIGHTS:
@@ -359,12 +375,14 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 **Step 3.** Recover posterior samples of the scale parameters.
 
 ``` r
+
 mod1 <- recoverGLMscale(mod1)
 ```
 
 **Step 4.** Sample from the stacked posterior distribution.
 
 ``` r
+
 post_samps <- stackedSampler(mod1)
 ```
 
@@ -372,6 +390,7 @@ Now, we analyze the posterior distribution of the latent process as
 obtained from the stacked posterior.
 
 ``` r
+
 post_z <- post_samps$z
 
 post_z1_summ <- t(apply(post_z[1:n_train,], 1,
@@ -407,6 +426,7 @@ Next, we analyze the posterior distribution of the scale matrix that
 models the inter-process dependence structure.
 
 ``` r
+
 post_scale_z <- post_samps$z.scale
 r <- sqrt(dim(post_scale_z)[1])
 # Generate plots into a matrix

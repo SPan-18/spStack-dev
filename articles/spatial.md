@@ -11,6 +11,7 @@ These functions can be used to fit Gaussian and non-Gaussian spatial
 point-referenced data.
 
 ``` r
+
 set.seed(1729)
 ```
 
@@ -21,6 +22,7 @@ Gaussian as well as non-Gaussian spatial data and provide code to
 analyze the output of our functions. We start by loading the package.
 
 ``` r
+
 library(spStack)
 library(ggplot2)
 library(patchwork)
@@ -40,10 +42,11 @@ the priors is optional. See the documentation of
 [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md)
 to learn more about the default priors. Besides, setting the priors, we
 also fix the values of the spatial process parameters (spatial decay
-$\phi$ and smoothness $\nu$) and the noise-to-spatial variance ratio
-($\delta^{2}$).
+$`\phi`$ and smoothness $`\nu`$) and the noise-to-spatial variance ratio
+($`\delta^2`$).
 
 ``` r
+
 data("simGaussian")
 dat <- simGaussian[1:200, ] # work with first 200 rows
 
@@ -63,20 +66,22 @@ We define the spatial model using a `formula`, similar to that in the
 widely used [`lm()`](https://rdrr.io/r/stats/lm.html) function in the
 `stats` package. Here, the formula `y ~ x1` corresponds to the spatial
 linear model
-$$y(s) = \beta_{0} + \beta_{1}x_{1}(s) + z(s) + \epsilon(s)\;,$$ where
-the `y` corresponds to the response variable $y(s)$, which is regressed
-on the predictor `x1` given by $x_{1}(s)$. The intercept is
+``` math
+y(s) = \beta_0 + \beta_1 x_1(s) + z(s) + \epsilon(s)\;,
+```
+where the `y` corresponds to the response variable $`y(s)`$, which is
+regressed on the predictor `x1` given by $`x_1(s)`$. The intercept is
 automatically considered within the model, and hence `y ~ x1` is
 functionally equivalent to `y ~ 1 + x1`. Moreover, a spatial random
 effect is inherent in the model, where the spatial correlation matrix is
 governed by the spatial correlation function specified by the argument
 `cor.fn`. Supported correlation functions are `"exponential"` and
 `"matern"`. The exponential covariogram is specified by the
-hyperparameter $\phi$ and the Matern covariogram is specified by the
-hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters
-are supplied through the argument `spParams`. In addition, the
-noise-to-spatial variance ration is also fixed through the argument
-`noise_sp_ratio`.
+hyperparameter $`\phi`$ and the Matern covariogram is specified by the
+hyperparameters $`\phi`$ and $`\nu`$. Fixed values of these
+hyperparameters are supplied through the argument `spParams`. In
+addition, the noise-to-spatial variance ration is also fixed through the
+argument `noise_sp_ratio`.
 
 If interested in calculation of leave-one-out predictive densities
 (LOO-PD), `loopd` must be set `TRUE` (the default is `FALSE`). Method of
@@ -84,8 +89,8 @@ LOO-PD calculation can be also set by the option `loopd.method` which
 support the keywords `"exact"` and `"psis"`. The option `"exact"`
 exploits the analytically available expressions of the predictive
 density and implements an efficient row-deletion Cholesky factor update
-for fast calculation and avoids refitting the model $n$ times, where $n$
-is the sample size. On the other hand, `"psis"` implements
+for fast calculation and avoids refitting the model $`n`$ times, where
+$`n`$ is the sample size. On the other hand, `"psis"` implements
 Pareto-smoothed importance sampling and finds approximate LOO-PD and is
 much faster than `"exact"`.
 
@@ -93,6 +98,7 @@ We pass these arguments into the function
 [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md).
 
 ``` r
+
 mod1 <- spLMexact(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
@@ -134,23 +140,24 @@ Next, we can summarize the posterior samples of the fixed effects as
 follows.
 
 ``` r
+
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                 2.5%      50%    97.5%
-#> (Intercept) 1.688957 2.284946 2.955524
-#> x1          4.866534 4.954401 5.040862
+#> (Intercept) 1.685198 2.284879 2.959611
+#> x1          4.865973 4.954385 5.041382
 ```
 
 ### Leave-one-out predictive densities using PSIS
 
 Out of curiosity, we find the LOO-PD for the same model using the
 approximate method that uses Pareto-smoothed importance sampling, or
-PSIS. See Vehtari, Gelman, and Gabry ([2017](#ref-LOOCV_vehtari17)) for
-details.
+PSIS. See Vehtari et al. ([2017](#ref-LOOCV_vehtari17)) for details.
 
 ``` r
+
 mod2 <- spLMexact(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
@@ -159,11 +166,15 @@ mod2 <- spLMexact(y ~ x1, data = dat,
                   noise_sp_ratio = noise_sp_ratio, n.samples = nSamples,
                   loopd = TRUE, loopd.method = "PSIS",
                   verbose = FALSE)
+#> Warning: 3 Pareto k diagnostic value(s) exceed 0.67; PSIS estimates of the
+#> corresponding leave-one-out predictive densities may be unreliable. Consider
+#> loopd.method = 'exact'.
 ```
 
 Subsquently, we compare the LOO-PD obtained by the two methods.
 
 ``` r
+
 loopd_exact <- mod1$loopd
 loopd_psis <- mod2$loopd
 loopd_df <- data.frame(exact = loopd_exact, psis = loopd_psis)
@@ -183,17 +194,22 @@ plot1
 ### Using predictive stacking
 
 Next, we move on to the Bayesian spatial stacking algorithm for Gaussian
-data. We supply the same prior list and provide some candidate values of
-spatial process parameters and noise-to-spatial variance ratio.
+data. We supply the same prior list and provide candidate models
+constructed using
+[`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md).
 
 ``` r
+
+cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
+                                 nu = c(0.5, 1, 1.5),
+                                 noise_sp_ratio = c(0.5, 1.5)),
+                            "cartesian")
+
 mod3 <- spLMstack(y ~ x1, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  params.list = list(phi = c(1.5, 3, 5),
-                                     nu = c(0.5, 1, 1.5),
-                                     noise_sp_ratio = c(0.5, 1.5)),
+                  candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 #> --------------------------------------------------
@@ -202,16 +218,16 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.923s
+#> ℹ Compile time: 3.966s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -113.076
-#> ℹ Compile time: 0.923s
-#> ℹ Solver time: 0.031s
+#> ✔ Optimal value: -109.16
+#> ℹ Compile time: 3.966s
+#> ℹ Solver time: 0.014s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -220,9 +236,9 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> | Model 1  |  1.5|  0.5|             0.5| 0.000  |
 #> | Model 2  |  3.0|  0.5|             0.5| 0.000  |
 #> | Model 3  |  5.0|  0.5|             0.5| 0.000  |
-#> | Model 4  |  1.5|  1.0|             0.5| 0.242  |
+#> | Model 4  |  1.5|  1.0|             0.5| 0.011  |
 #> | Model 5  |  3.0|  1.0|             0.5| 0.000  |
-#> | Model 6  |  5.0|  1.0|             0.5| 0.751  |
+#> | Model 6  |  5.0|  1.0|             0.5| 0.638  |
 #> | Model 7  |  1.5|  1.5|             0.5| 0.000  |
 #> | Model 8  |  3.0|  1.5|             0.5| 0.000  |
 #> | Model 9  |  5.0|  1.5|             0.5| 0.000  |
@@ -231,7 +247,7 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> | Model 12 |  5.0|  0.5|             1.5| 0.000  |
 #> | Model 13 |  1.5|  1.0|             1.5| 0.000  |
 #> | Model 14 |  3.0|  1.0|             1.5| 0.000  |
-#> | Model 15 |  5.0|  1.0|             1.5| 0.006  |
+#> | Model 15 |  5.0|  1.0|             1.5| 0.351  |
 #> | Model 16 |  1.5|  1.5|             1.5| 0.000  |
 #> | Model 17 |  3.0|  1.5|             1.5| 0.000  |
 #> | Model 18 |  5.0|  1.5|             1.5| 0.000  |
@@ -242,13 +258,14 @@ The user can check the solver status and runtime by issuing the
 following.
 
 ``` r
+
 print(mod3$solver)
 #> [1] "CVXR:CLARABEL"
 print(mod3$solver.status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.273   2.207   2.624
+#>   4.765   1.101   4.766
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -260,6 +277,7 @@ Subsequent inference proceeds from these samples obtained from the
 stacked posterior.
 
 ``` r
+
 post_samps <- stackedSampler(mod3)
 ```
 
@@ -267,20 +285,22 @@ We then collect the samples of the fixed effects and summarize them as
 follows.
 
 ``` r
+
 post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
-#>                  2.5%      50%    97.5%
-#> (Intercept) 0.9540551 2.220069 3.057419
-#> x1          4.8672400 4.949081 5.036638
+#>                 2.5%      50%    97.5%
+#> (Intercept) 1.642118 2.317330 2.981741
+#> x1          4.865461 4.952708 5.032503
 ```
 
 The synthetic data `simGaussian` was simulated using the true value
-$\beta = (2,5)^{\top}$. We notice that the stacked posterior is
-concentrated around the truth.
+$`\beta = (2, 5)^{ \scriptstyle \top }`$. We notice that the stacked
+posterior is concentrated around the truth.
 
 ``` r
+
 library(tidyr)
 library(dplyr)
 #> 
@@ -316,6 +336,7 @@ Furthermore, we compare the posterior samples of the spatial random
 effects with their corresponding true values.
 
 ``` r
+
 post_z <- post_samps$z
 post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
@@ -345,6 +366,7 @@ visually inspect the interpolated spatial surfaces of the true spatial
 effects and their posterior medians.
 
 ``` r
+
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
@@ -376,6 +398,7 @@ point-referenced Poisson, binomial count, and binary data.
 We first load and plot the point-referenced Poisson count data.
 
 ``` r
+
 data("simPoisson")
 dat <- simPoisson[1:200, ] # work with first 200 observations
 
@@ -401,7 +424,9 @@ random effects. The option `family` must be specified correctly while
 using this function. For instance, in the following example, the formula
 `y ~ x1` and `family = "poisson"` corresponds to the spatial regression
 model
-$$y(s) \sim {\mathsf{P}\mathsf{o}\mathsf{i}\mathsf{s}\mathsf{s}\mathsf{o}\mathsf{n}}\left( \lambda(s) \right),\quad\log\lambda(s) = \beta_{0} + \beta_{1}x_{1}(s) + z(s)\;.$$
+``` math
+y(s) \sim \mathsf{Poisson} (\lambda(s)), \quad \log \lambda(s) = \beta_0 + \beta_1 x_1(s) + z(s)\;.
+```
 
 We provide fixed values of the spatial process parameters and a boundary
 adjustment parameter, given by the argument `boundary`, which if not
@@ -409,6 +434,7 @@ supplied, defaults to 0.5. For details on the priors and its default
 value, see function documentation.
 
 ``` r
+
 mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    spParams = list(phi = phi0, nu = nu0),
@@ -449,10 +475,11 @@ mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
 
 We next collect the samples of the fixed effects and summarize them. The
 true value of the fixed effects with which the data was simulated is
-$\beta = (2, - 0.5)$ (for more details, see the documentation of the
+$`\beta = (2, -0.5)`$ (for more details, see the documentation of the
 data `simPoisson`).
 
 ``` r
+
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
@@ -465,21 +492,23 @@ print(summary_beta)
 #### Posterior recovery of scale parameters
 
 The analytic tractability of the posterior distribution under the
-$\mathsf{G}\mathsf{C}\mathsf{M}$ framework is enabled by marginalizing
-out the scale parameters $\sigma_{\beta}^{2}$ and $\sigma_{z}^{2}$
-associated with the fixed effects $\beta$ and the spatial random effects
-$z$, respectively. However, posterior samples of $\sigma_{\beta}^{2}$
-and $\sigma_{z}^{2}$ can be recovered using the function
+$`\mathsf{GCM}`$ framework is enabled by marginalizing out the scale
+parameters $`\sigma^2_\beta`$ and $`\sigma^2_z`$ associated with the
+fixed effects $`\beta`$ and the spatial random effects $`z`$,
+respectively. However, posterior samples of $`\sigma^2_\beta`$ and
+$`\sigma^2_z`$ can be recovered using the function
 [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md).
 
 ``` r
+
 mod1 <- recoverGLMscale(mod1)
 ```
 
-We visualize the posterior distributions of $\sigma_{\beta}$ and
-$\sigma_{z}$ through histograms.
+We visualize the posterior distributions of $`\sigma_\beta`$ and
+$`\sigma_z`$ through histograms.
 
 ``` r
+
 post_scale_df <- data.frame(value = sqrt(c(mod1$samples$sigmasq.beta, mod1$samples$sigmasq.z)),
                             group = factor(rep(c("sigma.beta", "sigma.z"),
                                     each = length(mod1$samples$sigmasq.beta))))
@@ -500,18 +529,21 @@ Next, we move on to the function
 that will implement our proposed stacking algorithm. The argument
 `loopd.controls` is used to provide details on what algorithm to be used
 to find LOO-PD. Valid options for the tag `method` is `"exact"` and
-`"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and
-`CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to
-be used to find the LOO-PD.
+`"CV"`. We use $`K`$-fold cross-validation by assigning
+`method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of
+Monte Carlo samples to be used to find the LOO-PD.
 
 ``` r
+
+cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.5, 1.5),
+                                 boundary = c(0.5, 0.6)), "cartesian")
+
 mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   params.list = list(phi = c(3, 7, 10), nu = c(0.5, 1.5),
-                                      boundary = c(0.5, 0.6)),
+                   candidate.models = cand.mod,
                    n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                   parallel = TRUE, verbose = TRUE)
+                   parallel = FALSE, verbose = TRUE)
 #> Some priors were not supplied. Using defaults.
 #> --------------------------------------------------
 #> Solver diagnostics:
@@ -519,16 +551,16 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.191s
+#> ℹ Compile time: 0.271s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -311.489
-#> ℹ Compile time: 0.191s
-#> ℹ Solver time: 0.045s
+#> ✔ Optimal value: -312.22
+#> ℹ Compile time: 0.271s
+#> ℹ Solver time: 0.051s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -543,9 +575,9 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 7  |    3|  0.5|       0.6| 0.000  |
 #> | Model 8  |    7|  0.5|       0.6| 0.000  |
 #> | Model 9  |   10|  0.5|       0.6| 0.000  |
-#> | Model 10 |    3|  1.5|       0.6| 0.005  |
-#> | Model 11 |    7|  1.5|       0.6| 0.724  |
-#> | Model 12 |   10|  1.5|       0.6| 0.272  |
+#> | Model 10 |    3|  1.5|       0.6| 0.000  |
+#> | Model 11 |    7|  1.5|       0.6| 0.758  |
+#> | Model 12 |   10|  1.5|       0.6| 0.242  |
 #> +----------+-----+-----+----------+--------+
 ```
 
@@ -553,13 +585,14 @@ We can extract information on solver status and runtime by the
 following.
 
 ``` r
+
 print(mod2$solver)
 #> [1] "CVXR:CLARABEL"
 print(mod2$solver.status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  35.112  25.120  15.414
+#>  20.134  30.634  13.003
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -569,6 +602,7 @@ once again through
 [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md).
 
 ``` r
+
 mod2 <- recoverGLMscale(mod2)
 ```
 
@@ -578,25 +612,28 @@ We first obtain final posterior samples by sampling from the stacked
 sampler.
 
 ``` r
+
 post_samps <- stackedSampler(mod2)
 ```
 
 Subsequently, we summarize the posterior samples of the fixed effects.
 
 ``` r
+
 post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  1.1209791  2.1014709  3.0766891
-#> x1          -0.6233661 -0.5472512 -0.4717314
+#> (Intercept)  1.0542622  2.0847265  3.0922761
+#> x1          -0.6248075 -0.5464667 -0.4685643
 ```
 
 The synthetic data `simPoisson` was simulated using
-$\beta = (2, - 0.5)^{\top}$.
+$`\beta = (2, -0.5)^{ \scriptstyle \top }`$.
 
 ``` r
+
 post_beta_df <- as.data.frame(post_beta)
 post_beta_df <- post_beta_df %>%
   mutate(row = paste0("beta", row_number()-1)) %>%
@@ -620,6 +657,7 @@ effects](spatial_files/figure-html/unnamed-chunk-20-1.png)
 Finally, we analyze the posterior samples of the spatial random effects.
 
 ``` r
+
 post_z <- post_samps$z
 post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 z_combn <- data.frame(z = dat$z_true, zL = post_z_summ[, 1],
@@ -642,6 +680,7 @@ We can also compare the interpolated spatial surfaces of the true
 spatial effects with that of their posterior median.
 
 ``` r
+
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
@@ -662,6 +701,7 @@ the total number of trials at each location. Here, we present only the
 function for brevity.
 
 ``` r
+
 data("simBinom")
 dat <- simBinom[1:200, ] # work with first 200 rows
 
@@ -673,16 +713,17 @@ mod1 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
 
 Similarly, we collect the posterior samples of the fixed effects and
 summarize them. The true value of the fixed effects with which the data
-was simulated is $\beta = (0.5, - 0.5)$.
+was simulated is $`\beta = (0.5, -0.5)`$.
 
 ``` r
+
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                   2.5%        50%      97.5%
-#> (Intercept) -1.2273338  0.7281044  2.7618818
-#> x1          -0.5837158 -0.4047673 -0.2188961
+#>                  2.5%        50%      97.5%
+#> (Intercept) -1.190050  0.7271262  2.3942790
+#> x1          -0.559403 -0.4056053 -0.2394892
 ```
 
 ### Spatial binary data
@@ -694,6 +735,7 @@ unlike the binomial model, almost nothing changes from that of in the
 case of spatial Poisson data.
 
 ``` r
+
 data("simBinary")
 dat <- simBinary[1:200, ]
 
@@ -705,21 +747,22 @@ mod1 <- spGLMexact(y ~ x1, data = dat, family = "binary",
 
 Similarly, we collect the posterior samples of the fixed effects and
 summarize them. The true value of the fixed effects with which the data
-was simulated is $\beta = (0.5, - 0.5)$.
+was simulated is $`\beta = (0.5, -0.5)`$.
 
 ``` r
+
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.2015085  0.3212393 2.20401790
-#> x1          -0.6653012 -0.3229634 0.07179601
+#> (Intercept) -1.2459420  0.2937991 1.92306216
+#> x1          -0.6741716 -0.3077403 0.04356718
 ```
 
 ## References
 
 Vehtari, Aki, Andrew Gelman, and Jonah Gabry. 2017. “Practical Bayesian
 Model Evaluation Using Leave-One-Out Cross-Validation and WAIC.”
-*Statistics and Computing* 27 (5): 1413–32.
+*Statistics and Computing* (USA) 27 (5): 1413–32.
 <https://doi.org/10.1007/s11222-016-9696-4>.

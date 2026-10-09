@@ -16,7 +16,7 @@ spGLMstack(
   coords,
   cor.fn,
   priors,
-  params.list,
+  candidate.models,
   n.samples,
   loopd.controls,
   parallel = FALSE,
@@ -63,10 +63,12 @@ spGLMstack(
   containing prior details. Valid tags include `V.beta`, `nu.beta`,
   `nu.z` and `sigmaSq.xi`.
 
-- params.list:
+- candidate.models:
 
-  a list containing candidate values of spatial process parameters for
-  the `cor.fn` used, and, the boundary parameter.
+  an object of class `candidateModels` containing a list of candidate
+  models for stacking. See
+  [`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md)
+  for details.
 
 - n.samples:
 
@@ -205,29 +207,31 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data("simPoisson")
 dat <- simPoisson[1:100,]
+cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
+                                 boundary = c(0.5, 0.6)), "cartesian")
+
 mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                  params.list = list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
-                                     boundary = c(0.5, 0.6)),
-                  n.samples = 1000,
-                  loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                  parallel = TRUE, verbose = TRUE)
+                   candidate.models = cand.mod,
+                   n.samples = 1000,
+                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
+                   parallel = TRUE, verbose = TRUE)
 #> --------------------------------------------------
 #> Solver diagnostics:
 #> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
 #> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
 #> Solver search order: CLARABEL -> SCS
 #> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.8.1 ─────────────────────────────────
+#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.038s
+#> ℹ Compile time: 0.682s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -157.72
-#> ℹ Compile time: 0.038s
-#> ℹ Solver time: 0.006s
+#> ✔ Optimal value: -157.999
+#> ℹ Compile time: 0.682s
+#> ℹ Solver time: 0.007s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -239,7 +243,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 4  |    3|  0.50|       0.5| 0.000  |
 #> | Model 5  |    7|  0.50|       0.5| 0.000  |
 #> | Model 6  |   10|  0.50|       0.5| 0.000  |
-#> | Model 7  |    3|  1.50|       0.5| 0.379  |
+#> | Model 7  |    3|  1.50|       0.5| 0.382  |
 #> | Model 8  |    7|  1.50|       0.5| 0.000  |
 #> | Model 9  |   10|  1.50|       0.5| 0.000  |
 #> | Model 10 |    3|  0.25|       0.6| 0.000  |
@@ -249,7 +253,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 14 |    7|  0.50|       0.6| 0.000  |
 #> | Model 15 |   10|  0.50|       0.6| 0.000  |
 #> | Model 16 |    3|  1.50|       0.6| 0.000  |
-#> | Model 17 |    7|  1.50|       0.6| 0.621  |
+#> | Model 17 |    7|  1.50|       0.6| 0.618  |
 #> | Model 18 |   10|  1.50|       0.6| 0.000  |
 #> +----------+-----+------+----------+--------+
 #> 
@@ -260,9 +264,9 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                   2.5%        50%      97.5%
-#> (Intercept)  0.1876210  2.1365567  4.8390871
-#> x1          -0.6906675 -0.5686308 -0.4223164
+#>                    2.5%        50%     97.5%
+#> (Intercept)  0.01988338  2.1363550  4.749246
+#> x1          -0.69471951 -0.5677445 -0.431458
 
 post_z <- post_samps$z
 post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
