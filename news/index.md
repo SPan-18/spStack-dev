@@ -26,14 +26,57 @@
   one n x n Cholesky factorization instead of several, and is about 3x
   faster for
   [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md).
-  In
+  Exact leave-one-out and K-fold cross-validation update the full-data
+  pre-processing for each held-out site or fold (O(n^2) per site)
+  instead of recomputing it (O(n^3)), with a direct recomputation as a
+  fallback. Posterior and Monte Carlo draws are projected in blocks of
+  64 with level-3 BLAS, drawing the random variates in the original
+  order: results are unchanged up to floating-point rounding, and
+  speed-ups are largest with an optimized BLAS (e.g. about 3.5x for
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md)
+  and 5.5x for
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+  with OpenBLAS). Results are unchanged up to floating-point rounding.
+- [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  candidate models that differ only in `boundary` share all the
+  pre-processing (full data, and each leave-one-out site or
+  cross-validation fold): candidates with the same (phi, nu), or (phi_s,
+  phi_t), are fitted in one call that loops over their boundary values
+  inside each fold. With three boundary values and 10-fold CV this cuts
+  the run time by 25-55% with OpenBLAS (e.g. n = 1000: 23 s to 16 s for
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  26 s to 19 s for
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md);
+  n = 2000: 146 s to 66 s for
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md))
+  and by up to 15% with the reference BLAS. The posterior samples of
+  these candidates are now drawn before their leave-one-out draws, so
+  results for a given seed differ from earlier versions at the Monte
+  Carlo level; a candidate fitted on its own (or a group with a single
+  boundary value) is unchanged.
+- [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  new advanced tag `CV.update` in `loopd.controls` (`'auto'`, `'update'`
+  or `'direct'`) choosing how the pre-processing of each
+  cross-validation fold is obtained: by deletion updates of the
+  full-data factors (scalar loops; faster with the reference BLAS) or by
+  recomputing it on the fold (level-3 BLAS; faster with an optimized
+  BLAS, e.g. a further 25-50% for
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
+  with OpenBLAS at n = 1000-2000). The default `'auto'` uses `'direct'`
+  when R reports an optimized BLAS (OpenBLAS, MKL, BLIS,
+  Accelerate/vecLib, ATLAS). Results agree up to floating-point
+  rounding.
   [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md)
   and
-  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
-  exact leave-one-out and K-fold cross-validation update the full-data
-  pre-processing for each held-out site or fold (O(n^2) per site)
-  instead of recomputing it (O(n^3)). Results are unchanged up to
-  floating-point rounding.
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+  use `'auto'`.
+- [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  leaving out `loopd.controls`, or the `CV.K` or `nMC` tag
+  ([`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)),
+  stopped with an error; the documented defaults are now used.
 - GLMs: the latent pseudo-data are now drawn on the log scale, as log
   G1 - log G2 with gamma variates G1, G2 (binomial, binary) and as log G
   with an underflow-safe draw for shape \< 1 (Poisson). Previously, a
@@ -52,6 +95,38 @@
   [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
   each candidate `boundary` must lie in (0, 1), and a message is given
   when any is below 0.1.
+- [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  fixed a heap buffer overflow in K-fold cross-validation when the
+  number of varying coefficients exceeded the number of fixed-effect
+  covariates.
+- [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  `process.type` is now checked to be one of ‘independent’,
+  ‘independent.shared’ or ‘multivariate’. The undocumented, incomplete
+  “multivariate2” option has been removed.
+- [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  and
+  [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
+  for GLMs: faster and leaner (the kriging means of 64 draws at a time
+  with level-3 BLAS, one n x n matrix fewer, the joint conditional
+  covariance built only for joint prediction). The C++ code now saves
+  and restores R’s random number state, so `.Random.seed` advances and
+  the draws no longer overlap with later random numbers in the session;
+  pointwise prediction variances are clamped at 0 against rounding.
+- [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
+  for
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)/[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
+  fits with `process.type = "independent"`: the posterior of each
+  process’s scale used the shape (nu.z + n\*r)/2 of the shared-scale
+  model; it is now (nu.z + n)/2. Recovered scales from earlier versions
+  were too concentrated and biased downwards.
+- [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  for
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)/[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
+  fits with `process.type = "multivariate"` and `joint = FALSE`:
+  `mu.pred` and `y.pred` were computed from the unscaled noise instead
+  of the predicted `z.pred`; fixed.
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
   the posterior scale of the variance is computed in residual form,

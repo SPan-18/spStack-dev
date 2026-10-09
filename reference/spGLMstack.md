@@ -77,12 +77,28 @@ spGLMstack(
 - loopd.controls:
 
   a list with details on how leave-one-out predictive densities (LOO-PD)
-  are to be calculated. Valid tags include `method`, `CV.K` and `nMC`.
-  The tag `method` can be either `'exact'` or `'CV'`. If sample size is
-  more than 100, then the default is `'CV'` with `CV.K` equal to its
-  default value 10 (Gelman *et al.* 2024). The tag `nMC` decides how
-  many Monte Carlo samples will be used to evaluate the leave-one-out
-  predictive densities, which must be at least 500 (default).
+  are to be calculated. Valid tags include `method`, `CV.K`, `nMC` and
+  `CV.update`. The tag `method` can be either `'exact'` or `'CV'`. If
+  sample size is more than 100, then the default is `'CV'` with `CV.K`
+  equal to its default value 10 (Gelman *et al.* 2024). The tag `nMC`
+  decides how many Monte Carlo samples will be used to evaluate the
+  leave-one-out predictive densities, which must be at least 500
+  (default). The tag `CV.update` is an advanced option, used only if
+  `method = 'CV'`, that decides how the pre-processing of the model fit
+  on each fold is obtained, and should be changed with care as the
+  faster choice depends on the BLAS library that R is linked with (see
+  [`sessionInfo()`](https://rdrr.io/r/utils/sessionInfo.html)).
+  `CV.update = 'update'` obtains it by deletion updates of the full-data
+  Cholesky factors, which is the faster choice with the reference BLAS
+  that R ships with. `CV.update = 'direct'` recomputes it on each fold,
+  which is faster only with an optimized BLAS such as OpenBLAS, Intel
+  MKL or Apple Accelerate (vecLib), and is slower otherwise. The default
+  `CV.update = 'auto'` uses `'direct'` if such an optimized BLAS is
+  detected from the library paths reported by R and `'update'`
+  otherwise; set it explicitly if the BLAS is not detected correctly
+  (for example, an optimized BLAS installed in place of `Rblas.dll` on
+  Windows). Both choices give the same results up to floating-point
+  rounding, so only the run time is affected.
 
 - parallel:
 
@@ -136,7 +152,9 @@ tags -
 - `loopd.method`:
 
   a list containing details of the algorithm used for calculation of
-  leave-one-out predictive densities.
+  leave-one-out predictive densities. For K-fold cross-validation, its
+  tag `cv.update` records the pre-processing method (`'update'` or
+  `'direct'`) that was used.
 
 - `n.models`:
 
@@ -225,13 +243,13 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.821s
+#> ℹ Compile time: 0.019s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -157.999
-#> ℹ Compile time: 0.821s
-#> ℹ Solver time: 0.004s
+#> ✔ Optimal value: -158.057
+#> ℹ Compile time: 0.019s
+#> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -243,7 +261,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 4  |    3|  0.50|       0.5| 0.000  |
 #> | Model 5  |    7|  0.50|       0.5| 0.000  |
 #> | Model 6  |   10|  0.50|       0.5| 0.000  |
-#> | Model 7  |    3|  1.50|       0.5| 0.382  |
+#> | Model 7  |    3|  1.50|       0.5| 0.000  |
 #> | Model 8  |    7|  1.50|       0.5| 0.000  |
 #> | Model 9  |   10|  1.50|       0.5| 0.000  |
 #> | Model 10 |    3|  0.25|       0.6| 0.000  |
@@ -252,8 +270,8 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 13 |    3|  0.50|       0.6| 0.000  |
 #> | Model 14 |    7|  0.50|       0.6| 0.000  |
 #> | Model 15 |   10|  0.50|       0.6| 0.000  |
-#> | Model 16 |    3|  1.50|       0.6| 0.000  |
-#> | Model 17 |    7|  1.50|       0.6| 0.618  |
+#> | Model 16 |    3|  1.50|       0.6| 0.426  |
+#> | Model 17 |    7|  1.50|       0.6| 0.574  |
 #> | Model 18 |   10|  1.50|       0.6| 0.000  |
 #> +----------+-----+------+----------+--------+
 #> 
@@ -264,9 +282,9 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                    2.5%        50%     97.5%
-#> (Intercept)  0.01988338  2.1363550  4.749246
-#> x1          -0.69471951 -0.5677445 -0.431458
+#>                   2.5%        50%     97.5%
+#> (Intercept) -0.7636588  2.0582568  4.304904
+#> x1          -0.7072396 -0.5637752 -0.422351
 
 post_z <- post_samps$z
 post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))

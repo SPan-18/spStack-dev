@@ -76,7 +76,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 3.057s
+    ## ℹ Compile time: 2.921s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -86,7 +86,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ✔ Optimal value: -84.439
 
-    ## ℹ Compile time: 3.057s
+    ## ℹ Compile time: 2.921s
 
     ## ℹ Solver time: 0.009s
 
@@ -214,7 +214,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.153s
+    ## ℹ Compile time: 0.168s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -224,9 +224,9 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ✔ Optimal value: -235.103
 
-    ## ℹ Compile time: 0.153s
+    ## ℹ Compile time: 0.168s
 
-    ## ℹ Solver time: 0.025s
+    ## ℹ Solver time: 0.028s
 
     ## 
     ## STACKING WEIGHTS:
@@ -341,7 +341,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.02s
+    ## ℹ Compile time: 0.019s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -349,11 +349,11 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## ✔ Status: optimal
 
-    ## ✔ Optimal value: -486.136
+    ## ✔ Optimal value: -477.714
 
-    ## ℹ Compile time: 0.02s
+    ## ℹ Compile time: 0.019s
 
-    ## ℹ Solver time: 0.01s
+    ## ℹ Solver time: 0.011s
 
     ## 
     ## STACKING WEIGHTS:
@@ -361,14 +361,14 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
     ##            | phi_s | phi_t | boundary | weight |
     ## +----------+-------+-------+----------+--------+
     ## | Model 1  |      1|      1|      0.50| 0.000  |
-    ## | Model 2  |      2|      1|      0.50| 0.084  |
-    ## | Model 3  |      3|      1|      0.50| 0.037  |
+    ## | Model 2  |      2|      1|      0.50| 0.000  |
+    ## | Model 3  |      3|      1|      0.50| 0.174  |
     ## | Model 4  |      1|      2|      0.50| 0.000  |
     ## | Model 5  |      2|      2|      0.50| 0.000  |
-    ## | Model 6  |      3|      2|      0.50| 0.000  |
+    ## | Model 6  |      3|      2|      0.50| 0.140  |
     ## | Model 7  |      1|      4|      0.50| 0.000  |
     ## | Model 8  |      2|      4|      0.50| 0.000  |
-    ## | Model 9  |      3|      4|      0.50| 0.600  |
+    ## | Model 9  |      3|      4|      0.50| 0.000  |
     ## | Model 10 |      1|      1|      0.75| 0.000  |
     ## | Model 11 |      2|      1|      0.75| 0.000  |
     ## | Model 12 |      3|      1|      0.75| 0.000  |
@@ -377,7 +377,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
     ## | Model 15 |      3|      2|      0.75| 0.000  |
     ## | Model 16 |      1|      4|      0.75| 0.000  |
     ## | Model 17 |      2|      4|      0.75| 0.000  |
-    ## | Model 18 |      3|      4|      0.75| 0.280  |
+    ## | Model 18 |      3|      4|      0.75| 0.685  |
     ## +----------+-------+-------+----------+--------+
 
 Define the new coordinates, run

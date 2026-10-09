@@ -221,13 +221,13 @@ mod3 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 3.897s
+#> ℹ Compile time: 3.934s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -109.16
-#> ℹ Compile time: 3.897s
-#> ℹ Solver time: 0.01s
+#> ℹ Compile time: 3.934s
+#> ℹ Solver time: 0.009s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -265,7 +265,7 @@ print(mod3$solver.status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.510   0.797   4.533
+#>   4.523   0.808   4.562
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -554,13 +554,13 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.146s
+#> ℹ Compile time: 0.165s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -312.661
-#> ℹ Compile time: 0.146s
-#> ℹ Solver time: 0.03s
+#> ✔ Optimal value: -314.946
+#> ℹ Compile time: 0.165s
+#> ℹ Solver time: 0.039s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -570,14 +570,14 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
 #> | Model 2  |    7|  0.5|       0.5| 0.000  |
 #> | Model 3  |   10|  0.5|       0.5| 0.000  |
 #> | Model 4  |    3|  1.5|       0.5| 0.000  |
-#> | Model 5  |    7|  1.5|       0.5| 0.346  |
+#> | Model 5  |    7|  1.5|       0.5| 0.448  |
 #> | Model 6  |   10|  1.5|       0.5| 0.000  |
 #> | Model 7  |    3|  0.5|       0.6| 0.000  |
 #> | Model 8  |    7|  0.5|       0.6| 0.000  |
 #> | Model 9  |   10|  0.5|       0.6| 0.000  |
-#> | Model 10 |    3|  1.5|       0.6| 0.017  |
-#> | Model 11 |    7|  1.5|       0.6| 0.271  |
-#> | Model 12 |   10|  1.5|       0.6| 0.366  |
+#> | Model 10 |    3|  1.5|       0.6| 0.071  |
+#> | Model 11 |    7|  1.5|       0.6| 0.019  |
+#> | Model 12 |   10|  1.5|       0.6| 0.463  |
 #> +----------+-----+-----+----------+--------+
 ```
 
@@ -592,7 +592,7 @@ print(mod2$solver.status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>   9.851  18.761   7.332
+#>   7.576   9.064   4.328
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -624,9 +624,9 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
-#>                   2.5%        50%     97.5%
-#> (Intercept)  0.8932646  2.1134528  3.124745
-#> x1          -0.6251605 -0.5506389 -0.472398
+#>                   2.5%        50%      97.5%
+#> (Intercept)  1.1039218  2.0944906  3.0048711
+#> x1          -0.6220264 -0.5513455 -0.4695849
 ```
 
 The synthetic data `simPoisson` was simulated using
@@ -722,8 +722,8 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.0059624  0.7207733  2.4464109
-#> x1          -0.5661417 -0.4006356 -0.2206868
+#> (Intercept) -0.9920959  0.7248914  2.4774974
+#> x1          -0.5657166 -0.3996569 -0.2206868
 ```
 
 ### Spatial binary data
@@ -756,8 +756,8 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.4991649  0.2961064 1.78403129
-#> x1          -0.6703245 -0.3055731 0.03549851
+#> (Intercept) -1.4205138  0.2951885 1.78403129
+#> x1          -0.6616319 -0.3073362 0.04206801
 ```
 
 ## References

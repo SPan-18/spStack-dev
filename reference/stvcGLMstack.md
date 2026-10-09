@@ -99,12 +99,28 @@ stvcGLMstack(
 - loopd.controls:
 
   a list with details on how leave-one-out predictive densities (LOO-PD)
-  are to be calculated. Valid tags include `method`, `CV.K` and `nMC`.
-  The tag `method` can be either `'exact'` or `'CV'`. If sample size is
-  more than 100, then the default is `'CV'` with `CV.K` equal to its
-  default value 10 (Gelman *et al.* 2024). The tag `nMC` decides how
-  many Monte Carlo samples will be used to evaluate the leave-one-out
-  predictive densities, which must be at least 500 (default).
+  are to be calculated. Valid tags include `method`, `CV.K`, `nMC` and
+  `CV.update`. The tag `method` can be either `'exact'` or `'CV'`. If
+  sample size is more than 100, then the default is `'CV'` with `CV.K`
+  equal to its default value 10 (Gelman *et al.* 2024). The tag `nMC`
+  decides how many Monte Carlo samples will be used to evaluate the
+  leave-one-out predictive densities, which must be at least 500
+  (default). The tag `CV.update` is an advanced option, used only if
+  `method = 'CV'`, that decides how the pre-processing of the model fit
+  on each fold is obtained, and should be changed with care as the
+  faster choice depends on the BLAS library that R is linked with (see
+  [`sessionInfo()`](https://rdrr.io/r/utils/sessionInfo.html)).
+  `CV.update = 'update'` obtains it by deletion updates of the full-data
+  Cholesky factors, which is the faster choice with the reference BLAS
+  that R ships with. `CV.update = 'direct'` recomputes it on each fold,
+  which is faster only with an optimized BLAS such as OpenBLAS, Intel
+  MKL or Apple Accelerate (vecLib), and is slower otherwise. The default
+  `CV.update = 'auto'` uses `'direct'` if such an optimized BLAS is
+  detected from the library paths reported by R and `'update'`
+  otherwise; set it explicitly if the BLAS is not detected correctly
+  (for example, an optimized BLAS installed in place of `Rblas.dll` on
+  Windows). Both choices give the same results up to floating-point
+  rounding, so only the run time is affected.
 
 - parallel:
 
@@ -209,26 +225,26 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.018s
+#> ℹ Compile time: 0.016s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -241.35
-#> ℹ Compile time: 0.018s
-#> ℹ Solver time: 0.004s
+#> ✔ Optimal value: -245.312
+#> ℹ Compile time: 0.016s
+#> ℹ Solver time: 0.003s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi_s | phi_t | boundary | weight |
 #> +---------+-------+-------+----------+--------+
-#> | Model 1 |      2|      1|      0.50| 0.056  |
+#> | Model 1 |      2|      1|      0.50| 0.000  |
 #> | Model 2 |      3|      1|      0.50| 0.000  |
 #> | Model 3 |      2|      2|      0.50| 0.000  |
-#> | Model 4 |      3|      2|      0.50| 0.503  |
+#> | Model 4 |      3|      2|      0.50| 0.483  |
 #> | Model 5 |      2|      1|      0.75| 0.000  |
-#> | Model 6 |      3|      1|      0.75| 0.441  |
-#> | Model 7 |      2|      2|      0.75| 0.000  |
-#> | Model 8 |      3|      2|      0.75| 0.000  |
+#> | Model 6 |      3|      1|      0.75| 0.000  |
+#> | Model 7 |      2|      2|      0.75| 0.063  |
+#> | Model 8 |      3|      2|      0.75| 0.454  |
 #> +---------+-------+-------+----------+--------+
 #> 
 # }

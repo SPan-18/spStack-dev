@@ -126,12 +126,26 @@ list of candidate models for stacking. See <code><a href="candidateModels.html">
 
 <dt id="arg-loopd-controls">loopd.controls<a class="anchor" aria-label="anchor" href="#arg-loopd-controls"></a></dt>
 <dd><p>a list with details on how leave-one-out predictive
-densities (LOO-PD) are to be calculated. Valid tags include <code>method</code>, <code>CV.K</code>
-and <code>nMC</code>. The tag <code>method</code> can be either <code>'exact'</code> or <code>'CV'</code>. If sample size
-is more than 100, then the default is <code>'CV'</code> with <code>CV.K</code> equal to its default
-value 10 (Gelman <em>et al.</em> 2024). The tag <code>nMC</code> decides how many Monte Carlo
-samples will be used to evaluate the leave-one-out predictive densities,
-which must be at least 500 (default).</p></dd>
+densities (LOO-PD) are to be calculated. Valid tags include <code>method</code>, <code>CV.K</code>,
+<code>nMC</code> and <code>CV.update</code>. The tag <code>method</code> can be either <code>'exact'</code> or <code>'CV'</code>. If
+sample size is more than 100, then the default is <code>'CV'</code> with <code>CV.K</code> equal to
+its default value 10 (Gelman <em>et al.</em> 2024). The tag <code>nMC</code> decides how many
+Monte Carlo samples will be used to evaluate the leave-one-out predictive
+densities, which must be at least 500 (default). The tag <code>CV.update</code> is an
+advanced option, used only if <code>method = 'CV'</code>, that decides how the
+pre-processing of the model fit on each fold is obtained, and should be
+changed with care as the faster choice depends on the BLAS library that R is
+linked with (see <code><a href="https://rdrr.io/r/utils/sessionInfo.html" class="external-link">sessionInfo()</a></code>). <code>CV.update = 'update'</code> obtains it by
+deletion updates of the full-data Cholesky factors, which is the faster
+choice with the reference BLAS that R ships with. <code>CV.update = 'direct'</code>
+recomputes it on each fold, which is faster only with an optimized BLAS such
+as OpenBLAS, Intel MKL or Apple Accelerate (vecLib), and is slower
+otherwise. The default <code>CV.update = 'auto'</code> uses <code>'direct'</code> if such an
+optimized BLAS is detected from the library paths reported by R and
+<code>'update'</code> otherwise; set it explicitly if the BLAS is not detected correctly
+(for example, an optimized BLAS installed in place of <code>Rblas.dll</code> on
+Windows). Both choices give the same results up to floating-point rounding,
+so only the run time is affected.</p></dd>
 
 
 <dt id="arg-parallel">parallel<a class="anchor" aria-label="anchor" href="#arg-parallel"></a></dt>
@@ -179,7 +193,9 @@ particular model.</p></dd>
 
 <dt><code>loopd.method</code></dt>
 <dd><p>a list containing details of the algorithm used for
-calculation of leave-one-out predictive densities.</p></dd>
+calculation of leave-one-out predictive densities. For K-fold
+cross-validation, its tag <code>cv.update</code> records the pre-processing method
+(<code>'update'</code> or <code>'direct'</code>) that was used.</p></dd>
 
 <dt><code>n.models</code></dt>
 <dd><p>number of candidate models that are fit.</p></dd>
@@ -267,13 +283,13 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.821s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.019s</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ─────────────────────────────── Numerical solver ───────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ──────────────────────────────────── Summary ───────────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Status: optimal</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Optimal value: -157.999</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.821s</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.004s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Optimal value: -158.057</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.019s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.005s</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> STACKING WEIGHTS:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -285,7 +301,7 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4  |    3|  0.50|       0.5| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 5  |    7|  0.50|       0.5| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 6  |   10|  0.50|       0.5| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 7  |    3|  1.50|       0.5| 0.382  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 7  |    3|  1.50|       0.5| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 8  |    7|  1.50|       0.5| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 9  |   10|  1.50|       0.5| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 10 |    3|  0.25|       0.6| 0.000  |</span>
@@ -294,8 +310,8 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 13 |    3|  0.50|       0.6| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 14 |    7|  0.50|       0.6| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 15 |   10|  0.50|       0.6| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 16 |    3|  1.50|       0.6| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 17 |    7|  1.50|       0.6| 0.618  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 16 |    3|  1.50|       0.6| 0.426  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 17 |    7|  1.50|       0.6| 0.574  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> | Model 18 |   10|  1.50|       0.6| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> +----------+-----+------+----------+--------+</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
@@ -306,9 +322,9 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-in"><span><span class="va">post_samps</span> <span class="op">&lt;-</span> <span class="fu"><a href="stackedSampler.html">stackedSampler</a></span><span class="op">(</span><span class="va">mod1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">beta</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>                    2.5%        50%     97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.01988338  2.1363550  4.749246</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.69471951 -0.5677445 -0.431458</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>                   2.5%        50%     97.5%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept) -0.7636588  2.0582568  4.304904</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.7072396 -0.5637752 -0.422351</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">post_z</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">z</span></span></span>
 <span class="r-in"><span><span class="va">post_z_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_z</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
