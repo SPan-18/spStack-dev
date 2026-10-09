@@ -318,6 +318,11 @@ psis_khat_threshold <- function(S){
   min(1 - 1 / log10(S), 0.7)
 }
 
+# TRUE if x is a single, finite, whole number (e.g., a 1-based index)
+is_whole_scalar <- function(x){
+  is.numeric(x) && length(x) == 1 && is.finite(x) && x == round(x)
+}
+
 # internal function: stops if any row of coords is duplicated. The spatial and
 # spatial-temporal process models assume distinct locations: repeated rows make
 # the correlation matrix singular. For spatial-temporal models, coords is the

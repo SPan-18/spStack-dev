@@ -98,8 +98,11 @@ cholUpdateDel <- function(A, del.index, lower = TRUE){
     stop("del.index missing.")
   }
   if(n < 3){ stop("Must be a matrix of dimension at least 3.")}
-  if(del.index < 0 || del.index > n){
-    stop("Index to delete out of bounds.")
+  if(!is_whole_scalar(del.index)){
+    stop("del.index must be a single integer.")
+  }
+  if(del.index < 1 || del.index > n){
+    stop("Index to delete out of bounds; must be between 1 and ", n, ".")
   }
 
   storage.mode(A) <- "double"
@@ -118,8 +121,11 @@ cholUpdateDelBlock <- function(A, del.start, del.end, lower = TRUE){
   n <- nrow(A);
   if(missing(del.start)){ stop("Start index missing.") }
   if(missing(del.end)){ stop("End index missing.") }
+  if(!is_whole_scalar(del.start) || !is_whole_scalar(del.end)){
+    stop("del.start and del.end must be single integers.")
+  }
   if(del.start > del.end || del.start == del.end){ stop("Start index must be at least 1 less than end index.") }
-  if(del.start < 0 || del.end > n){ stop("Indices to delete out of bounds.") }
+  if(del.start < 1 || del.end > n){ stop("Indices to delete out of bounds; must be between 1 and ", n, ".") }
   n_del <- del.end - del.start + 1
   if(n_del > n - 2){ stop("Maximum block size to delete is ", n - 2, ".") }
 

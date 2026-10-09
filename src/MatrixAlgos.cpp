@@ -211,11 +211,14 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
   int indexLjj = 0, indexLkj= 0;
 
   // Error handling
-  if(del_start > del_end || del_start == del_end){
-    perror("Block Start index must be at least 1 less than End index.");
+  // indices are 0-based; a block of size 1 (del_start == del_end) is valid
+  if(del_start > del_end){
+    perror("Block Start index must not exceed End index.");
+    return;
   }
-  if(del_start < 0 || del_end > n){
+  if(del_start < 0 || del_end > n - 1){
     perror("Block index to delete is out of bounds.");
+    return;
   }
 
   // Step 1: Determine if deletion case is terminal or intermediate
