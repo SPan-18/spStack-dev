@@ -110,7 +110,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 #> ✔ Status: optimal
 #> ✔ Optimal value: -61.1673
 #> ℹ Compile time: 0.031s
-#> ℹ Solver time: 0.008s
+#> ℹ Solver time: 0.007s
 #> 
 #> STACKING WEIGHTS:
 #> 

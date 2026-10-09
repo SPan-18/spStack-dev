@@ -87,13 +87,13 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 3.955s
+#> ℹ Compile time: 3.924s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -54.6976
-#> ℹ Compile time: 3.955s
-#> ℹ Solver time: 0.007s
+#> ℹ Compile time: 3.924s
+#> ℹ Solver time: 0.009s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -117,13 +117,13 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.291s
+#> ℹ Compile time: 0.28s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -54.6976
-#> ℹ Compile time: 0.291s
-#> ℹ Solver time: 0.06s
+#> ℹ Compile time: 0.28s
+#> ℹ Solver time: 0.057s
 print(round(w_hat$weights, 4))
 #> [1] 0.0000 0.3333 0.0000 0.6667
 print(w_hat$solver)

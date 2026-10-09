@@ -97,7 +97,7 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> ✔ Status: optimal
 #> ✔ Optimal value: -54.6976
 #> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.006s
+#> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -115,7 +115,7 @@ print(mod1$solver.status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.181   0.304   0.122 
+#>   0.175   0.311   0.122 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
