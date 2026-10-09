@@ -182,11 +182,20 @@ extern "C" {
 
                 F77_NAME(dgemm)(ytran, ntran, &r, &r, &n, &one, Zb, &n, Zb, &n, &zero, Qz_rr, &r FCONE FCONE);                        // Qz = Z'inv(R)Z
                 F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Qz_rr, &incOne);                                                          // Qz = Z'inv(R)Z + iwScale
-                F77_NAME(dpotrf)(lower, &r, Qz_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");} // chol(Qz)
-                F77_NAME(dpotri)(lower, &r, Qz_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");} // inv(Qz)
-                F77_NAME(dpotrf)(lower, &r, Qz_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");} // chol(inv(Qz))
+                // posterior scale matrix: positive definite in exact arithmetic (iwScale is), so a failure here is numerical;
+                // the RNG state is saved before stopping (all memory is R_alloc)
+                F77_NAME(dpotrf)(lower, &r, Qz_rr, &r, &info FCONE);                                                   // chol(Qz)
+                if(info == 0){ F77_NAME(dpotri)(lower, &r, Qz_rr, &r, &info FCONE); }                                  // inv(Qz)
+                if(info == 0){ F77_NAME(dpotrf)(lower, &r, Qz_rr, &r, &info FCONE); }                                  // chol(inv(Qz))
+                if(info != 0){
+                  PutRNGstate();
+                  Rf_error("c++ error: Cholesky factorization of the posterior inverse-Wishart scale matrix failed (info = %i).\n", info);
+                }
                 mkLT(Qz_rr, r);
-                rInvWishart(r, nu_z + n + 2*r, Qz_rr, samp_Sigma, tmp_rr);
+                if(rInvWishart(r, nu_z + n + 2*r, Qz_rr, samp_Sigma, tmp_rr) != 0){
+                  PutRNGstate();
+                  Rf_error("c++ error: Cholesky factorization in an inverse-Wishart draw failed (the scale matrix is not numerically positive definite).\n");
+                }
                 F77_NAME(dcopy)(&rr, samp_Sigma, &incOne, &REAL(samples_zScale_r)[(R_xlen_t) i * rr], &incOne);
 
             }

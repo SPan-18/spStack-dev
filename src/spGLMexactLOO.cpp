@@ -62,16 +62,13 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
   double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);                  // Cholesky of Vz
   double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);        // allocate memory for n x n matrix
-  double *cholSchur_n = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholSchur_n, nn);   // allocate memory for Schur complement
-  double *cholSchur_p = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p, pp);   // allocate memory for Schur complement
-  double *D1invX = (double *) R_chk_calloc(np, sizeof(double)); zeros(D1invX, np);             // allocate for preprocessing
-  double *DinvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DinvB_pn, np);         // allocate memory for p x n matrix
   double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);              // allocate VbetaInv
   double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                    // Cholesky of Vbeta
 
   // Find Cholesky of Vz
   F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-  F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+  F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
+  if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or a very small phi.\n", info);}
 
   // construct unit spherical perturbation of Vz; (Vz+I)
   F77_NAME(dcopy)(&nn, Vz, &incOne, cholVzPlusI, &incOne);
@@ -80,21 +77,36 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   }
 
   // find Cholesky factor of unit spherical perturbation of Vz
-  F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE); if(info != 0){perror("c++ error: VzPlusI dpotrf failed\n");}
+  F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE);
+  if(info != 0){Rf_error("c++ error: Cholesky factorization of Vz + I failed (info = %i).\n", info);}
 
   F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-  F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+  F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
   F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                     // Lbeta = chol(Vbeta)
-  F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+  F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");} // VbetaInv = chol2inv(Vbeta)
 
 
   // Get the Schur complement of top left nxn submatrix of (HtH)
+  // (heap memory below is allocated only after the factorizations above, which stop with an error on failure)
+  double *cholSchur_n = (double *) R_chk_calloc(nn, sizeof(double)); zeros(cholSchur_n, nn);   // allocate memory for Schur complement
+  double *cholSchur_p = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p, pp);   // allocate memory for Schur complement
+  double *D1invX = (double *) R_chk_calloc(np, sizeof(double)); zeros(D1invX, np);             // allocate for preprocessing
+  double *DinvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DinvB_pn, np);         // allocate memory for p x n matrix
   double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);       // temporary allocate memory for n x p matrix
 
-  cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
-               DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
+  info = cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
+                      DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
 
   R_chk_free(tmp_np);
+  if(info != 0){
+    R_chk_free(cholSchur_n); R_chk_free(cholSchur_p); R_chk_free(D1invX); R_chk_free(DinvB_pn);
+    glmPrimingError(info);
+  }
+
+  // failure in the leave-one-out / cross-validation loops: the loops are left, the heap memory is freed, and the
+  // error is raised at the end (failCode: 1, 2 as returned by cholSchurGLM; 3 = block-deleted correlation matrix;
+  // 4 = conditional covariance of the held-out block)
+  int failCode = 0;
 
   /*****************************************
    Set-up posterior sampling
@@ -303,8 +315,9 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
                            D1invlooX, DinvB_pn1, cholSchur_p1, cholSchur_n1,
                            del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
           // not numerically positive definite: recompute directly on the leave-one-out data (O(n^3))
-          cholSchurGLM(looX, n1, p, sigmaSq_xi, VbetaInv, looCholVzPlusI, tmp_n1p,
-                       DinvB_pn1, cholSchur_p1, cholSchur_n1, D1invlooX);
+          failCode = cholSchurGLM(looX, n1, p, sigmaSq_xi, VbetaInv, looCholVzPlusI, tmp_n1p,
+                                  DinvB_pn1, cholSchur_p1, cholSchur_n1, D1invlooX);
+          if(failCode != 0){ break; }
         }
 
         // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
@@ -584,8 +597,8 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
           for(cv_i = 0; cv_i < nnk; cv_i++){
             cvCholVzPlusI[cv_i*nnk + cv_i] += 1.0;                                                                   // Vz[-ids, -ids] + I
           }
-          F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
-          F77_NAME(dpotrf)(lower, &nnk, cvCholVzPlusI, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVzPlusI dpotrf failed\n");}
+          F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){ failCode = 3; break; }
+          F77_NAME(dpotrf)(lower, &nnk, cvCholVzPlusI, &nnk, &info FCONE); if(info != 0){ failCode = 3; break; }
         }
 
         // Spatial process prediction
@@ -594,7 +607,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nk, &one, cvCholVz, &nnk, LzInvCz_cv, &nnk FCONE FCONE FCONE FCONE);       // LzInvCz_cv = inv(Lz)*Cz
         F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, LzInvCz_cv, &nnk, LzInvCz_cv, &nnk, &zero, tmp_nknkmax, &nk FCONE FCONE); // tmp_nknkmax = t(Cz)*inv(Vz)*Cz
         F77_NAME(daxpy)(&nknk, &negone, tmp_nknkmax, &incOne, z_tilde_cov, &incOne);                                                  // z_tilde_cov = VzTilde - t(Cz)*inv(Vz)*Cz
-        F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_tilde_schur dpotrf failed\n");}
+        F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){ failCode = 4; break; }
         mkLT(z_tilde_cov, nk);
 
         // Pre-processing for projGLM() on block-deleted data
@@ -606,14 +619,15 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
                              D1invcvX, DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax,
                              del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
             // not numerically positive definite: recompute directly on the block-deleted data (O(n^3))
-            cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
-                         DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
+            failCode = cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
+                                    DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
           }
         }else{
           // directly on the block-deleted data (O(n^3))
-          cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
-                       DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
+          failCode = cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
+                                  DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
         }
+        if(failCode != 0){ break; }
 
         // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
         for(e = 0; e < nEps; e++){
@@ -913,6 +927,11 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   R_chk_free(cholSchur_n);
   R_chk_free(D1invX);
   R_chk_free(DinvB_pn);
+
+  if(failCode != 0){
+    UNPROTECT(nProtect);
+    glmLOOError(failCode);
+  }
 
   UNPROTECT(nProtect);
 

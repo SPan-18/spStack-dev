@@ -1211,7 +1211,8 @@ void rWishartBartlett(int r, double nu, double *A){
 // Inverse-Wishart draw from a Bartlett factor A (see rWishartBartlett):
 // Sigma = inv(L*A*t(A)*t(L)), L = cholinvIWscale (lower; its upper triangle is zeroed). Deterministic; tmp_rr is
 // r x r workspace and may be the same array as A (A is not used after its first product).
-void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+// Returns 0 on success, 1 if the factorization or inversion failed (Sigma is then incomplete).
+int invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr){
 
   int info = 0;
   int i = 0, j = 0;
@@ -1229,8 +1230,8 @@ void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Si
   F77_NAME(dsymm)(rside, lower, &r, &r, &one, Sigma, &r, cholinvIWscale, &r, &zero, tmp_rr, &r FCONE FCONE);
   F77_NAME(dgemm)(ntran, ytran, &r, &r, &r, &one, tmp_rr, &r, cholinvIWscale, &r, &zero, Sigma, &r FCONE FCONE);
 
-  F77_NAME(dpotrf)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: rInvWishart dpotrf failed\n");}
-  F77_NAME(dpotri)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: rInvWishart dpotri failed\n");}
+  F77_NAME(dpotrf)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){return 1;}
+  F77_NAME(dpotri)(lower, &r, Sigma, &r, &info FCONE); if(info != 0){return 1;}
 
   // make Sigma symmetric
   for(i = 1; i < r; i++){
@@ -1239,12 +1240,86 @@ void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Si
     }
   }
 
+  return 0;
+
 }
 
-// Draw from an inverse-Wishart distribution (Bartlett factor, then the deterministic transform)
-void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+// Draw from an inverse-Wishart distribution (Bartlett factor, then the deterministic transform).
+// Returns 0 on success, 1 on failure (see invWishartFromBartlett).
+int rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr){
 
   rWishartBartlett(r, nu, tmp_rr);
-  invWishartFromBartlett(r, tmp_rr, cholinvIWscale, Sigma, tmp_rr);
+  return invWishartFromBartlett(r, tmp_rr, cholinvIWscale, Sigma, tmp_rr);
+
+}
+
+// Fit diagnostics (stored in the fit, reported by the R wrappers when verbose = TRUE; no extra factorization).
+//
+// Smallest and largest off-diagonal entry of the correlation matrix held in the lower triangle of the n x n
+// column-major array A: the correlations of the two farthest-apart and of the two closest locations. One pass over
+// the n(n-1)/2 entries below the diagonal; NA if n < 2.
+void corOffDiagRange(double *A, int n, double *minCor, double *maxCor){
+
+  int i, j;
+  double lo = R_PosInf, hi = R_NegInf, a = 0.0;
+
+  for(j = 0; j < n - 1; j++){
+    for(i = j + 1; i < n; i++){
+      a = A[(size_t) j * n + i];
+      if(a < lo){ lo = a; }
+      if(a > hi){ hi = a; }
+    }
+  }
+  *minCor = (n < 2) ? NA_REAL : lo;
+  *maxCor = (n < 2) ? NA_REAL : hi;
+
+}
+
+// Smallest relative Cholesky pivot min_i L[i,i]^2 / d[i] of the lower factor L (n x n, column-major) of a matrix
+// with diagonal d (d[i] = dconst for all i if d is NULL). For a correlation-type matrix, L[i,i]^2 / d[i] is the part
+// of the variance of variable i not explained by variables 1, ..., i-1; its inverse bounds the condition number below.
+double minRelPivot(double *L, int n, double *d, double dconst){
+
+  int i;
+  double m = R_PosInf, piv = 0.0;
+
+  for(i = 0; i < n; i++){
+    piv = L[(size_t) i * n + i];
+    piv = piv * piv / ((d == NULL) ? dconst : d[i]);
+    if(piv < m){ m = piv; }
+  }
+
+  return m;
+
+}
+
+// Returns a copy of the named list list_r with the element "diagnostics" = c(min.pivot, min.cor, max.cor) appended.
+SEXP appendDiagnostics(SEXP list_r, double minPivot, double minCor, double maxCor){
+
+  int k, len = Rf_length(list_r);
+  SEXP names_r = Rf_getAttrib(list_r, R_NamesSymbol);
+  SEXP out_r = PROTECT(Rf_allocVector(VECSXP, len + 1));
+  SEXP outNames_r = PROTECT(Rf_allocVector(STRSXP, len + 1));
+  SEXP diag_r = PROTECT(Rf_allocVector(REALSXP, 3));
+  SEXP diagNames_r = PROTECT(Rf_allocVector(STRSXP, 3));
+
+  for(k = 0; k < len; k++){
+    SET_VECTOR_ELT(out_r, k, VECTOR_ELT(list_r, k));
+    SET_STRING_ELT(outNames_r, k, STRING_ELT(names_r, k));
+  }
+  REAL(diag_r)[0] = minPivot;
+  REAL(diag_r)[1] = minCor;
+  REAL(diag_r)[2] = maxCor;
+  SET_STRING_ELT(diagNames_r, 0, Rf_mkChar("min.pivot"));
+  SET_STRING_ELT(diagNames_r, 1, Rf_mkChar("min.cor"));
+  SET_STRING_ELT(diagNames_r, 2, Rf_mkChar("max.cor"));
+  Rf_setAttrib(diag_r, R_NamesSymbol, diagNames_r);
+  SET_VECTOR_ELT(out_r, len, diag_r);
+  SET_STRING_ELT(outNames_r, len, Rf_mkChar("diagnostics"));
+  Rf_setAttrib(out_r, R_NamesSymbol, outNames_r);
+
+  UNPROTECT(4);
+
+  return out_r;
 
 }

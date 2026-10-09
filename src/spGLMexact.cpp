@@ -134,23 +134,26 @@ extern "C" {
     }
 
     // find Cholesky factor of unit spherical perturbation of Vz
-    F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE); if(info != 0){perror("c++ error: VzPlusI dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE);
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of Vz + I failed (info = %i).\n", info);}
 
     // Find Cholesky of Vz
-    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or a very small phi.\n", info);}
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");} // VbetaInv = chol2inv(Vbeta)
 
     // Get the Schur complement of top left nxn submatrix of (HtH)
     double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);       // temporary allocate memory for n x p matrix
 
-    cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
-                 DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
+    info = cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
+                        DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
 
     R_chk_free(tmp_np);
+    if(info != 0){glmPrimingError(info);}
 
     /*****************************************
      Set-up posterior sampling

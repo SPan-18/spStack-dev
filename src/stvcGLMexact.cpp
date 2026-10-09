@@ -184,7 +184,7 @@ extern "C" {
 
       cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
       F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
       mkLT(cholVz, n);
 
     }else if(processType == "independent"){
@@ -192,7 +192,7 @@ extern "C" {
       cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
       F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
       for(k = 0; k < r; k++){
-          F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+          F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
           mkLT(&cholVz[nn * k], n);
       }
 
@@ -200,13 +200,13 @@ extern "C" {
 
       cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
       F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
       mkLT(cholVz, n);
       chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
       F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
-      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
-      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
-      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");}
+      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");} // chol_iwScale = chol2inv(iwScale)
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");}
       mkLT(chol_iwScale, r);
 
     }
@@ -219,9 +219,9 @@ extern "C" {
 
     // Find VbetaInv
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");}       // VbetaInv = chol2inv(Vbeta)
 
     // Find XtX
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
@@ -244,7 +244,7 @@ extern "C" {
         cholIplusXTildeVzXTildet[i*n + i] += 1.0;
     }
     F77_NAME(dpotrf)(lower, &n, cholIplusXTildeVzXTildet, &n, &info FCONE);
-    if(info != 0){perror("c++ error: capacitance matrix dpotrf failed\n");}
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of I + XTilde*Vz*t(XTilde) failed (info = %i).\n", info);}
     mkLT(cholIplusXTildeVzXTildet, n);
 
     // Allocations for priming step (pre-processing)
@@ -259,10 +259,19 @@ extern "C" {
     double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
-    primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
-                 sigmaSq_xi, tmp_nnr1, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
+    info = primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
+                        sigmaSq_xi, tmp_nnr1, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
     R_chk_free(tmp_nnr1);
+    if(info != 0){
+      R_chk_free(D1Inv); R_chk_free(D1InvB1); R_chk_free(cholschurA1); R_chk_free(DInvB_pn);
+      R_chk_free(DInvB_nrn); R_chk_free(cholschurA);
+      glmPrimingError(info);
+    }
+
+    // failure of an inverse-Wishart draw in the sampling loop: the loop is left, the heap memory is freed, and the
+    // error is raised at the end
+    int failCode = 0;
 
     /*****************************************
      Set-up posterior sampling
@@ -381,14 +390,16 @@ extern "C" {
                 tmp_nr[k*n + i] = rnorm(0.0, 1.0);
               }
             }
-            rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-            F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+            if(rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr) != 0){ failCode = 5; break; }
+            F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; break; }
             mkLT(samp_Sigma, r);
             F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, &V_z[bb*nr], &n FCONE FCONE);
 
           }
 
       }
+
+      if(failCode != 0){ break; }
 
       // projection step for the block
       projGLMvcbatch(n, p, r, nBlock, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
@@ -416,6 +427,11 @@ extern "C" {
     R_chk_free(DInvB_pn);
     R_chk_free(DInvB_nrn);
     R_chk_free(cholschurA);
+
+    if(failCode != 0){
+      UNPROTECT(nProtect);
+      glmLOOError(failCode);
+    }
 
     // make return object
     SEXP result_r, resultName_r;

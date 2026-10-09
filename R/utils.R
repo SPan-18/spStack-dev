@@ -384,3 +384,98 @@ resolve_CV_update <- function(CV.update = "auto"){
   CV.update
 
 }
+
+# Fit diagnostics. Each C++ fit returns c(min.pivot, min.cor, max.cor): the smallest
+# relative Cholesky pivot of the n x n factorizations (its inverse bounds the
+# condition number below), and the smallest and largest off-diagonal entry of the
+# correlation matrix (the correlations of the farthest-apart and of the closest
+# locations). Computed from quantities the fit already forms.
+diagnostics_thresholds <- list(min.pivot = 1e-8, min.cor = 0.95, max.cor = 0.05)
+
+# data frame of the diagnostics of a list of fits, one row per fit
+collect_diagnostics <- function(fits, model.names = NULL){
+
+  d <- do.call("rbind", lapply(fits, function(x) x[["diagnostics"]]))
+  d <- as.data.frame(d)
+  if(!is.null(model.names)){
+    rownames(d) <- model.names
+  }
+  d
+
+}
+
+# issues flagged by the diagnostics: a list with one character vector per row.
+# pivot.hint: likely causes of a small pivot, model specific
+diagnostics_issues <- function(d, pivot.hint = "nearly coincident locations, or a very small decay parameter"){
+
+  th <- diagnostics_thresholds
+  lapply(seq_len(nrow(d)), function(i){
+    out <- character(0)
+    if(isTRUE(d$min.pivot[i] < th$min.pivot)){
+      out <- c(out, paste0("smallest relative Cholesky pivot is ",
+                           format(signif(d$min.pivot[i], 2)), ": the covariance",
+                           " matrix is nearly singular and results may lose",
+                           " accuracy (", pivot.hint, ")."))
+    }
+    if(isTRUE(d$min.cor[i] > th$min.cor)){
+      out <- c(out, paste0("correlation between the two farthest-apart",
+                           " locations is ", format(round(d$min.cor[i], 3)),
+                           ": the effective range far exceeds the extent of the",
+                           " data; consider a larger decay parameter."))
+    }
+    if(isTRUE(d$max.cor[i] < th$max.cor)){
+      out <- c(out, paste0("correlation between the two closest locations is ",
+                           format(signif(d$max.cor[i], 2)), ": the locations",
+                           " are nearly uncorrelated and the spatial effect is",
+                           " hard to separate from noise; consider a smaller",
+                           " decay parameter."))
+    }
+    out
+  })
+
+}
+
+# prints a "Diagnostics" section if any fit has an issue. With stacking weights,
+# only models with weight above weight.min are reported in detail; flagged models
+# with negligible weight are counted.
+print_diagnostics <- function(d, weights = NULL, weight.min = 0.05, ...){
+
+  issues <- diagnostics_issues(d, ...)
+  flagged <- which(lengths(issues) > 0)
+  if(length(flagged) == 0){
+    return(invisible(NULL))
+  }
+  shown <- flagged
+  if(!is.null(weights)){
+    shown <- flagged[weights[flagged] > weight.min]
+  }
+  if(length(shown) == 0){
+    return(invisible(NULL))
+  }
+
+  cat("----------------------------------------\n")
+  cat("\tDiagnostics\n")
+  cat("----------------------------------------\n")
+  for(i in shown){
+    if(nrow(d) > 1 || !is.null(weights)){
+      lab <- rownames(d)[i]
+      if(!is.null(weights)){
+        lab <- paste0(lab, " (stacking weight ", format(round(weights[i], 3)), ")")
+      }
+      cat(lab, ":\n", sep = "")
+    }
+    for(msg in issues[[i]]){
+      cat(paste(strwrap(msg, width = 76, initial = "  - ", prefix = "    "),
+                collapse = "\n"), "\n", sep = "")
+    }
+  }
+  n_hidden <- length(flagged) - length(shown)
+  if(n_hidden > 0){
+    cat(n_hidden, " other candidate model(s) with stacking weight at most ",
+        weight.min, " are also flagged; see the 'diagnostics' element.\n", sep = "")
+  }
+  cat("----------------------------------------\n")
+
+  invisible(NULL)
+
+}

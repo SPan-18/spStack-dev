@@ -117,6 +117,11 @@ void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r);
 
 void rWishartBartlett(int r, double nu, double *A);
 
-void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr);
+int invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr);
 
-void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr);
+int rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr);
+void corOffDiagRange(double *A, int n, double *minCor, double *maxCor);
+
+double minRelPivot(double *L, int n, double *d, double dconst);
+
+SEXP appendDiagnostics(SEXP list_r, double minPivot, double minCor, double maxCor);

@@ -8,8 +8,12 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w);
 
 void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1, double *tmpL1, double *w);
 
-void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, double *cholVzPlusI,
-                  double *tmp_np, double *DinvB_np, double *out_pp, double *out_nn, double *D1invB1);
+void glmPrimingError(int code);
+
+void glmLOOError(int code);
+
+int cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, double *cholVzPlusI,
+                 double *tmp_np, double *DinvB_np, double *out_pp, double *out_nn, double *D1invB1);
 
 void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
                  double *Vz, double *cholVy, double *v1, double *v2,
@@ -26,10 +30,10 @@ void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_bet
 
 void upperTri_lowerTri(double *M, int n);
 
-void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
-                  double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
-                  double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
-                  double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn);
+int primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
+                 double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
+                 double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+                 double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn);
 
 void dtrsv_sparse1(double *L, double b, double *x, int n, int k);
 

@@ -95,6 +95,18 @@ candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
 \item{\code{solver.status}}{solver status as returned by the optimization
 routine.}
+\item{\code{diagnostics}}{a data frame with one row per candidate model and
+columns \code{min.pivot} (the smallest relative Cholesky pivot of the
+\eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a nearly
+singular covariance matrix), \code{min.cor} and \code{max.cor} (the
+correlations of the two farthest-apart and of the two closest locations;
+values of \code{min.cor} above 0.95 suggest an effective range far
+exceeding the extent of the data, values of \code{max.cor} below 0.05 nearly
+uncorrelated locations). They are obtained from quantities the fits compute
+anyway. If \code{verbose = TRUE}, a "Diagnostics" section is printed for
+flagged candidate models with stacking weight above 0.05; extreme candidates
+with negligible weight are expected in a stacking grid and are only
+counted.}
 }
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.

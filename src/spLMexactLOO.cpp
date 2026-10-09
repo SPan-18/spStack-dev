@@ -92,6 +92,11 @@ static SEXP spLMexactLOO_fit(double *Y, double *X, int n, int p, double *cholVy,
   }
   double *looQr = NULL;                                                            // Q*r = inv(Vy)*(Y-X*betahat), exact LOO only
 
+  // diagnostics: correlations of the farthest-apart and the closest locations, and below the smallest relative
+  // Cholesky pivot of the two n x n factorizations (no extra factorization)
+  double diagMinCor = 0.0, diagMaxCor = 0.0, diagPivot = 0.0;
+  corOffDiagRange(cholVy, n, &diagMinCor, &diagMaxCor);
+
   // construct marginal covariance matrix Vy = R + deltasq*I in place
   for(i = 0; i < n; i++){
     cholVy[i*n + i] += deltasq;
@@ -100,6 +105,7 @@ static SEXP spLMexactLOO_fit(double *Y, double *X, int n, int p, double *cholVy,
   // chol(Vy)
   F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE);
   if(info != 0){Rf_error("c++ error: Cholesky factorization of Vy = R + deltasq*I failed (info = %i).\n", info);}
+  diagPivot = minRelPivot(cholVy, n, NULL, 1.0 + deltasq);                                  // diag(Vy) = 1 + deltasq
 
   // find cholinv(Vy)*Y
   F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
@@ -226,8 +232,12 @@ static SEXP spLMexactLOO_fit(double *Y, double *X, int n, int p, double *cholVy,
     F77_NAME(dscal)(&i, &negDeltasq, &cholVy[j*n + j], &incOne);                                            // cholVy[j:n, j] = -deltasq*inv(Vy)[j:n, j]
     cholVy[j*n + j] += 1.0;                                                                                   // cholVy = I - deltasq*inv(Vy) = inv(Vy)*R
   }
+  const int nPlusOne = n + 1;
+  double *diagM = (double *) R_alloc(n, sizeof(double));
+  F77_NAME(dcopy)(&n, cholVy, &nPlusOne, diagM, &incOne);                                                     // diag(inv(Vy)*R)
   F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE);                                                       // cholVy = chol(inv(Vy)*R)
   if(info != 0){Rf_error("c++ error: Cholesky factorization of the posterior covariance of z failed (info = %i); the spatial correlation matrix is numerically singular.\n", info);}
+  diagPivot = fmin2(diagPivot, minRelPivot(cholVy, n, diagM, 1.0));
 
   // posterior parameters of sigmaSq
   sigmaSqIGaPost += sigmaSqIGa;
@@ -408,6 +418,8 @@ static SEXP spLMexactLOO_fit(double *Y, double *X, int n, int p, double *cholVy,
     Rf_namesgets(result_r, resultName_r);
 
   }
+
+  result_r = PROTECT(appendDiagnostics(result_r, diagPivot, diagMinCor, diagMaxCor)); nProtect++;
 
   UNPROTECT(nProtect);
 

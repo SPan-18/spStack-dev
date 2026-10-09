@@ -66,6 +66,18 @@
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
 #' \item{`solver.status`}{solver status as returned by the optimization
 #' routine.}
+#' \item{`diagnostics`}{a data frame with one row per candidate model and
+#'  columns \code{min.pivot} (the smallest relative Cholesky pivot of the
+#'  \eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a nearly
+#'  singular covariance matrix), \code{min.cor} and \code{max.cor} (the
+#'  correlations of the two farthest-apart and of the two closest locations;
+#'  values of \code{min.cor} above 0.95 suggest an effective range far
+#'  exceeding the extent of the data, values of \code{max.cor} below 0.05 nearly
+#'  uncorrelated locations). They are obtained from quantities the fits compute
+#'  anyway. If \code{verbose = TRUE}, a "Diagnostics" section is printed for
+#'  flagged candidate models with stacking weight above 0.05; extreme candidates
+#'  with negligible weight are expected in a stacking grid and are only
+#'  counted.}
 #' }
 #' The return object might include additional data that is useful for subsequent
 #' prediction, model fit evaluation and other utilities.
@@ -474,6 +486,12 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     }
   }
 
+  diagnostics <- collect_diagnostics(samps, paste("Model", seq_along(list_candidate)))
+  if(verbose){
+    print_diagnostics(diagnostics, weights = w_hat,
+                      pivot.hint = "nearly coincident locations, a very small decay parameter, or a very small noise-to-spatial variance ratio")
+  }
+
   samps <- lapply(samps, function(x) x[c("beta", "sigmaSq", "sigmaSq.z", "z")])
   names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
 
@@ -507,6 +525,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$run.time <- run.time
   out$solver <- solver_used
   out$solver.status <- solver_status
+  out$diagnostics <- diagnostics
 
   class(out) <- "spLMstack"
 

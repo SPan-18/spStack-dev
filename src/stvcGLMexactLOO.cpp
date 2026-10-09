@@ -228,7 +228,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
         F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-        F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+        F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
         mkLT(cholVz, n);
 
     }else if(processType == "independent"){
@@ -236,7 +236,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
         F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
         for(k = 0; k < r; k++){
-            F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+            F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
             mkLT(&cholVz[nn * k], n);
         }
 
@@ -244,13 +244,13 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
       cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
       F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
       mkLT(cholVz, n);
       chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
       F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
-      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
-      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
-      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");}
+      F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");} // chol_iwScale = chol2inv(iwScale)
+      F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){Rf_error("c++ error: the inverse-Wishart scale matrix iw.scale is not positive definite.\n");}
       mkLT(chol_iwScale, r);
 
     }
@@ -263,9 +263,9 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
     // Find VbetaInv
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
-    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
+    F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
-    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
+    F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");}       // VbetaInv = chol2inv(Vbeta)
 
     // Find XtX
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
@@ -288,7 +288,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         cholIplusXTildeVzXTildet[i*n + i] += 1.0;
     }
     F77_NAME(dpotrf)(lower, &n, cholIplusXTildeVzXTildet, &n, &info FCONE);
-    if(info != 0){perror("c++ error: capacitance matrix dpotrf failed\n");}
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of I + XTilde*Vz*t(XTilde) failed (info = %i).\n", info);}
     mkLT(cholIplusXTildeVzXTildet, n);
 
     // Allocations for priming step (pre-processing)
@@ -303,10 +303,19 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
     double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
-    primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
-                 sigmaSq_xi, tmp_nnr, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
+    info = primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
+                        sigmaSq_xi, tmp_nnr, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
     R_chk_free(tmp_nnr);
+    if(info != 0){
+      R_chk_free(D1Inv); R_chk_free(D1InvB1); R_chk_free(cholschurA1); R_chk_free(DInvB_pn);
+      R_chk_free(DInvB_nrn); R_chk_free(cholschurA);
+      glmPrimingError(info);
+    }
+
+    // failure in the sampling, leave-one-out or cross-validation loops: the loop is left (goto), its heap memory is
+    // freed, and the error is raised before the return object is made (codes as in glmLOOError)
+    int failCode = 0;
 
     /*****************************************
      Set-up posterior sampling
@@ -436,8 +445,9 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                   tmp_nr[k*n + i] = rnorm(0.0, 1.0);
                 }
               }
-              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              if(rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr) != 0){ failCode = 5; goto fit_done; }
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; goto fit_done; }
+              mkLT(samp_Sigma, r);                                                                       // zero the upper triangle
               F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, &V_z[bb*nr], &n FCONE FCONE);
 
             }
@@ -452,6 +462,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
       }
 
     }
+
+    fit_done:
 
     R_chk_free(V_eta);
     R_chk_free(tmp_nb);
@@ -474,7 +486,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
     SEXP result_r, resultName_r;
     SEXP loopd_out_l = R_NilValue;                                                       // leave-one-out predictive densities, one per epsilon
 
-    if(loopd){
+    if(loopd && failCode == 0){
 
       if(verbose){
         Rprintf("Evaluating leave-one-out predictive densities.\n");
@@ -658,12 +670,13 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
             }
             cholRowDelUpdate(n, cholIplusXTildeVzXTildet, loo_index, looCholIplusXTildeVzXTildet, tmp_n11);
 
-            primingGLMvc(n1, p, r, looX, looX_tilde, looXtX, looXTildetX, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
-                         sigmaSq_xi, tmp_n1n1r, looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA);
+            failCode = primingGLMvc(n1, p, r, looX, looX_tilde, looXtX, looXTildetX, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
+                                    sigmaSq_xi, tmp_n1n1r, looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA);
 
             R_chk_free(looVz);
             R_chk_free(looCholIplusXTildeVzXTildet);
             R_chk_free(tmp_n1n1r);
+            if(failCode != 0){ goto loo_done; }
 
           }
 
@@ -752,8 +765,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                       tmp_n1r[k*n1 + loo_i] = rnorm(0.0, 1.0);
                     }
                   }
-                  rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  if(rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr) != 0){ failCode = 5; goto loo_done; }
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; goto loo_done; }
                   mkLT(samp_Sigma, r);
                   F77_NAME(dgemm)(ntran, ytran, &n1, &r, &r, &one, tmp_n1r, &n1, samp_Sigma, &r, &zero, &LV_z[bb*n1r], &n1 FCONE FCONE);
 
@@ -827,12 +840,12 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                   F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, Zb, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);   // z_tilde_mu = t(C)*inv(R)*Z
                   F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, Zb, &n1, Zb, &n1, &zero, Mdist_rr, &r FCONE FCONE);                  // Mdist = t(Z)*inv(R)*Z
                   F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Mdist_rr, &incOne);                                                      // Mdist = iwScale + t(Z)*inv(R)*Z
-                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-                  F77_NAME(dpotri)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
-                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){ failCode = 5; goto loo_done; }
+                  F77_NAME(dpotri)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){ failCode = 5; goto loo_done; }
+                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){ failCode = 5; goto loo_done; }
                   mkLT(Mdist_rr, r);
-                  invWishartFromBartlett(r, &LV_bart[bb*rr], Mdist_rr, samp_Sigma, tmp_rr);                                            // = rInvWishart(r, nu_z + n1 + 2r, Mdist_rr, ...)
-                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  if(invWishartFromBartlett(r, &LV_bart[bb*rr], Mdist_rr, samp_Sigma, tmp_rr) != 0){ failCode = 5; goto loo_done; }  // = rInvWishart(r, nu_z + n1 + 2r, Mdist_rr, ...)
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; goto loo_done; }
                   mkLT(samp_Sigma, r);
 
                   dtemp1 = sqrt(z_tilde_var[0]);
@@ -872,6 +885,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
           }
 
         }
+
+        loo_done:
 
         PutRNGstate();
 
@@ -1105,7 +1120,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
               cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_n11);
             }else{
               copyMatrixDelRowColBlock(Vz, n, n, cvCholVz, start_index, end_index, start_index, end_index);
-              F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
+              F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){ failCode = 3; goto cv_done; }
               mkLT(cvCholVz, nnk);
             }
 
@@ -1115,7 +1130,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
             F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, cvCz, &nnk, cvCz, &nnk, &zero, tmp_nknkmax, &nk FCONE FCONE);  // tmp_nknkmax = t(Cz)*inv(Vz)*Cz
             copyMatrixRowColBlock(Vz, n, n, z_tilde_cov, start_index, end_index, start_index, end_index);                      // z_tilde_cov = Vz[ids, ids]
             F77_NAME(daxpy)(&nknk, &negOne, tmp_nknkmax, &incOne, z_tilde_cov, &incOne);
-            F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_schur dpotrf failed\n");}
+            F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){ failCode = 4; goto cv_done; }
             mkLT(z_tilde_cov, nk);
 
           }else if(processType == "independent"){
@@ -1127,7 +1142,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                 cholBlockDelUpdate(n, &cholVz[nn * k], start_index, end_index, &cvCholVz[nnknnk * k], tmp_nnknnkmax, tmp_n11);
               }else{
                 copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvCholVz[nnknnk * k], start_index, end_index, start_index, end_index);
-                F77_NAME(dpotrf)(lower, &nnk, &cvCholVz[nnknnk * k], &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
+                F77_NAME(dpotrf)(lower, &nnk, &cvCholVz[nnknnk * k], &nnk, &info FCONE); if(info != 0){ failCode = 3; goto cv_done; }
                 mkLT(&cvCholVz[nnknnk * k], nnk);
               }
 
@@ -1137,7 +1152,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
               F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, &cvCz[nnk * nk * k], &nnk, &cvCz[nnk * nk * k], &nnk, &zero, tmp_nknkmax, &nk FCONE FCONE);
               copyMatrixRowColBlock(&Vz[nn * k], n, n, &z_tilde_cov[nknk * k], start_index, end_index, start_index, end_index);
               F77_NAME(daxpy)(&nknk, &negOne, tmp_nknkmax, &incOne, &z_tilde_cov[nknk * k], &incOne);
-              F77_NAME(dpotrf)(lower, &nk, &z_tilde_cov[nknk * k], &nk, &info FCONE); if(info != 0){perror("c++ error: z_schur dpotrf failed\n");}
+              F77_NAME(dpotrf)(lower, &nk, &z_tilde_cov[nknk * k], &nk, &info FCONE); if(info != 0){ failCode = 4; goto cv_done; }
               mkLT(&z_tilde_cov[nknk * k], nk);
 
             }
@@ -1186,16 +1201,19 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                 cvCholIplusXTildeVzXTildet[cv_i*nnk + cv_i] += 1.0;
               }
               F77_NAME(dpotrf)(lower, &nnk, cvCholIplusXTildeVzXTildet, &nnk, &info FCONE);
-              if(info != 0){perror("c++ error: capacitance matrix dpotrf failed\n");}
               mkLT(cvCholIplusXTildeVzXTildet, nnk);
+              if(info != 0){ failCode = 3; }
             }
 
-            primingGLMvc(nnk, p, r, cvX, cvX_tilde, cvXtX, cvXTildetX, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
-                         sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
+            if(failCode == 0){
+              failCode = primingGLMvc(nnk, p, r, cvX, cvX_tilde, cvXtX, cvXTildetX, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
+                                      sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
+            }
 
             R_chk_free(cvVz);
             R_chk_free(cvCholIplusXTildeVzXTildet);
             R_chk_free(tmp_n1n1r);
+            if(failCode != 0){ goto cv_done; }
 
           }
 
@@ -1286,8 +1304,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                       tmp_n1r[k*nnk + cv_i] = rnorm(0.0, 1.0);
                     }
                   }
-                  rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  if(rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr) != 0){ failCode = 5; goto cv_done; }
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; goto cv_done; }
                   mkLT(samp_Sigma, r);
                   F77_NAME(dgemm)(ntran, ytran, &nnk, &r, &r, &one, tmp_n1r, &nnk, samp_Sigma, &r, &zero, &CV_z[bb*nnkr], &nnk FCONE FCONE);
 
@@ -1380,12 +1398,12 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
                   F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, Zb, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
                   F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, Zb, &nnk, Zb, &nnk, &zero, PCM_dist, &r FCONE FCONE);          // PCM_dist <- t(v_z)*inv(R)*v_z
                   F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                 // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
-                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-                  F77_NAME(dpotri)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
-                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){ failCode = 5; goto cv_done; }
+                  F77_NAME(dpotri)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){ failCode = 5; goto cv_done; }
+                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){ failCode = 5; goto cv_done; }
                   mkLT(PCM_dist, r);
-                  invWishartFromBartlett(r, &CV_bart[bb*rr], PCM_dist, samp_Sigma, tmp_rr);                                      // = rInvWishart(r, nu_z + nnk + 2r, PCM_dist, ...)
-                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  if(invWishartFromBartlett(r, &CV_bart[bb*rr], PCM_dist, samp_Sigma, tmp_rr) != 0){ failCode = 5; goto cv_done; }  // = rInvWishart(r, nu_z + nnk + 2r, PCM_dist, ...)
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){ failCode = 5; goto cv_done; }
                   mkLT(samp_Sigma, r);
 
                   for(k = 0; k < r; k++){
@@ -1437,6 +1455,9 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         }
 
+        cv_done:
+
+        PutRNGstate();
 
         R_chk_free(startsCV);
         R_chk_free(endsCV);
@@ -1498,6 +1519,12 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
       }
 
+    }
+
+    if(failCode != 0){
+      R_chk_free(D1Inv); R_chk_free(D1InvB1); R_chk_free(DInvB_pn); R_chk_free(DInvB_nrn); R_chk_free(cholschurA);
+      UNPROTECT(nProtect);
+      glmLOOError(failCode);
     }
 
     // return object: a list of nEps fits, each a list of the posterior samples (and leave-one-out predictive densities)

@@ -369,8 +369,10 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
 //   Schur(A)  = I/sigmaSqxi + Q,  Q = P - W*inv(Schur(A1))*t(W) = inv(Vz + I + X*Vbeta*t(X)).
 // Outputs: out_pp = chol(Schur(A1)), out_nn = chol(Schur(A)) (lower triangles), DinvB_np, D1invB1.
 // tmp_np is n x p workspace.
-void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, double *cholVzPlusI,
-                  double *tmp_np, double *DinvB_np, double *out_pp, double *out_nn, double *D1invB1){
+// Returns 0 on success, 1 if Schur(A1) and 2 if Schur(A) is not numerically positive definite (outputs are then
+// incomplete); no message is printed, the caller decides.
+int cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, double *cholVzPlusI,
+                 double *tmp_np, double *DinvB_np, double *out_pp, double *out_nn, double *D1invB1){
 
   int np = n * p;
   int pp = p * p;
@@ -402,7 +404,7 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, d
   // chol(Schur(A1)), Schur(A1) = t(X)*W + inv(Vbeta)
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, tmp_np, &n, &zero, out_pp, &p FCONE FCONE);             // out_pp = t(X)*W
   F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, out_pp, &incOne);                                                 // out_pp = t(X)*W + inv(Vbeta)
-  F77_NAME(dpotrf)(lower, &p, out_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}      // out_pp = chol(Schur(A1))
+  F77_NAME(dpotrf)(lower, &p, out_pp, &p, &info FCONE); if(info != 0){return 1;}                                 // out_pp = chol(Schur(A1))
 
   // DinvB_np = W*inv(Schur(A1)) = W*t(Linv)*Linv, L = chol(Schur(A1)); the intermediate T = W*t(Linv)
   // gives W*inv(Schur(A1))*t(W) = T*t(T)
@@ -411,7 +413,7 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, d
 
   // Schur(A) = I/sigmaSqxi + inv(Vz + I) - T*t(T) (lower triangle)
   F77_NAME(dcopy)(&nn, cholVzPlusI, &incOne, out_nn, &incOne);
-  F77_NAME(dpotri)(lower, &n, out_nn, &n, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}      // out_nn = inv(Vz + I)
+  F77_NAME(dpotri)(lower, &n, out_nn, &n, &info FCONE); if(info != 0){return 2;}                                 // out_nn = inv(Vz + I)
   F77_NAME(dsyrk)(lower, ntran, &n, &p, &negone, DinvB_np, &n, &one, out_nn, &n FCONE FCONE);                     // out_nn = inv(Vz + I) - T*t(T) = Q
   for(i = 0; i < n; i++){
     out_nn[i * n + i] += sigmaSqxiInv;                                                                            // out_nn = I/sigmaSqxi + Q
@@ -420,7 +422,9 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, d
   F77_NAME(dtrsm)(rside, lower, ntran, nunit, &n, &p, &one, out_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);    // DinvB_np = W*inv(Schur(A1)) and RETURN
 
   // Find Cholesky factor of Schur complement
-  F77_NAME(dpotrf)(lower, &n, out_nn, &n, &info FCONE); if(info != 0){perror("c++ error: Schur dpotrf failed\n");}
+  F77_NAME(dpotrf)(lower, &n, out_nn, &n, &info FCONE); if(info != 0){return 2;}
+
+  return 0;
 
 }
 
@@ -600,10 +604,12 @@ void upperTri_lowerTri(double *M, int n){
 // Outputs as before: D1inv (nr x nr, full), D1invB1 (nr x p), cholSchurA1_pp = chol(Schur(A1)), DinvB_np (n x p),
 // DinvB_nrn (nr x n), cholSchurA_nn = chol(Schur(A)) (lower triangles). tmp_nnr is nr x n workspace.
 // XtX and XTildetX are not needed by this formulation.
-void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
-                  double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
-                  double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
-                  double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn){
+// Returns 0 on success, 1 if Schur(A1) and 2 if Schur(A) is not numerically positive definite (outputs are then
+// incomplete); no message is printed, the caller decides.
+int primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
+                 double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
+                 double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+                 double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn){
 
   int np = n * p;
   int pp = p * p;
@@ -633,7 +639,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   // chol(Schur(A1)), Schur(A1) = t(X)*W + inv(Vbeta)
   F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, DinvB_np, &n, &zero, cholSchurA1_pp, &p FCONE FCONE);         // t(X)*W
   F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, cholSchurA1_pp, &incOne);                                              // SchurA1 = t(X)*W + VBetaInv
-  F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: cholSchurA1_pp dpotrf failed\n");}   // chol(Schur(A1))
+  F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){return 1;}   // chol(Schur(A1))
 
   // G = Vzf*t(XTf) (nr x n), exploiting the sparsity of XTf; rmul_Vz_XTildeT accumulates, so start from zero
   zeros(tmp_nnr, nnr);
@@ -676,7 +682,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   // DinvB_np = W*inv(Schur(A1)) via T = W*t(L1inv); Q = P - T*t(T)
   F77_NAME(dtrsm)(rside, lower, ytran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE); // DinvB_np = T = W*t(L1inv)
   F77_NAME(dcopy)(&nn, cholCap, &incOne, cholSchurA_nn, &incOne);
-  F77_NAME(dpotri)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){perror("c++ error: Cap dpotri failed\n");}  // cholSchurA_nn = P = inv(Cap)
+  F77_NAME(dpotri)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){return 2;}  // cholSchurA_nn = P = inv(Cap)
   F77_NAME(dsyrk)(lower, ntran, &n, &p, &negone, DinvB_np, &n, &one, cholSchurA_nn, &n FCONE FCONE);                    // cholSchurA_nn = Q (lower)
   F77_NAME(dtrsm)(rside, lower, ntran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE); // DinvB_np = W*inv(Schur(A1))
 
@@ -687,7 +693,9 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   for(i = 0; i < n; i++){
     cholSchurA_nn[i*n + i] += sigmaSqxiInv;
   }
-  F77_NAME(dpotrf)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){perror("c++ error: cholSchurA_nn dpotrf failed\n");}   // chol(Schur(A))
+  F77_NAME(dpotrf)(lower, &n, cholSchurA_nn, &n, &info FCONE); if(info != 0){return 2;}   // chol(Schur(A))
+
+  return 0;
 
 }
 
@@ -1208,5 +1216,31 @@ void projGLMvcbatch(int n, int p, int r, int b, double *X, double *XTilde, doubl
   // inv(D)*v2 - inv(D)*B*inv(schurA1)*(v1 - t(B)*inv(D)*v2)
   F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &negone, DinvB_np, &n, V_xi, &n, &one, V_beta, &p FCONE FCONE);
   F77_NAME(dgemm)(ntran, ntran, &nr, &b, &n, &negone, DinvB_nrn, &nr, V_xi, &n, &one, V_z, &nr FCONE FCONE);
+
+}
+
+// Errors raised when the GLM pre-processing fails. code: as returned by cholSchurGLM()/primingGLMvc() (1, 2), or set by
+// the leave-one-out / cross-validation loops (3, 4).
+void glmPrimingError(int code){
+
+  if(code == 1){
+    Rf_error("c++ error: Cholesky factorization of the Schur complement of beta failed; check X for collinear columns.\n");
+  }
+  Rf_error("c++ error: Cholesky factorization of the Schur complement of xi failed; the correlation matrix of the latent process is numerically singular, check for nearly coincident locations or very strong correlation (small decay parameters).\n");
+
+}
+
+void glmLOOError(int code){
+
+  if(code == 3){
+    Rf_error("c++ error: Cholesky factorization of the correlation matrix of a cross-validation training set failed; it is numerically singular, check for nearly coincident locations or very strong correlation (small decay parameters).\n");
+  }
+  if(code == 4){
+    Rf_error("c++ error: Cholesky factorization of the conditional covariance of the latent process at a held-out cross-validation block failed; check for nearly coincident locations or very strong correlation (small decay parameters).\n");
+  }
+  if(code == 5){
+    Rf_error("c++ error: Cholesky factorization in an inverse-Wishart draw failed (the scale matrix is not numerically positive definite).\n");
+  }
+  glmPrimingError(code);
 
 }
