@@ -364,7 +364,7 @@ void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1
 // get the Schur complement of xi-cov submatrix for GLM case
 void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double *VbetaInv,
                   double *Vz, double *cholVzPlusI, double *tmp_nn, double *tmp_np,
-                  double *tmp_pn, double *tmp_nn2, double *out_pp, double *out_nn, double *D1invB1){
+                  double *DinvB_np, double *tmp_nn2, double *out_pp, double *out_nn, double *D1invB1){
 
   int np = n * p;
   int pp = p * p;
@@ -377,6 +377,7 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double
   char const *ntran = "N";
   char const *nunit = "N";
   char const *lside = "L";
+  char const *rside = "R";
   const double one = 1.0;
   const double negone = -1.0;
   const double zero = 0.0;
@@ -392,12 +393,13 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double
   F77_NAME(daxpy)(&pp, &one, XtX, &incOne, out_pp, &incOne);                                                      // out_pp = XtX - XtD1invX
   F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, out_pp, &incOne);                                                 // out_pp = XtX + VbetaInv - XtD1invX
   F77_NAME(dpotrf)(lower, &p, out_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}      // chol(Schur(A1))
-  F77_NAME(daxpy)(&np, &negone, X, &incOne, tmp_np, &incOne);                                                     // tmp_np = inv(VzInv+I)*X-X
-  F77_NAME(dscal)(&np, &negone, tmp_np, &incOne);                                                                 // tmp_np = X-inv(VzInv+I)*X
-  transpose_matrix(tmp_np, n, p, tmp_pn);                                                                         // tmp_pn = t(tmp_np)
-  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, out_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);
-  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, out_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);      // tmp_pn = inv(schur(A1))*(X-inv(VzInv+I)*X) and RETURN
-  F77_NAME(dgemm)(ntran, ntran, &n, &n, &p, &one, X, &n, tmp_pn, &p, &zero, tmp_nn, &n FCONE FCONE);              // tmp_nn = X*inv(schur(A1))*(X-inv(VzInv+I)*X)
+  // DinvB_np (n x p) = (X-inv(VzInv+I)*X)*inv(schur(A1)), the transpose of inv(schur(A1))*t(X-inv(VzInv+I)*X),
+  // formed by right-side triangular solves (no transpose)
+  F77_NAME(dcopy)(&np, X, &incOne, DinvB_np, &incOne);                                                            // DinvB_np = X
+  F77_NAME(daxpy)(&np, &negone, tmp_np, &incOne, DinvB_np, &incOne);                                              // DinvB_np = X-inv(VzInv+I)*X
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &n, &p, &one, out_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(rside, lower, ntran, nunit, &n, &p, &one, out_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);    // DinvB_np = (X-inv(VzInv+I)*X)*inv(schur(A1)) and RETURN
+  F77_NAME(dgemm)(ntran, ytran, &n, &n, &p, &one, X, &n, DinvB_np, &n, &zero, tmp_nn, &n FCONE FCONE);            // tmp_nn = X*inv(schur(A1))*t(X-inv(VzInv+I)*X)
   F77_NAME(dscal)(&nn, &negone, tmp_nn, &incOne);                                                                 // tmp_nn = -X*inv(schur(A1))*(X-inv(VzInv+I)*X)
 
   for(i = 0; i < n; i++){
@@ -414,7 +416,7 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double
   }
 
   F77_NAME(dscal)(&nn, &negone, tmp_nn, &incOne);                                                                 // tmp_nn = X*inv(schur(A1))*(X-inv(VzInv+I)*X)
-  F77_NAME(daxpy)(&nn, &one, tmp_nn, &incOne, out_nn, &incOne);                                                   // out_nn = X*tmp_pn + out_nn
+  F77_NAME(daxpy)(&nn, &one, tmp_nn, &incOne, out_nn, &incOne);                                                   // out_nn = X*t(DinvB_np) + out_nn
   F77_NAME(dscal)(&nn, &negone, out_nn, &incOne);                                                                 // out_nn = - BtDinvB
 
   for(i = 0; i < n; i++){
@@ -506,7 +508,7 @@ int mapIndex(int i, int j, int nRowB, int nColB, int startRowB, int startColB, i
 // projection operator for GLM
 void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_beta, double *v_z,
              double *cholpSchur, double *cholnSchur, double sigmaSqxi, double *Lbeta, double *Lz,
-             double *Vz, double *cholVzPlusI, double *D1invB1, double *DinvBpn, double *DinvBnn,
+             double *Vz, double *cholVzPlusI, double *D1invB1, double *DinvBnp, double *DinvBnn,
              double *tmp_n, double *tmp_p){
 
   char const *lower = "L";
@@ -556,7 +558,7 @@ void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_bet
   F77_NAME(dtrsv)(lower, ytran, nunit, &n, cholnSchur, &n, v_xi, &incOne FCONE FCONE FCONE);       // v_xi = inv(sA)*(v1-BtDInvv2)
 
   // Find DInvB*inv(schurA1)*(v1 - BtDInvv2)
-  F77_NAME(dgemv)(ntran, &p, &n, &one, DinvBpn, &p, v_xi, &incOne, &zero, tmp_p, &incOne FCONE);
+  F77_NAME(dgemv)(ytran, &n, &p, &one, DinvBnp, &n, v_xi, &incOne, &zero, tmp_p, &incOne FCONE);
   F77_NAME(dgemv)(ntran, &n, &n, &one, DinvBnn, &n, v_xi, &incOne, &zero, tmp_n, &incOne FCONE);   // (tmp_p,n) = (DinvB) * inv(sA)*(v1-BtDInvv2)
 
   // Find v_beta, v_z
@@ -566,17 +568,6 @@ void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_bet
 }
 
 // Function to transpose a matrix in column-major form
-void transpose_matrix(double *M, int nrow, int ncol, double *Mt){
-
-  int i, j;
-
-  for(i = 0; i < nrow; i++){
-    for(j = 0; j < ncol; j++){
-      Mt[j + i * ncol] = M[i + j * nrow];
-    }
-  }
-
-}
 
 // Function to transpose a matrix in column-major form from upper-tri to lower-tri
 void upperTri_lowerTri(double *M, int n){
@@ -596,7 +587,7 @@ void upperTri_lowerTri(double *M, int n){
 void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, double *XTildetX,
                   double *VBetaInv, double *Vz, std::string &processtype, double *cholCap, double sigmaSqxi,
                   double *tmp_nnr, double *D1inv, double *D1invB1, double *cholSchurA1_pp,
-                  double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn){
+                  double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn){
 
   int np = n * p;
   int pp = p * p;
@@ -612,7 +603,7 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   char const *ytran = "T";
   char const *ntran = "N";
   char const *nunit = "N";
-  char const *lside = "L";
+  char const *rside = "R";
   const double one = 1.0;
   const double negone = -1.0;
   const double zero = 0.0;
@@ -686,27 +677,27 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
 
   F77_NAME(dgemm)(ntran, ntran, &nr, &p, &nr, &one, D1inv, &nr, XTildetX, &nr, &zero, tmp_nnr, &nr FCONE FCONE);       // inv(D1)*XTildetX
   F77_NAME(dcopy)(&nrp, tmp_nnr, &incOne, D1invB1, &incOne);                                                           // D1invB1 = inv(D1)*XTildetX
-  lmulm_XTilde_VC(ntran, n, r, p, XTilde, tmp_nnr, DinvB_pn);                                                          // XTilde*inv(D1)*XTildetX
-  F77_NAME(dscal)(&np, &negone, DinvB_pn, &incOne);                                                                    // - XTilde*inv(D1)*XTildetX
+  lmulm_XTilde_VC(ntran, n, r, p, XTilde, tmp_nnr, DinvB_np);                                                          // XTilde*inv(D1)*XTildetX
+  F77_NAME(dscal)(&np, &negone, DinvB_np, &incOne);                                                                    // - XTilde*inv(D1)*XTildetX
 
-  F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, DinvB_pn, &n, &zero, cholSchurA1_pp, &p FCONE FCONE);         // - t(X)*XTilde*inv(D1)*XTildetX
+  F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, DinvB_np, &n, &zero, cholSchurA1_pp, &p FCONE FCONE);         // - t(X)*XTilde*inv(D1)*XTildetX
   F77_NAME(daxpy)(&pp, &one, XtX, &incOne, cholSchurA1_pp, &incOne);                                                   // XtX - t(X)*XTilde*inv(D1)*XTildetX
   F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, cholSchurA1_pp, &incOne);                                              // SchurA1 = XtX + VBetaInv - t(X)*XTilde*inv(D1)*XTildetX
   F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: cholSchurA1_pp dpotrf failed\n");}   // chol(Schur(A1))
 
-  F77_NAME(daxpy)(&np, &one, X, &incOne, DinvB_pn, &incOne);                                                           // X - XTilde*inv(D1)*XTildetX
-  F77_NAME(dcopy)(&np, DinvB_pn, &incOne, tmp_nnr, &incOne);
-  transpose_matrix(tmp_nnr, n, p, DinvB_pn);
-  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, cholSchurA1_pp, &p, DinvB_pn, &p FCONE FCONE FCONE FCONE);
-  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, cholSchurA1_pp, &p, DinvB_pn, &p FCONE FCONE FCONE FCONE); // inv(schurA1)*t(X - XTilde*inv(D1)*XTildetX)
+  F77_NAME(daxpy)(&np, &one, X, &incOne, DinvB_np, &incOne);                                                           // X - XTilde*inv(D1)*XTildetX
+  // DinvB_np (n x p) = (X - XTilde*inv(D1)*XTildetX)*inv(schurA1), the transpose of inv(schurA1)*t(X - XTilde*inv(D1)*XTildetX),
+  // formed by right-side triangular solves (no transpose)
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(rside, lower, ntran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE); // (X - XTilde*inv(D1)*XTildetX)*inv(schurA1)
 
-  F77_NAME(dgemm)(ntran, ntran, &nr, &n, &p, &one, XTildetX, &nr, DinvB_pn, &p, &zero, tmp_nnr, &nr FCONE FCONE);      // t(XTilde)*X*DinvB_pn
-  F77_NAME(dscal)(&nnr, &negone, tmp_nnr, &incOne);                                                                    // - t(XTilde)*X*DinvB_pn
-  addXTildeTransposeToMatrixByRow(XTilde, tmp_nnr, n, r);                                                              // t(XTilde) - t(XTilde)*X*DinvB_pn
-  F77_NAME(dgemm)(ntran, ntran, &nr, &n, &nr, &one, D1inv, &nr, tmp_nnr, &nr, &zero, DinvB_nrn, &nr FCONE FCONE);      // inv(D1)*(t(XTilde) - t(XTilde)*X*DinvB_pn)
+  F77_NAME(dgemm)(ntran, ytran, &nr, &n, &p, &one, XTildetX, &nr, DinvB_np, &n, &zero, tmp_nnr, &nr FCONE FCONE);      // t(XTilde)*X*t(DinvB_np)
+  F77_NAME(dscal)(&nnr, &negone, tmp_nnr, &incOne);                                                                    // - t(XTilde)*X*DinvB_np
+  addXTildeTransposeToMatrixByRow(XTilde, tmp_nnr, n, r);                                                              // t(XTilde) - t(XTilde)*X*DinvB_np
+  F77_NAME(dgemm)(ntran, ntran, &nr, &n, &nr, &one, D1inv, &nr, tmp_nnr, &nr, &zero, DinvB_nrn, &nr FCONE FCONE);      // inv(D1)*(t(XTilde) - t(XTilde)*X*DinvB_np)
 
   lmulm_XTilde_VC(ntran, n, r, n, XTilde, DinvB_nrn, cholSchurA_nn);                                                   // XTilde*DinvB_nrn
-  F77_NAME(dgemm)(ntran, ntran, &n, &n, &p, &one, X, &n, DinvB_pn, &p, &one, cholSchurA_nn, &n FCONE FCONE);           // XTilde*DinvB_nrn + X*DinvB_pn
+  F77_NAME(dgemm)(ntran, ytran, &n, &n, &p, &one, X, &n, DinvB_np, &n, &one, cholSchurA_nn, &n FCONE FCONE);           // XTilde*DinvB_nrn + X*t(DinvB_np)
   F77_NAME(dscal)(&nn, &negone, cholSchurA_nn, &incOne);
   for(i = 0; i < n; i++){
     cholSchurA_nn[i*n + i] += sigmaSqxi2;
@@ -747,7 +738,7 @@ void dtrsv_sparse1(double *L, double b, double *x, int n, int k){
 void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
                double *cholVz, std::string &processtype, double *v_eta, double *v_xi, double *v_beta, double *v_z,
                double *D1inv, double *D1invB1, double *cholSchurA1_pp,
-               double *DinvB_pn, double *DinvB_nrn, double *cholSchurA_nn,
+               double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn,
                double *tmp_nr){
 
   int i = 0;
@@ -788,7 +779,7 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
   F77_NAME(daxpy)(&nr, &one, tmp_nr, &incOne, v_z, &incOne);                                          // v_z = XTildet*v_eta + t(LzInv)*v_z
 
   F77_NAME(dgemv)(ytran, &nr, &n, &one, DinvB_nrn, &nr, v_z, &incOne, &zero, tmp_nr, &incOne FCONE);  // tmp_nr = (BtDInv*v2)_1
-  F77_NAME(dgemv)(ytran, &p, &n, &one, DinvB_pn, &p, v_beta, &incOne, &one, tmp_nr, &incOne FCONE);   // tmp_nr = BtDInv*v2
+  F77_NAME(dgemv)(ntran, &n, &p, &one, DinvB_np, &n, v_beta, &incOne, &one, tmp_nr, &incOne FCONE);   // tmp_nr = BtDInv*v2
   F77_NAME(dscal)(&n, &negone, tmp_nr, &incOne);                                                      // tmp_nr = - BtDInv*v2
   F77_NAME(daxpy)(&n, &one, tmp_nr, &incOne, v_xi, &incOne);                                          // v_xi = v_xi - BtDInv*v2
   F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholSchurA_nn, &n, v_xi, &incOne FCONE FCONE FCONE);
@@ -804,7 +795,7 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
   F77_NAME(dcopy)(&nr, tmp_nr, &incOne, v_z, &incOne);                                                 // v_z = inv(D1)*v_z - inv(D1)*B1*v_beta
 
   // Find inv(D)*v2 - inv(D)*B*inv(schurA1)*(v1 - t(B)*inv(D)*v2)
-  F77_NAME(dgemv)(ntran, &p, &n, &negone, DinvB_pn, &p, v_xi, &incOne, &one, v_beta, &incOne FCONE);
+  F77_NAME(dgemv)(ytran, &n, &p, &negone, DinvB_np, &n, v_xi, &incOne, &one, v_beta, &incOne FCONE);
   F77_NAME(dgemv)(ntran, &nr, &n, &negone, DinvB_nrn, &nr, v_xi, &incOne, &one, v_z, &incOne FCONE);
 
 }
