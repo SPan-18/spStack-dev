@@ -71,13 +71,13 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 3.977s
+#> ℹ Compile time: 4.053s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -60.5492
-#> ℹ Compile time: 3.977s
-#> ℹ Solver time: 0.01s
+#> ℹ Compile time: 4.053s
+#> ℹ Solver time: 0.011s
 #> 
 #> STACKING WEIGHTS:
 #> 
@@ -244,12 +244,12 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.254s
+#> ℹ Compile time: 0.255s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -148.776
-#> ℹ Compile time: 0.254s
+#> ℹ Compile time: 0.255s
 #> ℹ Solver time: 0.044s
 #> 
 #> STACKING WEIGHTS:

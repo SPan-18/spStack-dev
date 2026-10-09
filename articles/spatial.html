@@ -275,13 +275,13 @@ models constructed using <code><a href="../reference/candidateModels.html">candi
 <span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.954s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 4.081s</span></span>
 <span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
 <span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -109.16</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.954s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.018s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 4.081s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.014s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -315,7 +315,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   4.740   1.106   4.749</span></span></code></pre></div>
+<span><span class="co">#&gt;   4.870   1.112   4.881</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="analyzing-samples-from-the-stacked-posterior">Analyzing samples from the stacked posterior<a class="anchor" aria-label="anchor" href="#analyzing-samples-from-the-stacked-posterior"></a>
@@ -568,13 +568,13 @@ Monte Carlo samples to be used to find the LOO-PD.</p>
 <span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
 <span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.272s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.278s</span></span>
 <span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
 <span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
 <span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -312.22</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.272s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.052s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.278s</span></span>
+<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.053s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
@@ -602,7 +602,7 @@ following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  20.371  30.377  12.976</span></span></code></pre></div>
+<span><span class="co">#&gt;  20.389  30.731  13.094</span></span></code></pre></div>
 <p>Further, we can recover the posterior samples of the scale parameters
 by passing the output obtained by running <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code> once
 again through <code><a href="../reference/recoverGLMscale.html">recoverGLMscale()</a></code>.</p>

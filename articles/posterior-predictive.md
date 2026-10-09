@@ -76,7 +76,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 3.341s
+    ## ℹ Compile time: 3.514s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -86,7 +86,7 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
 
     ## ✔ Optimal value: -84.439
 
-    ## ℹ Compile time: 3.341s
+    ## ℹ Compile time: 3.514s
 
     ## ℹ Solver time: 0.012s
 
@@ -214,7 +214,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.259s
+    ## ℹ Compile time: 0.265s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -224,9 +224,9 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## ✔ Optimal value: -236.035
 
-    ## ℹ Compile time: 0.259s
+    ## ℹ Compile time: 0.265s
 
-    ## ℹ Solver time: 0.044s
+    ## ℹ Solver time: 0.046s
 
     ## 
     ## STACKING WEIGHTS:
@@ -341,7 +341,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 0.032s
+    ## ℹ Compile time: 0.033s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -351,9 +351,9 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
 
     ## ✔ Optimal value: -479.995
 
-    ## ℹ Compile time: 0.032s
+    ## ℹ Compile time: 0.033s
 
-    ## ℹ Solver time: 0.017s
+    ## ℹ Solver time: 0.016s
 
     ## 
     ## STACKING WEIGHTS:
