@@ -393,8 +393,9 @@ void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double
   F77_NAME(daxpy)(&pp, &one, XtX, &incOne, out_pp, &incOne);                                                      // out_pp = XtX - XtD1invX
   F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, out_pp, &incOne);                                                 // out_pp = XtX + VbetaInv - XtD1invX
   F77_NAME(dpotrf)(lower, &p, out_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}      // chol(Schur(A1))
-  // DinvB_np (n x p) = (X-inv(VzInv+I)*X)*inv(schur(A1)), the transpose of inv(schur(A1))*t(X-inv(VzInv+I)*X),
-  // formed by right-side triangular solves (no transpose)
+  // DinvB_np (n x p) = (X-inv(VzInv+I)*X)*inv(schur(A1)),
+  // the transpose of inv(schur(A1))*t(X-inv(VzInv+I)*X),
+  // formed by right-side triangular solves
   F77_NAME(dcopy)(&np, X, &incOne, DinvB_np, &incOne);                                                            // DinvB_np = X
   F77_NAME(daxpy)(&np, &negone, tmp_np, &incOne, DinvB_np, &incOne);                                              // DinvB_np = X-inv(VzInv+I)*X
   F77_NAME(dtrsm)(rside, lower, ytran, nunit, &n, &p, &one, out_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);
@@ -610,23 +611,6 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   const int incOne = 1;
   const double sigmaSqxi2 = (sigmaSqxi + 1.0) / sigmaSqxi;
 
-  // F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &one, XtVzXtt, &n, X, &n, &zero, tmp_np1, &n FCONE FCONE);                 // tmp_np1 = X_tilde*Vz*t(X_tilde)*X
-  // F77_NAME(dcopy)(&np, tmp_np1, &incOne, tmp_np2, &incOne);                                                            // tmp_n2 = X_tilde*Vz*t(X_tilde)*X
-  // F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &p, &one, cholCap, &n, tmp_np1, &n FCONE FCONE FCONE FCONE);
-  // F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &p, &one, cholCap, &n, tmp_np1, &n FCONE FCONE FCONE FCONE);         // tmp_np1 = inv(I+XTildeVzXTildet)*X_tilde*Vz*t(X_tilde)*X
-  // F77_NAME(dgemm)(ntran, ntran, &n, &p, &n, &negone, XtVzXtt, &n, tmp_np1, &n, &one, tmp_np2, &n FCONE FCONE);         // tmp_np2 = X_tilde*inv(D1)*t(X_tilde)*X
-  // F77_NAME(dscal)(&np, &negone, tmp_np2, &incOne);                                                                     // tmp_np2 = -X_tilde*inv(D1)*t(X_tilde)*X
-  // F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, tmp_np2, &n, &zero, tmp_pp, &p FCONE FCONE);                  // tmp_pp = -t(X)*X_tilde*inv(D1)*t(X_tilde)*X
-  // F77_NAME(daxpy)(&pp, &one, XtX, &incOne, tmp_pp, &incOne);                                                           // tmp_pp = XtX - t(X)*X_tilde*inv(D1)*t(X_tilde)*X
-  // F77_NAME(daxpy)(&pp, &one, VBetaInv, &incOne, tmp_pp, &incOne);                                                      // tmp_pp = XtX + VbetaInv - t(X)*X_tilde*inv(D1)*t(X_tilde)*X = Schur(A1)
-  // F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}           // tmp_pp = chol(Schur(A1))
-  // F77_NAME(daxpy)(&np, &one, X, &incOne, tmp_np2, &incOne);                                                            // tmp_np2 = X - X_tilde*inv(D1)*t(X_tilde)*X
-  // transpose_matrix(tmp_np2, n, p, tmp_pn);                                                                             // tmp_pn = t(tmp_np2) = t(X - X_tilde*inv(D1)*t(X_tilde)*X)
-  // F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &n, &one, tmp_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);
-  // F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &n, &one, tmp_pp, &p, tmp_pn, &p FCONE FCONE FCONE FCONE);           // tmp_np1 = inv(schur(A1))*t(X - X_tilde*inv(D1)*t(X_tilde)*X) and RETURN
-
-  // printMtrx(tmp_pn, p, n);
-
   // Find inv(D1)
   zeros(D1inv, nrnr);
   // Step 1: Find invchol(I+XTVzXTt)*XT
@@ -686,8 +670,9 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
   F77_NAME(dpotrf)(lower, &p, cholSchurA1_pp, &p, &info FCONE); if(info != 0){perror("c++ error: cholSchurA1_pp dpotrf failed\n");}   // chol(Schur(A1))
 
   F77_NAME(daxpy)(&np, &one, X, &incOne, DinvB_np, &incOne);                                                           // X - XTilde*inv(D1)*XTildetX
-  // DinvB_np (n x p) = (X - XTilde*inv(D1)*XTildetX)*inv(schurA1), the transpose of inv(schurA1)*t(X - XTilde*inv(D1)*XTildetX),
-  // formed by right-side triangular solves (no transpose)
+  // DinvB_np (n x p) = (X - XTilde*inv(D1)*XTildetX)*inv(schurA1),
+  //the transpose of inv(schurA1)*t(X - XTilde*inv(D1)*XTildetX),
+  // formed by right-side triangular solves
   F77_NAME(dtrsm)(rside, lower, ytran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE);
   F77_NAME(dtrsm)(rside, lower, ntran, nunit, &n, &p, &one, cholSchurA1_pp, &p, DinvB_np, &n FCONE FCONE FCONE FCONE); // (X - XTilde*inv(D1)*XTildetX)*inv(schurA1)
 
