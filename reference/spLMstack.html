@@ -189,6 +189,20 @@ candidate models storing the optimal stacking weights.</p></dd>
 <dd><p>solver status as returned by the optimization
 routine.</p></dd>
 
+<dt><code>diagnostics</code></dt>
+<dd><p>a data frame with one row per candidate model and
+columns <code>min.pivot</code> (the smallest relative Cholesky pivot of the
+\(n \times n\) factorizations; values below 1e-8 indicate a nearly
+singular covariance matrix), <code>min.cor</code> and <code>max.cor</code> (the
+correlations of the two farthest-apart and of the two closest locations;
+values of <code>min.cor</code> above 0.95 suggest an effective range far
+exceeding the extent of the data, values of <code>max.cor</code> below 0.05 nearly
+uncorrelated locations). They are obtained from quantities the fits compute
+anyway. If <code>verbose = TRUE</code>, a "Diagnostics" section is printed for
+flagged candidate models with stacking weight above 0.05; extreme candidates
+with negligible weight are expected in a stacking grid and are only
+counted.</p></dd>
+
 
 </dl><p>The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.</p>
@@ -269,13 +283,13 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.016s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.031s</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ─────────────────────────────── Numerical solver ───────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> ──────────────────────────────────── Summary ───────────────────────────────────</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Status: optimal</span>
 <span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Optimal value: -29.233</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.016s</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.003s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.031s</span>
+<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.005s</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> STACKING WEIGHTS:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>

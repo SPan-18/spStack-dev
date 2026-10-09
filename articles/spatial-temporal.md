@@ -333,7 +333,7 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
 
-    ## ℹ Compile time: 3.544s
+    ## ℹ Compile time: 3.725s
 
     ## ─────────────────────────────── Numerical solver ───────────────────────────────
 
@@ -341,11 +341,11 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## ✔ Status: optimal
 
-    ## ✔ Optimal value: -274.089
+    ## ✔ Optimal value: -274.974
 
-    ## ℹ Compile time: 3.544s
+    ## ℹ Compile time: 3.725s
 
-    ## ℹ Solver time: 0.007s
+    ## ℹ Solver time: 0.014s
 
     ## 
     ## STACKING WEIGHTS:
@@ -354,22 +354,22 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
     ## +----------+-------+-------+----------+--------+
     ## | Model 1  |      1|      1|      0.50| 0.000  |
     ## | Model 2  |      2|      1|      0.50| 0.000  |
-    ## | Model 3  |      3|      1|      0.50| 0.000  |
+    ## | Model 3  |      3|      1|      0.50| 0.218  |
     ## | Model 4  |      1|      2|      0.50| 0.000  |
     ## | Model 5  |      2|      2|      0.50| 0.000  |
-    ## | Model 6  |      3|      2|      0.50| 0.259  |
-    ## | Model 7  |      1|      4|      0.50| 0.000  |
-    ## | Model 8  |      2|      4|      0.50| 0.106  |
-    ## | Model 9  |      3|      4|      0.50| 0.153  |
+    ## | Model 6  |      3|      2|      0.50| 0.000  |
+    ## | Model 7  |      1|      4|      0.50| 0.063  |
+    ## | Model 8  |      2|      4|      0.50| 0.000  |
+    ## | Model 9  |      3|      4|      0.50| 0.335  |
     ## | Model 10 |      1|      1|      0.75| 0.000  |
     ## | Model 11 |      2|      1|      0.75| 0.000  |
-    ## | Model 12 |      3|      1|      0.75| 0.000  |
+    ## | Model 12 |      3|      1|      0.75| 0.085  |
     ## | Model 13 |      1|      2|      0.75| 0.000  |
     ## | Model 14 |      2|      2|      0.75| 0.000  |
-    ## | Model 15 |      3|      2|      0.75| 0.000  |
+    ## | Model 15 |      3|      2|      0.75| 0.166  |
     ## | Model 16 |      1|      4|      0.75| 0.000  |
-    ## | Model 17 |      2|      4|      0.75| 0.000  |
-    ## | Model 18 |      3|      4|      0.75| 0.481  |
+    ## | Model 17 |      2|      4|      0.75| 0.134  |
+    ## | Model 18 |      3|      4|      0.75| 0.000  |
     ## +----------+-------+-------+----------+--------+
 
 **Step 3.** Recover posterior samples of the scale parameters.

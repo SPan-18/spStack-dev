@@ -77,6 +77,47 @@
   leaving out `loopd.controls`, or the `CV.K` or `nMC` tag
   ([`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)),
   stopped with an error; the documented defaults are now used.
+- [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
+  [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md):
+  a failed Cholesky factorization (e.g. a numerically singular
+  correlation matrix from nearly coincident locations or very strong
+  correlation, a prior covariance `V.beta` or `iw.scale` that is not
+  positive definite) now stops with an informative error. Previously a
+  message was printed to the console and the computation continued with
+  invalid factors. In leave-one-out and cross-validation, a failed
+  deletion update still falls back to the direct computation, and only a
+  failure of that stops.
+- [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+  with `loopd = TRUE`, and
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
+  for `process.type = "multivariate"`: the prior draw of the latent
+  process in the posterior sampler used the Cholesky factor of the
+  inverse-Wishart draw without zeroing its upper triangle, so the
+  returned posterior samples of `beta`, `z` and `xi` had the wrong
+  distribution. Fixed; the samples now match
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+  with `loopd = FALSE` for the same seed. Leave-one-out predictive
+  densities and stacking weights were not affected.
+- [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  K-fold cross-validation now saves R’s random number state at the end,
+  so later random numbers in the session no longer repeat the ones used
+  by the cross-validation draws.
+- [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
+  new `diagnostics` element (one row per model) with the smallest
+  relative Cholesky pivot of the n x n factorizations and the
+  correlations of the two farthest-apart and the two closest locations,
+  taken from quantities the fit computes anyway (no extra
+  factorization). With `verbose = TRUE`, a “Diagnostics” section flags a
+  nearly singular covariance matrix (pivot \< 1e-8), an effective range
+  far beyond the extent of the data (farthest-pair correlation \> 0.95)
+  or nearly uncorrelated locations (closest-pair correlation \< 0.05);
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
+  reports only flagged candidates with stacking weight above 0.05.
 - GLMs: the latent pseudo-data are now drawn on the log scale, as log
   G1 - log G2 with gamma variates G1, G2 (binomial, binary) and as log G
   with an underflow-safe draw for shape \< 1 (Poisson). Previously, a

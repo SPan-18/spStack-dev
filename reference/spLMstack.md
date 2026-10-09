@@ -153,6 +153,21 @@ tags -
 
   solver status as returned by the optimization routine.
 
+- `diagnostics`:
+
+  a data frame with one row per candidate model and columns `min.pivot`
+  (the smallest relative Cholesky pivot of the \\n \times n\\
+  factorizations; values below 1e-8 indicate a nearly singular
+  covariance matrix), `min.cor` and `max.cor` (the correlations of the
+  two farthest-apart and of the two closest locations; values of
+  `min.cor` above 0.95 suggest an effective range far exceeding the
+  extent of the data, values of `max.cor` below 0.05 nearly uncorrelated
+  locations). They are obtained from quantities the fits compute anyway.
+  If `verbose = TRUE`, a "Diagnostics" section is printed for flagged
+  candidate models with stacking weight above 0.05; extreme candidates
+  with negligible weight are expected in a stacking grid and are only
+  counted.
+
 The return object might include additional data that is useful for
 subsequent prediction, model fit evaluation and other utilities.
 
@@ -231,13 +246,13 @@ mod1 <- spLMstack(y ~ x1, data = dat,
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.016s
+#> ℹ Compile time: 0.031s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -29.233
-#> ℹ Compile time: 0.016s
-#> ℹ Solver time: 0.003s
+#> ℹ Compile time: 0.031s
+#> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:
 #> 

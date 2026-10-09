@@ -119,6 +119,19 @@ An object of class `spLMexact`, which is a list with the following tags
   `nu` (spatial smoothness) and `noise_sp_ratio` (noise-to-spatial
   variance ratio).
 
+- diagnostics:
+
+  a data frame with one row and columns `min.pivot` (the smallest
+  relative Cholesky pivot of the \\n \times n\\ factorizations; values
+  below 1e-8 indicate a nearly singular covariance matrix), `min.cor`
+  and `max.cor` (the correlations of the two farthest-apart and of the
+  two closest locations; values of `min.cor` above 0.95 suggest an
+  effective range far exceeding the extent of the data, values of
+  `max.cor` below 0.05 nearly uncorrelated locations). They are obtained
+  from quantities the fit computes anyway. If `verbose = TRUE`, a
+  "Diagnostics" section is printed when any of these thresholds is
+  crossed.
+
 The return object might include additional data used for subsequent
 prediction and/or model fit evaluation.
 
