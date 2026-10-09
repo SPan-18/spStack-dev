@@ -39,10 +39,6 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
                double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn,
                double *tmp_nr);
 
-void kronecker(int r, int n, double *A, double *B, double *C);
-
-void chol_kron(int r, int n, double *cholA, double *cholB, double *cholC);
-
 int cholRankOneDowndate(int n, double *L, double *v, double *w);
 
 int cholSchurGLMdel(int n, int p, int del_start, int del_end, double *X, double *cholVzPlusI,
@@ -50,3 +46,20 @@ int cholSchurGLMdel(int n, int p, int del_start, int del_end, double *X, double 
                     double *D1invX_out, double *DinvB_np_out, double *cholSchur_p_out, double *cholSchurDel_n,
                     double *PJ, double *QJ, double *tmp_np, double *LP, double *LQ, double *Z,
                     double *u, double *w);
+
+int cholSchurGLMvcDel(int n, int p, int r, int del_start, int del_end, double *X, double *XTilde, double *cholCap,
+                      double *D1inv, double *D1invB1, double *DinvB_np, double *DinvB_nrn, double *VbetaInv,
+                      double *D1inv_out, double *D1invB1_out, double *cholSchurA1_out, double *DinvB_np_out,
+                      double *DinvB_nrn_out, double *cholSchurDel_n,
+                      double *PB, double *QB, double *QBK, double *LP, double *LQ, double *WB, double *Z,
+                      double *H, double *HK, double *A2, double *tmp_np, double *w);
+
+void projGLMbatch(double *X, int n, int p, int b, double *V_eta, double *V_xi, double *V_beta, double *V_z,
+                  double *cholpSchur, double *cholnSchur, double sigmaSqxi, double *Lbeta, double *Lz,
+                  double *cholVzPlusI, double *D1invB1, double *DinvBnp, double *tmp_nb, double *tmp_pb);
+
+void projGLMvcbatch(int n, int p, int r, int b, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
+                    double *cholVz, std::string &processtype, double *V_eta, double *V_xi, double *V_beta, double *V_z,
+                    double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+                    double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn,
+                    double *tmp_nrb, double *tmp_nb, double *tmp_pb);

@@ -46,13 +46,13 @@ extern "C" {
                      SEXP coords_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                      SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                      SEXP epsilon_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                     SEXP CV_K_r, SEXP loopd_nMC_r, SEXP verbose_r);
+                     SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r, SEXP verbose_r);
 
   SEXP spGLMexactLOOgrid(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                          SEXP coords_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                          SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                          SEXP epsilon_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                         SEXP CV_K_r, SEXP loopd_nMC_r);
+                         SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r);
 
   SEXP spLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coords_r,
                  SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
@@ -81,5 +81,12 @@ extern "C" {
                        SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
                        SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
                        SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                       SEXP CV_K_r, SEXP loopd_nMC_r,  SEXP verbose_r);
+                       SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r,  SEXP verbose_r);
+
+  SEXP stvcGLMexactLOOgrid(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
+                       SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
+                       SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                       SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                       SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
+                       SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r,  SEXP verbose_r);
 }

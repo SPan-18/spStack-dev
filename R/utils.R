@@ -348,3 +348,39 @@ check_distinct_coords <- function(coords, what = "spatial locations",
   invisible(TRUE)
 
 }
+
+# Is R linked to an optimized BLAS? Judged from the BLAS and LAPACK library
+# paths reported by R (see sessionInfo()): OpenBLAS, Intel MKL, BLIS, Apple
+# Accelerate (vecLib) or ATLAS. Returns FALSE when unsure, e.g., for R's
+# reference BLAS, or an optimized BLAS installed under the reference name
+# (common on Windows, where Rblas.dll is replaced).
+blas_is_optimized <- function(){
+
+  libs <- tryCatch(c(extSoftVersion()[["BLAS"]], La_library()),
+                   error = function(e) character(0))
+  libs <- tolower(paste(libs, collapse = " "))
+  grepl("openblas|mkl|blis|accelerate|veclib|atlas", libs)
+
+}
+
+# Pre-processing of the K-fold cross-validation subsets: "update" (deletion
+# updates of the full-data factors, scalar loops, fastest with the reference
+# BLAS) or "direct" (recomputation on each subset, level-3 BLAS, fastest with an
+# optimized BLAS). "auto" picks "direct" if blas_is_optimized(), else "update".
+# Both give the same results up to floating-point rounding.
+resolve_CV_update <- function(CV.update = "auto"){
+
+  if(!is.character(CV.update) || length(CV.update) != 1){
+    stop("error: CV.update in loopd.controls must be one of 'auto', 'update' or 'direct'.")
+  }
+  CV.update <- tolower(CV.update)
+  if(!CV.update %in% c("auto", "update", "direct")){
+    stop("CV.update = '", CV.update, "' is not a valid option; choose from c('auto', 'update', 'direct').")
+  }
+  if(CV.update == "auto"){
+    CV.update <- if(blas_is_optimized()) "direct" else "update"
+  }
+
+  CV.update
+
+}

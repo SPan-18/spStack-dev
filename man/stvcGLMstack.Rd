@@ -70,12 +70,26 @@ list of candidate models for stacking. See \code{\link[=candidateModels]{candida
 distribution.}
 
 \item{loopd.controls}{a list with details on how leave-one-out predictive
-densities (LOO-PD) are to be calculated. Valid tags include \code{method}, \code{CV.K}
-and \code{nMC}. The tag \code{method} can be either \code{'exact'} or \code{'CV'}. If sample size
-is more than 100, then the default is \code{'CV'} with \code{CV.K} equal to its default
-value 10 (Gelman \emph{et al.} 2024). The tag \code{nMC} decides how many Monte Carlo
-samples will be used to evaluate the leave-one-out predictive densities,
-which must be at least 500 (default).}
+densities (LOO-PD) are to be calculated. Valid tags include \code{method}, \code{CV.K},
+\code{nMC} and \code{CV.update}. The tag \code{method} can be either \code{'exact'} or \code{'CV'}. If
+sample size is more than 100, then the default is \code{'CV'} with \code{CV.K} equal to
+its default value 10 (Gelman \emph{et al.} 2024). The tag \code{nMC} decides how many
+Monte Carlo samples will be used to evaluate the leave-one-out predictive
+densities, which must be at least 500 (default). The tag \code{CV.update} is an
+advanced option, used only if \code{method = 'CV'}, that decides how the
+pre-processing of the model fit on each fold is obtained, and should be
+changed with care as the faster choice depends on the BLAS library that R is
+linked with (see \code{sessionInfo()}). \code{CV.update = 'update'} obtains it by
+deletion updates of the full-data Cholesky factors, which is the faster
+choice with the reference BLAS that R ships with. \code{CV.update = 'direct'}
+recomputes it on each fold, which is faster only with an optimized BLAS such
+as OpenBLAS, Intel MKL or Apple Accelerate (vecLib), and is slower
+otherwise. The default \code{CV.update = 'auto'} uses \code{'direct'} if such an
+optimized BLAS is detected from the library paths reported by R and
+\code{'update'} otherwise; set it explicitly if the BLAS is not detected correctly
+(for example, an optimized BLAS installed in place of \code{Rblas.dll} on
+Windows). Both choices give the same results up to floating-point rounding,
+so only the run time is affected.}
 
 \item{parallel}{logical. If \code{parallel=FALSE}, the parallelization plan,
 if set up by the user, is ignored. If \code{parallel=TRUE}, the function

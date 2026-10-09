@@ -48,9 +48,6 @@ extern "C" {
     int r = INTEGER(r_r)[0];
     int rr = r * r;
     int nr = n * r;
-    int nnr = nn * r;
-    int n_predn_predr = n_predn_pred * r;
-    int nn_predr = nn_pred * r;
     int n_predr = n_pred * r;
     int joint = INTEGER(joint_r)[0];
     double *X_new = REAL(X_new_r);
@@ -73,60 +70,56 @@ extern "C" {
     const char *family_binary = "binary";
     const char *family_binomial = "binomial";
 
-    // create spatial-temporal covariance matrices
+    // supported spatial-temporal process models
     std::string processType = CHAR(STRING_ELT(processType_r, 0));
+    if(processType != "independent.shared" && processType != "independent" && processType != "multivariate"){
+      Rf_error("c++ error: process.type must be one of 'independent', 'independent.shared' or 'multivariate'.");
+    }
+    if(corfn != "gneiting-decay"){
+      Rf_error("c++ error: cor.fn must be 'gneiting-decay'.");
+    }
+    int nCov = (processType == "independent") ? r : 1;                   // number of distinct correlation functions
+
     double *phi_s_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_s_vec, r);
     double *phi_t_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_t_vec, r);
-    double *thetaspt = (double *) R_alloc(2, sizeof(double));
-    double *Vz = NULL;
-    double *Vz_new = NULL;
-    double *Cz = NULL;
+    double thetaspt[2] = {0.0, 0.0};
+    F77_NAME(dcopy)(&nCov, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
+    F77_NAME(dcopy)(&nCov, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
 
-    if(corfn == "gneiting-decay"){
+    // Given a posterior draw (beta, z, scale), for each correlation function k (one shared, or r independent):
+    //   z.pred_k | z_k ~ N(t(C_k)*inv(R_k)*z_k, scale*(R_new_k - t(C_k)*inv(R_k)*C_k)) (multivariate: matrix normal
+    //   with column covariance Sigma), natural parameter X_new*beta + XTilde_new*z.pred, and y.pred from the family.
+    // For each k: chol(R_k) built in place, Cz_k = cholinv(R_k)*C_k, and chol(R_new_k - t(Cz_k)*Cz_k) (joint) or the
+    // diagonal 1 - ||Cz_k[, i]||^2 clamped at 0 (pointwise).
+    double *cholVz = (double *) R_alloc((size_t) nn * nCov, sizeof(double)); zeros(cholVz, nn * nCov);
+    double *Cz = (double *) R_alloc((size_t) nn_pred * nCov, sizeof(double)); zeros(Cz, nn_pred * nCov);
+    double *z_pred_cov = NULL;
+    if(joint){
+      z_pred_cov = (double *) R_alloc((size_t) n_predn_pred * nCov, sizeof(double)); zeros(z_pred_cov, n_predn_pred * nCov);
+    }else{
+      z_pred_cov = (double *) R_alloc((size_t) n_pred * nCov, sizeof(double)); zeros(z_pred_cov, n_pred * nCov);
+    }
 
-        if(processType == "independent.shared" || processType == "multivariate"){
-
-            phi_s_vec[0] = REAL(phi_s_r)[0];
-            phi_t_vec[0] = REAL(phi_t_r)[0];
-            thetaspt[0] = phi_s_vec[0];
-            thetaspt[1] = phi_t_vec[0];
-
-            Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-            sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
-
-            if(joint){
-                Vz_new = (double *) R_alloc(n_predn_pred, sizeof(double)); zeros(Vz_new, n_predn_pred);
-                sptCorFull(n_pred, 2, coords_sp_new, coords_tm_new, thetaspt, corfn, Vz_new);
-            }
-
-            Cz = (double *) R_alloc(nn_pred, sizeof(double)); zeros(Cz, nn_pred);
-            sptCorCross(n, n_pred, 2, coords_sp, coords_tm, coords_sp_new, coords_tm_new, thetaspt, corfn, Cz);
-
-        }else if(processType == "independent"){
-
-            F77_NAME(dcopy)(&r, REAL(phi_s_r), &incOne, phi_s_vec, &incOne);
-            F77_NAME(dcopy)(&r, REAL(phi_t_r), &incOne, phi_t_vec, &incOne);
-
-            // find r-many correlation/cross-correlation matrices, stacked into a rn^2-dim vector
-            Vz = (double *) R_alloc(nnr, sizeof(double)); zeros(Vz, nnr);
-            Cz = (double *) R_alloc(nn_predr, sizeof(double)); zeros(Cz, nn_predr);
-            for(k = 0; k < r; k++){
-                thetaspt[0] = phi_s_vec[k];
-                thetaspt[1] = phi_t_vec[k];
-                sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
-                sptCorCross(n, n_pred, 2, coords_sp, coords_tm, coords_sp_new, coords_tm_new, thetaspt, corfn, &Cz[nn_pred * k]);
-            }
-
-            if(joint){
-                Vz_new = (double *) R_alloc(n_predn_predr, sizeof(double)); zeros(Vz_new, n_predn_predr);
-                for(k = 0; k < r; k++){
-                    thetaspt[0] = phi_s_vec[k];
-                    thetaspt[1] = phi_t_vec[k];
-                    sptCorFull(n_pred, 2, coords_sp_new, coords_tm_new, thetaspt, corfn, &Vz_new[n_predn_pred * k]);
-                }
-            }
-
+    for(k = 0; k < nCov; k++){
+      thetaspt[0] = phi_s_vec[k];
+      thetaspt[1] = phi_t_vec[k];
+      sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &cholVz[nn * k]);
+      F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE);
+      if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i).\n", info);}
+      mkLT(&cholVz[nn * k], n);
+      sptCorCross(n, n_pred, 2, coords_sp, coords_tm, coords_sp_new, coords_tm_new, thetaspt, corfn, &Cz[nn_pred * k]);
+      F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, &cholVz[nn * k], &n, &Cz[nn_pred * k], &n FCONE FCONE FCONE FCONE);  // Cz = cholinv(R)*C
+      if(joint){
+        sptCorFull(n_pred, 2, coords_sp_new, coords_tm_new, thetaspt, corfn, &z_pred_cov[n_predn_pred * k]);                        // R_new
+        F77_NAME(dsyrk)(lower, ytran, &n_pred, &n, &negOne, &Cz[nn_pred * k], &n, &one, &z_pred_cov[n_predn_pred * k], &n_pred FCONE FCONE);
+        F77_NAME(dpotrf)(lower, &n_pred, &z_pred_cov[n_predn_pred * k], &n_pred, &info FCONE);
+        if(info != 0){Rf_error("c++ error: Cholesky factorization of the conditional covariance of z.pred failed (info = %i); check for prediction locations that coincide with each other or with observed locations.\n", info);}
+        mkLT(&z_pred_cov[n_predn_pred * k], n_pred);
+      }else{
+        for(i = 0; i < n_pred; i++){
+          z_pred_cov[n_pred * k + i] = fmax2(1.0 - F77_CALL(ddot)(&n, &Cz[nn_pred * k + i * n], &incOne, &Cz[nn_pred * k + i * n], &incOne), 0.0);
         }
+      }
     }
 
     // sampling set-up
@@ -135,254 +128,136 @@ extern "C" {
     SEXP samples_predz_r = PROTECT(Rf_allocMatrix(REALSXP, n_predr, nSamples)); nProtect++;
     SEXP samples_predmu_r = PROTECT(Rf_allocMatrix(REALSXP, n_pred, nSamples)); nProtect++;
     SEXP samples_predy_r = PROTECT(Rf_allocMatrix(REALSXP, n_pred, nSamples)); nProtect++;
+    double *predz = REAL(samples_predz_r);
+    double *predmu = REAL(samples_predmu_r);
+    double *predy = REAL(samples_predy_r);
 
-    double *beta_s = (double *) R_alloc(p, sizeof(double)); zeros(beta_s, p);
-    double *z_s = (double *) R_alloc(nr, sizeof(double)); zeros(z_s, nr);
-    double *zScale_s = NULL;
-    if(processType == "independent"){
-        zScale_s = (double *) R_alloc(r, sizeof(double)); zeros(zScale_s, r);
-    }else if(processType == "multivariate"){
-        zScale_s = (double *) R_alloc(rr, sizeof(double)); zeros(zScale_s, rr);
-    }
+    double *zScale_s = (double *) R_alloc(rr, sizeof(double)); zeros(zScale_s, rr);
+    double *noise = (double *) R_alloc(n_predr, sizeof(double)); zeros(noise, n_predr);
+    double *tmp_n_predr = (double *) R_alloc(n_predr, sizeof(double)); zeros(tmp_n_predr, n_predr);
     double dtemp1 = 0.0;
 
-    /*****************************************
-     Set-up preprocessing matrices etc.
-     *****************************************/
+    // Draws are processed in blocks of nBlock: the conditional means t(Cz_k)*cholinv(R_k)*z_k of the whole block are
+    // found with level-3 BLAS; the random variates are then drawn draw by draw, in the same order as before (for each
+    // draw, the variates of z.pred and then those of y.pred, whose number depends on mu.pred).
+    const int nBlockMax = 64;
+    int nBlock = 0, nrBlock = 0, b = 0;
+    R_xlen_t offz = 0, offy = 0;
+    double *zBlock = (double *) R_alloc((size_t) nr * nBlockMax, sizeof(double));                   // nr x nBlock work matrix
+    double *zp = NULL;
 
-    double *cholVz = NULL;               // define NULL pointer for chol(Vz)
-    double *z_pred_mu = (double *) R_alloc(n_predr, sizeof(double)); zeros(z_pred_mu, n_predr);      // n_pred*rx1 vector z_pred_mu
-    double *z_pred_s = (double *) R_alloc(n_predr, sizeof(double)); zeros(z_pred_s, n_predr);        // n_pred*rx1 vector z_pred_s
-    double *tmp_n_predr = (double *) R_alloc(n_predr, sizeof(double)); zeros(tmp_n_predr, n_predr);  // n_pred*rx1 vector tmp_n_predr
+    GetRNGstate();
 
-    if(joint){
+    for(s = 0; s < nSamples; s += nBlockMax){
 
-        // Joint prediction
-        double *z_pred_cov = NULL;           // define NULL pointer for z_pred_cov
+      nBlock = std::min(nBlockMax, nSamples - s);
+      nrBlock = nr * nBlock;
+      offz = (R_xlen_t) s * n_predr;
+      offy = (R_xlen_t) s * n_pred;
 
-        // Find Cholesky of Vz, find cholesky of z_pred_cov
-        if(processType == "independent.shared" || processType == "multivariate"){
+      // conditional means of the block, written into predz
+      F77_NAME(dcopy)(&nrBlock, &zSamps[(R_xlen_t) s * nr], &incOne, zBlock, &incOne);
+      if(nCov == 1){
+        // the r processes share R: treat the block as an n x (r*nBlock) matrix
+        int rBlock = r * nBlock;
+        F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &rBlock, &one, cholVz, &n, zBlock, &n FCONE FCONE FCONE FCONE);
+        F77_NAME(dgemm)(ytran, ntran, &n_pred, &rBlock, &n, &one, Cz, &n, zBlock, &n, &zero, &predz[offz], &n_pred FCONE FCONE);
+      }else{
+        for(k = 0; k < r; k++){
+          F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &nBlock, &one, &cholVz[nn * k], &n, &zBlock[n * k], &nr FCONE FCONE FCONE FCONE);
+          F77_NAME(dgemm)(ytran, ntran, &n_pred, &nBlock, &n, &one, &Cz[nn_pred * k], &n, &zBlock[n * k], &nr, &zero, &predz[offz + n_pred * k], &n_predr FCONE FCONE);
+        }
+      }
 
-            cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);                              // nxn matrix chol(Vz)
-            z_pred_cov = (double *) R_alloc(n_predn_pred, sizeof(double)); zeros(z_pred_cov, n_predn_pred);  // n_predxn_pred matrix chol(z_pred_cov)
+      for(b = 0; b < nBlock; b++){
 
-            F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-            F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-            mkLT(cholVz, n);
+        zp = &predz[offz + (R_xlen_t) b * n_predr];
 
-            F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, cholVz, &n, Cz, &n FCONE FCONE FCONE FCONE);          // Cz = cholinv(Vz)*Cz
-            F77_NAME(dgemm)(ytran, ntran, &n_pred, &n_pred, &n, &one, Cz, &n, Cz, &n, &zero, z_pred_cov, &n_pred FCONE FCONE);   // z_pred_cov = t(Cz)*inv(Vz)*Cz
-            F77_NAME(daxpy)(&n_predn_pred, &negOne, Vz_new, &incOne, z_pred_cov, &incOne);
-            F77_NAME(dscal)(&n_predn_pred, &negOne, z_pred_cov, &incOne);                                                        // z_pred_cov = Vz_new - t(Cz)*inv(Vz)*Cz
-            F77_NAME(dpotrf)(lower, &n_pred, z_pred_cov, &n_pred, &info FCONE); if(info != 0){perror("c++ error: z_pred_cov dpotrf failed\n");}
-            mkLT(z_pred_cov, n_pred);
+        // z.pred = mean + noise, with the variates drawn in the original order
+        if(processType == "independent.shared"){
+
+          dtemp1 = zScaleSamps[s + b];
+          if(joint){
+            for(k = 0; k < r; k++){
+              for(i = 0; i < n_pred; i++){
+                noise[k * n_pred + i] = rnorm(0.0, sqrt(dtemp1));
+              }
+            }
+            F77_NAME(dtrmm)(lside, lower, ntran, nunit, &n_pred, &r, &one, z_pred_cov, &n_pred, noise, &n_pred FCONE FCONE FCONE FCONE);
+            F77_NAME(daxpy)(&n_predr, &one, noise, &incOne, zp, &incOne);
+          }else{
+            for(k = 0; k < r; k++){
+              for(i = 0; i < n_pred; i++){
+                zp[k * n_pred + i] += rnorm(0.0, sqrt(dtemp1 * z_pred_cov[i]));
+              }
+            }
+          }
 
         }else if(processType == "independent"){
 
-            cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);                             // r nxn matrices chol(Vz)
-            z_pred_cov = (double *) R_alloc(n_predn_predr, sizeof(double)); zeros(z_pred_cov, n_predn_predr); // r n_predxn_pred matrix chol(z_pred_cov)
-
-            F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
-
-            for(k = 0; k < r; k++){
-                F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-                mkLT(&cholVz[nn * k], n);
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, &cholVz[nn * k], &n, &Cz[nn_pred * k], &n FCONE FCONE FCONE FCONE);                                  // Cz = cholinv(Vz)*Cz
-                F77_NAME(dgemm)(ytran, ntran, &n_pred, &n_pred, &n, &one, &Cz[nn_pred * k], &n, &Cz[nn_pred * k], &n, &zero, &z_pred_cov[n_predn_pred * k], &n_pred FCONE FCONE);   // z_pred_cov = t(Cz)*inv(Vz)*Cz
-                F77_NAME(daxpy)(&n_predn_pred, &negOne, &Vz_new[n_predn_pred * k], &incOne, &z_pred_cov[n_predn_pred * k], &incOne);
-                F77_NAME(dscal)(&n_predn_pred, &negOne, &z_pred_cov[n_predn_pred * k], &incOne);
-                F77_NAME(dpotrf)(lower, &n_pred, &z_pred_cov[n_predn_pred * k], &n_pred, &info FCONE); if(info != 0){perror("c++ error: z_pred_cov dpotrf failed\n");}
-                mkLT(&z_pred_cov[n_predn_pred * k], n_pred);
+          for(k = 0; k < r; k++){
+            dtemp1 = zScaleSamps[(R_xlen_t) (s + b) * r + k];
+            if(joint){
+              for(i = 0; i < n_pred; i++){
+                noise[i] = rnorm(0.0, sqrt(dtemp1));
+              }
+              F77_NAME(dtrmv)(lower, ntran, nunit, &n_pred, &z_pred_cov[n_predn_pred * k], &n_pred, noise, &incOne FCONE FCONE FCONE);
+              F77_NAME(daxpy)(&n_pred, &one, noise, &incOne, &zp[n_pred * k], &incOne);
+            }else{
+              for(i = 0; i < n_pred; i++){
+                zp[k * n_pred + i] += rnorm(0.0, sqrt(dtemp1 * z_pred_cov[k * n_pred + i]));
+              }
             }
+          }
 
-        }
+        }else if(processType == "multivariate"){
 
-        for(s = 0; s < nSamples; s++){
-
-            F77_NAME(dcopy)(&p, &betaSamps[s * p], &incOne, beta_s, &incOne);
-            F77_NAME(dcopy)(&nr, &zSamps[s * nr], &incOne, z_s, &incOne);
-
-            if(processType == "independent.shared"){
-
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &r, &one, cholVz, &n, z_s, &n FCONE FCONE FCONE FCONE);
-                F77_NAME(dgemm)(ytran, ntran, &n_pred, &r, &n, &one, Cz, &n, z_s, &n, &zero, z_pred_mu, &n_pred FCONE FCONE);
-                for(k = 0; k < r; k++){
-                    for(i = 0; i < n_pred; i++){
-                        tmp_n_predr[k * n_pred + i] = rnorm(0.0, sqrt(zScaleSamps[s]));
-                    }
-                }
-                F77_NAME(dgemm)(ntran, ntran, &n_pred, &r, &n_pred, &one, z_pred_cov, &n_pred, tmp_n_predr, &n_pred, &zero, z_pred_s, &n_pred FCONE FCONE);
-                F77_NAME(daxpy)(&n_predr, &one, z_pred_mu, &incOne, z_pred_s, &incOne);
-                F77_NAME(dcopy)(&n_predr, &z_pred_s[0], &incOne, &REAL(samples_predz_r)[s*n_predr], &incOne);
-
-            }else if(processType == "independent"){
-
-                F77_NAME(dcopy)(&r, &zScaleSamps[s * r], &incOne, zScale_s, &incOne);
-                for(k = 0; k < r; k++){
-                    F77_NAME(dtrsv)(lower, ntran, nunit, &n, &cholVz[nn * k], &n, &z_s[n * k], &incOne FCONE FCONE FCONE);
-                    F77_NAME(dgemv)(ytran, &n, &n_pred, &one, &Cz[nn_pred * k], &n, &z_s[n * k], &incOne, &zero, &z_pred_mu[n_pred * k], &incOne FCONE);
-                    for(i = 0; i < n_pred; i++){
-                        tmp_n_predr[k * n_pred + i] = rnorm(0.0, sqrt(zScale_s[k]));
-                    }
-                    F77_NAME(dgemv)(ntran, &n_pred, &n_pred, &one, &z_pred_cov[n_predn_pred * k], &n_pred, &tmp_n_predr[n_pred * k], &incOne, &zero, &z_pred_s[n_pred * k], &incOne FCONE);
-                    F77_NAME(daxpy)(&n_pred, &one, &z_pred_mu[n_pred * k], &incOne, &z_pred_s[n_pred * k], &incOne);
-                }
-                F77_NAME(dcopy)(&n_predr, &z_pred_s[0], &incOne, &REAL(samples_predz_r)[s*n_predr], &incOne);
-
-            }else if(processType == "multivariate"){
-
-                F77_NAME(dcopy)(&rr, &zScaleSamps[s * rr], &incOne, zScale_s, &incOne);
-                F77_NAME(dpotrf)(lower, &r, zScale_s, &r, &info FCONE); if(info != 0){perror("c++ error: zScale_s dpotrf failed\n");}
-                mkLT(zScale_s, r);
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &r, &one, cholVz, &n, z_s, &n FCONE FCONE FCONE FCONE);
-                F77_NAME(dgemm)(ytran, ntran, &n_pred, &r, &n, &one, Cz, &n, z_s, &n, &zero, z_pred_mu, &n_pred FCONE FCONE);
-                for(k = 0; k < r; k++){
-                    for(i = 0; i < n_pred; i++){
-                        z_pred_s[k * n_pred + i] = rnorm(0.0, 1.0);
-                    }
-                }
-                F77_NAME(dgemm)(ntran, ntran, &n_pred, &r, &n_pred, &one, z_pred_cov, &n_pred, z_pred_s, &n_pred, &zero, tmp_n_predr, &n_pred FCONE FCONE);
-                F77_NAME(dgemm)(ntran, ytran, &n_pred, &r, &r, &one, tmp_n_predr, &n_pred, zScale_s, &r, &zero, z_pred_s, &n_pred FCONE FCONE);
-                F77_NAME(daxpy)(&n_predr, &one, z_pred_mu, &incOne, z_pred_s, &incOne);
-                F77_NAME(dcopy)(&n_predr, &z_pred_s[0], &incOne, &REAL(samples_predz_r)[s*n_predr], &incOne);
-
-            }
-
-            // Find canonical parameter (X*beta + X_tilde*z_tilde)
-            lmulm_XTilde_VC(ntran, n_pred, r, 1, XTilde_new, z_pred_s, tmp_n_predr);
-            F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, beta_s, &incOne, &one, tmp_n_predr, &incOne FCONE);
-
-            // Sample from predictive distribution
+          // column covariance Sigma of the draw
+          F77_NAME(dcopy)(&rr, &zScaleSamps[(R_xlen_t) (s + b) * rr], &incOne, zScale_s, &incOne);
+          F77_NAME(dpotrf)(lower, &r, zScale_s, &r, &info FCONE);
+          if(info != 0){PutRNGstate(); Rf_error("c++ error: Cholesky factorization of a posterior sample of Sigma failed (info = %i).\n", info);}
+          mkLT(zScale_s, r);
+          for(k = 0; k < r; k++){
             for(i = 0; i < n_pred; i++){
-                if(family == family_poisson){
-                    dtemp1 = exp(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rpois(dtemp1);
-                }else if(family == family_binary){
-                    dtemp1 = inverse_logit(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(1, dtemp1);
-                }else if(family == family_binomial){
-                    dtemp1 = inverse_logit(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
-                }
+              if(joint){
+                noise[k * n_pred + i] = rnorm(0.0, 1.0);
+              }else{
+                noise[k * n_pred + i] = rnorm(0.0, sqrt(z_pred_cov[i]));
+              }
             }
-
-        }
-        // End of joint prediction set-up
-
-    }else{
-
-        // Implement point-wise prediction
-
-        double *z_pred_cov = NULL;  // define NULL pointer for z_pred_cov
-
-        // first find the Schur complement RTilde - t(C)*inv(R)*C
-        // here, RTilde is always 1.0 (diagonal of correlation matrix)
-        if(processType == "independent.shared" || processType == "multivariate"){
-
-            cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);                              // nxn matrix chol(Vz)
-            F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-            F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-            mkLT(cholVz, n);
-
-            z_pred_cov = (double *) R_alloc(n_pred, sizeof(double)); zeros(z_pred_cov, n_pred);  // n_predx1 vector z_pred_cov
-
-            F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, cholVz, &n, Cz, &n FCONE FCONE FCONE FCONE);          // Cz = cholinv(Vz)*Cz
-            for(i = 0; i < n_pred; i++){
-                z_pred_cov[i] = 1.0 - F77_CALL(ddot)(&n, &Cz[i * n], &incOne, &Cz[i * n], &incOne);
-            }
-
-        }else if(processType == "independent"){
-
-            cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);                             // r nxn matrices chol(Vz)
-            z_pred_cov = (double *) R_alloc(n_predr, sizeof(double)); zeros(z_pred_cov, n_predr);             // n_predxr vector z_pred_cov
-            for(k = 0; k < r; k++){
-                F77_NAME(dcopy)(&nn, &Vz[nn * k], &incOne, &cholVz[nn * k], &incOne);
-                F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-                mkLT(&cholVz[nn * k], n);
-
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, &cholVz[nn * k], &n, &Cz[nn_pred * k], &n FCONE FCONE FCONE FCONE);          // Cz = cholinv(Vz)*Cz
-                for(i = 0; i < n_pred; i++){
-                    z_pred_cov[k * n_pred + i] = 1.0 - F77_CALL(ddot)(&n, &Cz[nn_pred * k + i * n], &incOne, &Cz[nn_pred * k + i * n], &incOne);
-                }
-            }
+          }
+          if(joint){
+            F77_NAME(dtrmm)(lside, lower, ntran, nunit, &n_pred, &r, &one, z_pred_cov, &n_pred, noise, &n_pred FCONE FCONE FCONE FCONE);   // chol(z_pred_cov)*noise
+          }
+          F77_NAME(dgemm)(ntran, ytran, &n_pred, &r, &r, &one, noise, &n_pred, zScale_s, &r, &zero, tmp_n_predr, &n_pred FCONE FCONE);  // *t(chol(Sigma))
+          F77_NAME(daxpy)(&n_predr, &one, tmp_n_predr, &incOne, zp, &incOne);
 
         }
 
-        for(s = 0; s < nSamples; s++){
-
-            F77_NAME(dcopy)(&p, &betaSamps[s * p], &incOne, beta_s, &incOne);
-            F77_NAME(dcopy)(&nr, &zSamps[s * nr], &incOne, z_s, &incOne);
-
-            if(processType == "independent.shared"){
-
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &r, &one, cholVz, &n, z_s, &n FCONE FCONE FCONE FCONE);
-                F77_NAME(dgemm)(ytran, ntran, &n_pred, &r, &n, &one, Cz, &n, z_s, &n, &zero, z_pred_mu, &n_pred FCONE FCONE);
-                for(k = 0; k < r; k++){
-                    for(i = 0; i < n_pred; i++){
-                        z_pred_s[k * n_pred + i] = rnorm(0.0, sqrt(zScaleSamps[s] * z_pred_cov[i]));
-                    }
-                }
-                F77_NAME(daxpy)(&n_predr, &one, z_pred_mu, &incOne, z_pred_s, &incOne);
-                F77_NAME(dcopy)(&n_predr, z_pred_s, &incOne, &REAL(samples_predz_r)[s * n_predr], &incOne);
-
-            }else if(processType == "independent"){
-
-                F77_NAME(dcopy)(&r, &zScaleSamps[s * r], &incOne, zScale_s, &incOne);
-                for(k = 0; k < r; k++){
-                    F77_NAME(dtrsv)(lower, ntran, nunit, &n, &cholVz[nn * k], &n, &z_s[n * k], &incOne FCONE FCONE FCONE);
-                    F77_NAME(dgemv)(ytran, &n, &n_pred, &one, &Cz[nn_pred * k], &n, &z_s[n * k], &incOne, &zero, &z_pred_mu[n_pred * k], &incOne FCONE);
-                    for(i = 0; i < n_pred; i++){
-                        z_pred_s[k * n_pred + i] = rnorm(0.0, sqrt(zScale_s[k] * z_pred_cov[k * n_pred + i]));
-                    }
-                    F77_NAME(daxpy)(&n_pred, &one, &z_pred_mu[n_pred * k], &incOne, &z_pred_s[n_pred * k], &incOne);
-                }
-                F77_NAME(dcopy)(&n_predr, z_pred_s, &incOne, &REAL(samples_predz_r)[s * n_predr], &incOne);
-
-            }else if(processType == "multivariate"){
-
-                F77_NAME(dcopy)(&rr, &zScaleSamps[s * rr], &incOne, zScale_s, &incOne);
-                F77_NAME(dpotrf)(lower, &r, zScale_s, &r, &info FCONE); if(info != 0){perror("c++ error: zScale_s dpotrf failed\n");}
-                mkLT(zScale_s, r);
-                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &r, &one, cholVz, &n, z_s, &n FCONE FCONE FCONE FCONE);
-                F77_NAME(dgemm)(ytran, ntran, &n_pred, &r, &n, &one, Cz, &n, z_s, &n, &zero, z_pred_mu, &n_pred FCONE FCONE);
-                for(k = 0; k < r; k++){
-                    for(i = 0; i < n_pred; i++){
-                        z_pred_s[k * n_pred + i] = rnorm(0.0, sqrt(z_pred_cov[i]));
-                    }
-                }
-                F77_NAME(dgemm)(ntran, ytran, &n_pred, &r, &r, &one, z_pred_s, &n_pred, zScale_s, &r, &zero, tmp_n_predr, &n_pred FCONE FCONE);
-                F77_NAME(daxpy)(&n_predr, &one, z_pred_mu, &incOne, tmp_n_predr, &incOne);
-                F77_NAME(dcopy)(&n_predr, tmp_n_predr, &incOne, &REAL(samples_predz_r)[s * n_predr], &incOne);
-
-            }
-
-            // Find canonical parameter (X*beta + X_tilde*z_tilde)
-            lmulm_XTilde_VC(ntran, n_pred, r, 1, XTilde_new, z_pred_s, tmp_n_predr);
-            F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, beta_s, &incOne, &one, tmp_n_predr, &incOne FCONE);
-
-            // Sample from predictive distribution
-            for(i = 0; i < n_pred; i++){
-                if(family == family_poisson){
-                    dtemp1 = exp(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rpois(dtemp1);
-                }else if(family == family_binary){
-                    dtemp1 = inverse_logit(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(1, dtemp1);
-                }else if(family == family_binomial){
-                    dtemp1 = inverse_logit(tmp_n_predr[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
-                }
-            }
-
+        // natural parameter X_new*beta + XTilde_new*z.pred, then mu.pred and y.pred
+        lmulm_XTilde_VC(ntran, n_pred, r, 1, XTilde_new, zp, tmp_n_predr);
+        F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, &betaSamps[(R_xlen_t) (s + b) * p], &incOne, &one, tmp_n_predr, &incOne FCONE);
+        for(i = 0; i < n_pred; i++){
+          if(family == family_poisson){
+            dtemp1 = exp(tmp_n_predr[i]);
+            predmu[offy + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offy + (R_xlen_t) b * n_pred + i] = rpois(dtemp1);
+          }else if(family == family_binary){
+            dtemp1 = inverse_logit(tmp_n_predr[i]);
+            predmu[offy + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offy + (R_xlen_t) b * n_pred + i] = rbinom(1, dtemp1);
+          }else if(family == family_binomial){
+            dtemp1 = inverse_logit(tmp_n_predr[i]);
+            predmu[offy + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offy + (R_xlen_t) b * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
+          }
         }
+
+      }
 
     }
+
+    PutRNGstate();
 
     // make return object
     SEXP result_r, resultName_r;

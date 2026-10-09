@@ -43,12 +43,26 @@
 #' @param n.samples number of samples to be drawn from the posterior
 #' distribution.
 #' @param loopd.controls a list with details on how leave-one-out predictive
-#' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`
-#' and `nMC`. The tag `method` can be either `'exact'` or `'CV'`. If sample size
-#' is more than 100, then the default is `'CV'` with `CV.K` equal to its default
-#' value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many Monte Carlo
-#' samples will be used to evaluate the leave-one-out predictive densities,
-#' which must be at least 500 (default).
+#' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`,
+#' `nMC` and `CV.update`. The tag `method` can be either `'exact'` or `'CV'`. If
+#' sample size is more than 100, then the default is `'CV'` with `CV.K` equal to
+#' its default value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many
+#' Monte Carlo samples will be used to evaluate the leave-one-out predictive
+#' densities, which must be at least 500 (default). The tag `CV.update` is an
+#' advanced option, used only if `method = 'CV'`, that decides how the
+#' pre-processing of the model fit on each fold is obtained, and should be
+#' changed with care as the faster choice depends on the BLAS library that R is
+#' linked with (see `sessionInfo()`). `CV.update = 'update'` obtains it by
+#' deletion updates of the full-data Cholesky factors, which is the faster
+#' choice with the reference BLAS that R ships with. `CV.update = 'direct'`
+#' recomputes it on each fold, which is faster only with an optimized BLAS such
+#' as OpenBLAS, Intel MKL or Apple Accelerate (vecLib), and is slower
+#' otherwise. The default `CV.update = 'auto'` uses `'direct'` if such an
+#' optimized BLAS is detected from the library paths reported by R and
+#' `'update'` otherwise; set it explicitly if the BLAS is not detected correctly
+#' (for example, an optimized BLAS installed in place of `Rblas.dll` on
+#' Windows). Both choices give the same results up to floating-point rounding,
+#' so only the run time is affected.
 #' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
 #' if set up by the user, is ignored. If \code{parallel=TRUE}, the function
 #' inherits the parallelization plan that is set by the user via the function
@@ -135,6 +149,17 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
     if(!family %in% c('poisson', 'binary', 'binomial')){
       stop("Invalid family. Choose from c('poisson', 'binary', 'binomial').")
     }
+  }
+
+  ##### process type #####
+  if(missing(process.type)){
+    stop("process.type must be specified. Choose from c('independent',
+         'independent.shared', 'multivariate').")
+  }
+  if(!is.character(process.type) || length(process.type) != 1 ||
+     !process.type %in% c('independent', 'independent.shared', 'multivariate')){
+    stop("Invalid process.type. Choose from c('independent', 'independent.shared',
+         'multivariate').")
   }
 
   ##### formula #####
@@ -363,6 +388,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   #### Leave-one-out setup ####
   loopd <- TRUE
 
+  # defaults if loopd.controls is not supplied; parsed below like a user-supplied list
   if(missing(loopd.controls)){
     if(n > 99){
       loopd.controls <- list()
@@ -375,53 +401,70 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
       loopd.controls[["CV.K"]] <- 0
       loopd.controls[["nMC"]] <- 500
     }
-  }else{
-    names(loopd.controls) <- tolower(names(loopd.controls))
-    if(!"method" %in% names(loopd.controls)){
-      stop("error: method missing from loopd.controls.")
-    }
-    loopd.method <- loopd.controls[["method"]]
-    loopd.method <- tolower(loopd.method)
-    if(!loopd.method %in% c("exact", "cv")){
-      stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
-    }
-    if(loopd.method == "exact"){
+  }
+
+  if(!is.list(loopd.controls)){
+    stop("error: loopd.controls must be a list.")
+  }
+  names(loopd.controls) <- tolower(names(loopd.controls))
+  if(!"method" %in% names(loopd.controls)){
+    stop("error: method missing from loopd.controls.")
+  }
+  loopd.method <- loopd.controls[["method"]]
+  loopd.method <- tolower(loopd.method)
+  if(!loopd.method %in% c("exact", "cv")){
+    stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
+  }
+  if(loopd.method == "exact"){
+    CV.K <- as.integer(0)
+  }
+  if(loopd.method == "cv"){
+    if(n < 100){
+      message("Sample size too low for CV. Finding exact LOO-PD.")
+      loopd.method <- "exact"
       CV.K <- as.integer(0)
-    }
-    if(loopd.method == "cv"){
-      if(n < 100){
-        message("Sample size too low for CV. Finding exact LOO-PD.")
-        loopd.method <- "exact"
-        CV.K <- as.integer(0)
+    }else{
+      if(!"cv.k" %in% names(loopd.controls)){
+        message("CV.K missing from loopd.controls. Using defaults.")
+        CV.K <- 10
       }else{
-        if(!"cv.k" %in% names(loopd.controls)){
-          message("CV.K missing from loopd.controls. Using defaults.")
-          CV.K <- 10
-        }
         CV.K <- loopd.controls[["cv.k"]]
-        if(CV.K < 10){
-          message("CV.K must be at least 10. Setting it to 10.")
-          CV.K <- 10
-        }else if(CV.K > 20){
-          message("CV.K must be at most 20. Setting it to 20.")
-          CV.K <- 20
-        }
-        if(floor(CV.K) != CV.K){
-          message("CV.K must be integer. Setting it to nearest integer.")
-        }
+      }
+      if(CV.K < 10){
+        message("CV.K must be at least 10. Setting it to 10.")
+        CV.K <- 10
+      }else if(CV.K > 20){
+        message("CV.K must be at most 20. Setting it to 20.")
+        CV.K <- 20
+      }
+      if(floor(CV.K) != CV.K){
+        message("CV.K must be integer. Setting it to nearest integer.")
+        CV.K <- round(CV.K)
       }
     }
-    if(!"nmc" %in% names(loopd.controls)){
-      message("nMC missing from loopd.controls. Using defaults.")
-      loopd.nMC <- 500
-    }else{
-      loopd.nMC <- loopd.controls[["nmc"]]
-    }
-    if(loopd.nMC < 500){
-      message("Number of Monte Carlo samples too low. Using defaults.")
-      loopd.nMC = 500
-    }
   }
+  if(!"nmc" %in% names(loopd.controls)){
+    message("nMC missing from loopd.controls. Using defaults.")
+    loopd.nMC <- 500
+  }else{
+    loopd.nMC <- loopd.controls[["nmc"]]
+  }
+  if(loopd.nMC < 500){
+    message("Number of Monte Carlo samples too low. Using defaults.")
+    loopd.nMC = 500
+  }
+
+  # pre-processing of the K-fold CV subsets: deletion updates or direct recomputation (advanced)
+  if(!"cv.update" %in% names(loopd.controls)){
+    CV.update <- "auto"
+  }else{
+    CV.update <- loopd.controls[["cv.update"]]
+  }
+  CV.update <- resolve_CV_update(CV.update)
+  if(loopd.method == "cv"){
+    loopd.controls[["cv.update"]] <- CV.update
+  }
+  CV.update <- as.integer(CV.update == "update")
 
   storage.mode(CV.K) <- "integer"
   storage.mode(loopd.nMC) <- "integer"
@@ -437,6 +480,41 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
 
   verbose_child <- FALSE
   storage.mode(verbose_child) <- "integer"
+
+  # candidate models sharing (phi_s, phi_t) are fitted in one call, which builds
+  # the spatial-temporal correlation matrices and all the pre-processing (full
+  # data and leave-one-out/CV subsets) once and shares it across their boundary
+  # values
+  cand_phi_s <- lapply(list_candidate, function(x) as.numeric(x[["phi_s"]]))
+  cand_phi_t <- lapply(list_candidate, function(x) as.numeric(x[["phi_t"]]))
+  cand_boundary <- vapply(list_candidate, function(x) as.numeric(x[["boundary"]]),
+                          numeric(1))
+  cand_key <- vapply(seq_along(list_candidate), function(x){
+    paste(sprintf("%a", c(cand_phi_s[[x]], cand_phi_t[[x]])), collapse = " ")   # exact (hexadecimal) keys
+  }, character(1))
+  cand_groups <- split(seq_along(list_candidate),
+                       factor(cand_key, levels = unique(cand_key)))
+  names(cand_groups) <- NULL
+
+  # fits the candidate models in group g
+  fit_group <- function(g){
+    idx <- cand_groups[[g]]
+    .Call(C_stvcGLMexactLOOgrid, y, X, X_tilde, n, p, r, family,
+          n.binom, sp_coords, time_coords, cor.fn, V.beta,
+          nu.beta, nu.z, sigmaSq.xi, IW.scale, process.type,
+          cand_phi_s[[idx[1]]], cand_phi_t[[idx[1]]], cand_boundary[idx],
+          n.samples, loopd, loopd.method, CV.K, loopd.nMC, CV.update,
+          verbose_child)
+  }
+
+  # results of the groups, put back in the order of list_candidate
+  ungroup <- function(samps_grouped){
+    samps <- vector("list", length(list_candidate))
+    for(g in seq_along(cand_groups)){
+      samps[cand_groups[[g]]] <- samps_grouped[[g]]
+    }
+    samps
+  }
 
   #### main function call ####
   ptm <- proc.time()
@@ -473,15 +551,8 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
       }
     }
 
-    samps <- future_lapply(1:length(list_candidate), function(x){
-                    .Call(C_stvcGLMexactLOO, y, X, X_tilde, n, p, r, family,
-                          n.binom, sp_coords, time_coords, cor.fn, V.beta,
-                          nu.beta, nu.z, sigmaSq.xi, IW.scale, process.type,
-                          as.numeric(list_candidate[[x]][["phi_s"]]),
-                          as.numeric(list_candidate[[x]][["phi_t"]]),
-                          as.numeric(list_candidate[[x]][["boundary"]]),
-                          n.samples, loopd, loopd.method, CV.K, loopd.nMC,
-                          verbose_child)}, future.seed = TRUE)
+    samps <- ungroup(future_lapply(seq_along(cand_groups), fit_group,
+                                   future.seed = TRUE))
 
   }else{
 
@@ -492,16 +563,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
       is set to FALSE. Ignoring parallelization plan.")
     }
 
-    samps <- lapply(1:length(list_candidate), function(x){
-                    .Call(C_stvcGLMexactLOO, y, X, X_tilde, n, p, r, family,
-                          n.binom, sp_coords, time_coords, cor.fn, V.beta,
-                          nu.beta, nu.z, sigmaSq.xi, IW.scale, process.type,
-                          as.numeric(list_candidate[[x]][["phi_s"]]),
-                          as.numeric(list_candidate[[x]][["phi_t"]]),
-                          as.numeric(list_candidate[[x]][["boundary"]]),
-                          n.samples, loopd, loopd.method, CV.K, loopd.nMC,
-                          verbose_child)
-                        })
+    samps <- ungroup(lapply(seq_along(cand_groups), fit_group))
 
   }
 

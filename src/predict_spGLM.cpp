@@ -69,145 +69,117 @@ extern "C" {
       nu = REAL(nu_r)[0];
     }
 
-    // Create correlation and cross-correlation matrices
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-    double *Cz = (double *) R_alloc(nn_pred, sizeof(double)); zeros(Cz, nn_pred);
-    double *Vz_new = (double *) R_alloc(n_predn_pred, sizeof(double)); zeros(Vz_new, n_predn_pred);
-    double *thetasp = (double *) R_alloc(2, sizeof(double));
-
-    //construct covariance matrix (full)
-    thetasp[0] = phi;
-    thetasp[1] = nu;
-    spCorFull2(n, 2, coords_sp, thetasp, corfn, Vz);
-    spCorCross(n, n_pred, 2, coords_sp, coords_sp_new, thetasp, corfn, Cz);
-    spCorFull2(n_pred, 2, coords_sp_new, thetasp, corfn, Vz_new);
-
     // sampling set-up
     int nSamples = INTEGER(nSamples_r)[0];
+    double thetasp[2] = {phi, nu};
+
+    // Given a posterior draw (beta, z, sigmaSqz):
+    //   z.pred | z ~ N(t(C)*inv(R)*z, sigmaSqz*(R_new - t(C)*inv(R)*C)),  mu.pred = g^{-1}(X_new*beta + z.pred),
+    //   y.pred ~ Poisson(mu.pred) or Binomial(nBinom_new, mu.pred),
+    // where R = cor(observed), C = cor(observed, new) and R_new = cor(new) (joint) or its diagonal of ones (pointwise).
+
+    // chol(R), built in place
+    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);
+    spCorFull2(n, 2, coords_sp, thetasp, corfn, cholVz);
+    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i).\n", info);}
+
+    // Cz = cholinv(R)*C
+    double *Cz = (double *) R_alloc(nn_pred, sizeof(double)); zeros(Cz, nn_pred);
+    spCorCross(n, n_pred, 2, coords_sp, coords_sp_new, thetasp, corfn, Cz);
+    F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, cholVz, &n, Cz, &n FCONE FCONE FCONE FCONE);
+
+    // conditional covariance of z.pred given z (per unit sigmaSqz)
+    double *z_pred_cov = NULL;
+    if(joint){
+      // z_pred_cov = chol(R_new - t(Cz)*Cz), formed in place (lower triangle)
+      z_pred_cov = (double *) R_alloc(n_predn_pred, sizeof(double)); zeros(z_pred_cov, n_predn_pred);
+      spCorFull2(n_pred, 2, coords_sp_new, thetasp, corfn, z_pred_cov);                                                    // z_pred_cov = R_new
+      F77_NAME(dsyrk)(lower, ytran, &n_pred, &n, &negOne, Cz, &n, &one, z_pred_cov, &n_pred FCONE FCONE);                 // z_pred_cov = R_new - t(Cz)*Cz
+      F77_NAME(dpotrf)(lower, &n_pred, z_pred_cov, &n_pred, &info FCONE);
+      if(info != 0){Rf_error("c++ error: Cholesky factorization of the conditional covariance of z.pred failed (info = %i); check for prediction locations that coincide with each other or with observed locations.\n", info);}
+      mkLT(z_pred_cov, n_pred);
+    }else{
+      // pointwise conditional variances 1 - ||Cz[, i]||^2, clamped at 0 against rounding
+      z_pred_cov = (double *) R_alloc(n_pred, sizeof(double)); zeros(z_pred_cov, n_pred);
+      for(i = 0; i < n_pred; i++){
+        z_pred_cov[i] = fmax2(1.0 - F77_CALL(ddot)(&n, &Cz[i * n], &incOne, &Cz[i * n], &incOne), 0.0);
+      }
+    }
 
     // posterior predictive samples of z and y
     SEXP samples_predz_r = PROTECT(Rf_allocMatrix(REALSXP, n_pred, nSamples)); nProtect++;
     SEXP samples_predmu_r = PROTECT(Rf_allocMatrix(REALSXP, n_pred, nSamples)); nProtect++;
     SEXP samples_predy_r = PROTECT(Rf_allocMatrix(REALSXP, n_pred, nSamples)); nProtect++;
+    double *predz = REAL(samples_predz_r);
+    double *predmu = REAL(samples_predmu_r);
+    double *predy = REAL(samples_predy_r);
 
-    // Set up pre-processing matrices etc.
-    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);  // chol(Vz)
-    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-    mkLT(cholVz, n);
-
-    // Cz = cholinv(Vz)*Cz
-    F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, cholVz, &n, Cz, &n FCONE FCONE FCONE FCONE);
-
-    double *z_pred_cov = NULL;  // define NULL pointer for z_pred_cov
-    double *z_pred_mu = (double *) R_alloc(n_pred, sizeof(double)); zeros(z_pred_mu, n_pred);  // n_predx1 vector z_pred_mu
-    double *beta_s = (double *) R_alloc(p, sizeof(double)); zeros(beta_s, p);
-    double *z_s = (double *) R_alloc(n, sizeof(double)); zeros(z_s, n);
-    double *z_pred_s = (double *) R_alloc(n_pred, sizeof(double)); zeros(z_pred_s, n_pred);      // n_predx1 vector z_pred_s
-    double *tmp_n_pred = (double *) R_alloc(n_pred, sizeof(double)); zeros(tmp_n_pred, n_pred);  // n_predx1 vector tmp_n_pred
+    // Draws are processed in blocks of nBlock: the conditional means t(Cz)*cholinv(R)*Z of the whole block are
+    // found with level-3 BLAS; the random variates are then drawn draw by draw, in the same order as before
+    // (for each draw, the n_pred variates of z.pred and then the n_pred of y.pred, whose number depends on mu.pred).
+    const int nBlockMax = 64;
+    int nBlock = 0, nzBlock = 0, b = 0;
+    R_xlen_t offset = 0;
     double dtemp1 = 0.0;
+    double *zBlock = (double *) R_alloc((size_t) n * nBlockMax, sizeof(double));                    // n x nBlock work matrix
+    double *noise = (double *) R_alloc(n_pred, sizeof(double)); zeros(noise, n_pred);
+    double *zp = NULL;
 
-    if(joint){
+    GetRNGstate();
 
-        z_pred_cov = (double *) R_alloc(n_predn_pred, sizeof(double)); zeros(z_pred_cov, n_predn_pred);  // n_predxn_pred matrix z_pred_cov
+    for(s = 0; s < nSamples; s += nBlockMax){
 
-        // first find the Schur complement RTilde - t(C)*inv(R)*C
-        // goal: z_pred_cov = chol(t(Cz)*inv(Vz)*Cz)
-        F77_NAME(dgemm)(ytran, ntran, &n_pred, &n_pred, &n, &one, Cz, &n, Cz, &n, &zero, z_pred_cov, &n_pred FCONE FCONE);
-        F77_NAME(daxpy)(&n_predn_pred, &negOne, Vz_new, &incOne, z_pred_cov, &incOne);
+      nBlock = std::min(nBlockMax, nSamples - s);
+      nzBlock = n * nBlock;
+      offset = (R_xlen_t) s * n_pred;
 
-        // z_pred_cov = Vz_new - t(Cz)*inv(Vz)*Cz
-        F77_NAME(dscal)(&n_predn_pred, &negOne, z_pred_cov, &incOne);
-        F77_NAME(dpotrf)(lower, &n_pred, z_pred_cov, &n_pred, &info FCONE); if(info != 0){perror("c++ error: z_pred_cov dpotrf failed\n");}
-        mkLT(z_pred_cov, n_pred);
+      // conditional means of the block: predz[, s:(s+nBlock)] = t(Cz)*cholinv(R)*Z[, s:(s+nBlock)]
+      F77_NAME(dcopy)(&nzBlock, &zSamps[(R_xlen_t) s * n], &incOne, zBlock, &incOne);
+      F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &nBlock, &one, cholVz, &n, zBlock, &n FCONE FCONE FCONE FCONE);
+      F77_NAME(dgemm)(ytran, ntran, &n_pred, &nBlock, &n, &one, Cz, &n, zBlock, &n, &zero, &predz[offset], &n_pred FCONE FCONE);
 
-        for(s = 0; s < nSamples; s++){
+      for(b = 0; b < nBlock; b++){
 
-            // copy posterior samples of beta and z
-            F77_NAME(dcopy)(&p, &betaSamps[s * p], &incOne, beta_s, &incOne);
-            F77_NAME(dcopy)(&n, &zSamps[s * n], &incOne, z_s, &incOne);
+        zp = &predz[offset + (R_xlen_t) b * n_pred];
 
-            // find posterior predictive mean z_pred_mu = t(Cz)*inv(Vz)*z_s
-            F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVz, &n, z_s, &incOne FCONE FCONE FCONE);
-            F77_NAME(dgemv)(ytran, &n, &n_pred, &one, Cz, &n, z_s, &incOne, &zero, z_pred_mu, &incOne FCONE);
-
-            for(i = 0; i < n_pred; i++){
-                tmp_n_pred[i] = rnorm(0.0, sqrt(sigmaSqzSamps[s]));
-            }
-            F77_NAME(dgemv)(ntran, &n_pred, &n_pred, &one, z_pred_cov, &n_pred, tmp_n_pred, &incOne, &zero, z_pred_s, &incOne FCONE);
-            F77_NAME(daxpy)(&n_pred, &one, z_pred_mu, &incOne, z_pred_s, &incOne);
-            F77_NAME(dcopy)(&n_pred, &z_pred_s[0], &incOne, &REAL(samples_predz_r)[s*n_pred], &incOne);
-
-            // Find natural parameter X*beta + z; dgemv: z_pred_s = z_pred_s + X_new * beta_s
-            F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, beta_s, &incOne, &one, z_pred_s, &incOne FCONE);
-
-            // Sample from predictive distribution
-            for(i = 0; i < n_pred; i++){
-                if(family == family_poisson){
-                    dtemp1 = exp(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rpois(dtemp1);
-                }else if(family == family_binary){
-                    dtemp1 = inverse_logit(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(1, dtemp1);
-                }else if(family == family_binomial){
-                    dtemp1 = inverse_logit(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
-                }
-            }
-
+        // z.pred = mean + noise
+        if(joint){
+          for(i = 0; i < n_pred; i++){
+            noise[i] = rnorm(0.0, sqrt(sigmaSqzSamps[s + b]));
+          }
+          F77_NAME(dtrmv)(lower, ntran, nunit, &n_pred, z_pred_cov, &n_pred, noise, &incOne FCONE FCONE FCONE);   // noise = chol(z_pred_cov)*noise
+          F77_NAME(daxpy)(&n_pred, &one, noise, &incOne, zp, &incOne);
+        }else{
+          for(i = 0; i < n_pred; i++){
+            zp[i] += rnorm(0.0, sqrt(sigmaSqzSamps[s + b] * z_pred_cov[i]));
+          }
         }
-        // End of joint prediction set-up
 
-    }else{
-
-        z_pred_cov = (double *) R_alloc(n_pred, sizeof(double)); zeros(z_pred_cov, n_pred);  // n_predx1 vector z_pred_cov
+        // natural parameter X_new*beta + z.pred, then mu.pred and y.pred
+        F77_NAME(dcopy)(&n_pred, zp, &incOne, noise, &incOne);
+        F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, &betaSamps[(R_xlen_t) (s + b) * p], &incOne, &one, noise, &incOne FCONE);
         for(i = 0; i < n_pred; i++){
-            z_pred_cov[i] = 1.0 - F77_CALL(ddot)(&n, &Cz[i * n], &incOne, &Cz[i * n], &incOne);
+          if(family == family_poisson){
+            dtemp1 = exp(noise[i]);
+            predmu[offset + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offset + (R_xlen_t) b * n_pred + i] = rpois(dtemp1);
+          }else if(family == family_binary){
+            dtemp1 = inverse_logit(noise[i]);
+            predmu[offset + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offset + (R_xlen_t) b * n_pred + i] = rbinom(1, dtemp1);
+          }else if(family == family_binomial){
+            dtemp1 = inverse_logit(noise[i]);
+            predmu[offset + (R_xlen_t) b * n_pred + i] = dtemp1;
+            predy[offset + (R_xlen_t) b * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
+          }
         }
 
-        for(s = 0; s < nSamples; s++){
-
-            // copy posterior samples of beta and z
-            F77_NAME(dcopy)(&p, &betaSamps[s * p], &incOne, beta_s, &incOne);
-            F77_NAME(dcopy)(&n, &zSamps[s * n], &incOne, z_s, &incOne);
-
-            // find posterior predictive mean z_pred_mu = t(Cz)*inv(Vz)*z_s
-            F77_NAME(dtrsv)(lower, ntran, nunit, &n, cholVz, &n, z_s, &incOne FCONE FCONE FCONE);
-            F77_NAME(dgemv)(ytran, &n, &n_pred, &one, Cz, &n, z_s, &incOne, &zero, z_pred_mu, &incOne FCONE);
-
-            for(i = 0; i < n_pred; i++){
-                z_pred_s[i] = rnorm(0.0, sqrt(sigmaSqzSamps[s] * z_pred_cov[i]));
-            }
-            F77_NAME(daxpy)(&n_pred, &one, z_pred_mu, &incOne, z_pred_s, &incOne);
-            F77_NAME(dcopy)(&n_pred, &z_pred_s[0], &incOne, &REAL(samples_predz_r)[s*n_pred], &incOne);
-
-            // Find natural parameter X*beta + z; dgemv: z_pred_s = z_pred_s + X_new * beta_s
-            F77_NAME(dgemv)(ntran, &n_pred, &p, &one, X_new, &n_pred, beta_s, &incOne, &one, z_pred_s, &incOne FCONE);
-
-            // Sample from predictive distribution
-            for(i = 0; i < n_pred; i++){
-                if(family == family_poisson){
-                    dtemp1 = exp(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rpois(dtemp1);
-                }else if(family == family_binary){
-                    dtemp1 = inverse_logit(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(1, dtemp1);
-                }else if(family == family_binomial){
-                    dtemp1 = inverse_logit(z_pred_s[i]);
-                    REAL(samples_predmu_r)[s * n_pred + i] = dtemp1;
-                    REAL(samples_predy_r)[s * n_pred + i] = rbinom(nBinom_new[i], dtemp1);
-                }
-            }
-
-        }
-        // End of point-wise prediction set-up
+      }
 
     }
+
+    PutRNGstate();
 
     // make return object
     SEXP result_r, resultName_r;

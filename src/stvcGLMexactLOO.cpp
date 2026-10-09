@@ -14,19 +14,27 @@
 # define FCONE
 #endif
 
-extern "C" {
-
-  SEXP stvcGLMexactLOO(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
-                       SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
-                       SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
-                       SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
-                       SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                       SEXP CV_K_r, SEXP loopd_nMC_r,  SEXP verbose_r){
+// Fits of the candidate models sharing the process parameters (phi_s, phi_t) that differ only in the boundary
+// adjustment parameter epsilon (a vector epsilon_r of nEps values), with optional leave-one-out predictive densities.
+// The pre-processing of the full data and of each leave-one-out or cross-validation subset does not depend on
+// epsilon, so it is computed once and shared by the nEps fits: the posterior samples of the nEps models are drawn
+// first (in the order of epsilon_r), and then, for each held-out site or fold, the Monte Carlo draws of the nEps
+// models are made in turn. With nEps = 1 the random-number stream is that of a single fit.
+// cvUpdate (K-fold CV only): 1 = the pre-processing of each block-deleted data set is obtained from the full-data
+// one by deletion updates (scalar loops); 0 = it is recomputed directly (level-3 BLAS; faster with an optimized
+// multi-threaded BLAS). Both give the same result up to floating-point rounding.
+// Returns a list of nEps fits.
+static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
+                                SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
+                                SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                                SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                                SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
+                                SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r, SEXP verbose_r){
 
     /*****************************************
      Common variables
      *****************************************/
-    int i, j, k, s, info, nProtect = 0;
+    int i, j, k, s, e, info, nProtect = 0;
     char const *lower = "L";
     char const *ntran = "N";
     char const *ytran = "T";
@@ -78,11 +86,15 @@ extern "C" {
 
     // spatial-temporal process parameters: create spatial-temporal covariance matrices
     std::string processType = CHAR(STRING_ELT(processType_r, 0));
+
+    // supported spatial-temporal process models
+    if(processType != "independent.shared" && processType != "independent" && processType != "multivariate"){
+      Rf_error("c++ error: process.type must be one of 'independent', 'independent.shared' or 'multivariate'.");
+    }
     double *phi_s_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_s_vec, r);
     double *phi_t_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_t_vec, r);
     double *thetaspt = (double *) R_alloc(2, sizeof(double));
     double *Vz = NULL;
-    double *R = NULL;
 
     if(corfn == "gneiting-decay"){
 
@@ -110,23 +122,13 @@ extern "C" {
             sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
           }
 
-        }else if(processType == "multivariate2"){
-
-          phi_s_vec[0] = REAL(phi_s_r)[0];
-          phi_t_vec[0] = REAL(phi_t_r)[0];
-          thetaspt[0] = phi_s_vec[0];
-          thetaspt[1] = phi_t_vec[0];
-
-          R = (double *) R_alloc(nn, sizeof(double)); zeros(R, nn);
-          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, R);
-          Vz = (double *) R_alloc(nrnr, sizeof(double)); zeros(Vz, nrnr);
-          kronecker(r, n, iwScale, R, Vz);
-
         }
     }
 
-    // boundary adjustment parameter
-    double epsilon = REAL(epsilon_r)[0];
+    // boundary adjustment parameters
+    int nEps = Rf_length(epsilon_r);
+    double *epsVec = REAL(epsilon_r);
+    double epsilon = epsVec[0];
 
     // sampling set-up
     int nSamples = INTEGER(nSamples_r)[0];
@@ -137,6 +139,7 @@ extern "C" {
     std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
     int CV_K = INTEGER(CV_K_r)[0];
     int loopd_nMC = INTEGER(loopd_nMC_r)[0];
+    int cvUpdate = INTEGER(cvUpdate_r)[0];
 
     const char *exact_str = "exact";
     const char *cv_str = "cv";
@@ -170,7 +173,15 @@ extern "C" {
         Rprintf("\tsigmaSq.z.j ~ IG(nu.z/2, nu.z/2), j = 1,...,%i.\n", r);
       }
       Rprintf("\tsigmaSq.xi = %.2f.\n", sigmaSq_xi);
-      Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
+      if(nEps == 1){
+        Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
+      }else{
+        Rprintf("\tBoundary adjustment parameters =");
+        for(e = 0; e < nEps; e++){
+          Rprintf(" %.2f", epsVec[e]);
+        }
+        Rprintf(".\n\n");
+      }
 
       Rprintf("Spatial-temporal correlation function: %s.\n", corfn.c_str());
 
@@ -210,7 +221,6 @@ extern "C" {
      *****************************************/
 
     double *cholVz = NULL;               // define NULL pointer for chol(Vz)
-    double *cholR = NULL;
     double *chol_iwScale = NULL;
 
     // Find Cholesky of Vz
@@ -242,25 +252,6 @@ extern "C" {
       F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
       F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
       mkLT(chol_iwScale, r);
-
-    }else if(processType == "multivariate2"){
-
-        // // Inefficient cholesky!
-        // cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
-        // F77_NAME(dcopy)(&nrnr, Vz, &incOne, cholVz, &incOne);
-        // F77_NAME(dpotrf)(lower, &nr, cholVz, &nr, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
-        // mkLT(cholVz, nr);
-
-        // Efficient Cholesky for kronecker product: chol(kron(A, B)) = kron(chol(A), chol(B))
-        cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
-        cholR = (double *) R_alloc(nn, sizeof(double)); zeros(cholR, nn);
-        chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
-        F77_NAME(dcopy)(&nn, R, &incOne, cholR, &incOne);
-        F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
-        F77_NAME(dpotrf)(lower, &n, cholR, &n, &info FCONE); if(info != 0){perror("c++ error: R dpotrf failed\n");}
-        F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
-        chol_kron(r, n, chol_iwScale, cholR, cholVz);
-        mkLT(cholVz, nr);
 
     }
 
@@ -321,9 +312,15 @@ extern "C" {
      Set-up posterior sampling
      *****************************************/
     // posterior samples of sigma-sq and beta
-    SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
-    SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, nr, nSamples)); nProtect++;
-    SEXP samples_xi_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
+    // (one entry per epsilon)
+    SEXP samples_beta_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+    SEXP samples_z_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+    SEXP samples_xi_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+    for(e = 0; e < nEps; e++){
+      SET_VECTOR_ELT(samples_beta_l, e, Rf_allocMatrix(REALSXP, p, nSamples));
+      SET_VECTOR_ELT(samples_z_l, e, Rf_allocMatrix(REALSXP, nr, nSamples));
+      SET_VECTOR_ELT(samples_xi_l, e, Rf_allocMatrix(REALSXP, n, nSamples));
+    }
 
     const char *family_poisson = "poisson";
     const char *family_binary = "binary";
@@ -339,95 +336,127 @@ extern "C" {
 
     GetRNGstate();
 
-    for(s = 0; s < nSamples; s++){
+    // Posterior samples are drawn in blocks of nBlockMax: within a block the random variates are drawn in exactly
+    // the order of a draw-by-draw loop, directly into the output matrices, and the block is then projected at once
+    // with level-3 BLAS (projGLMvcbatch).
+    const int nBlockMax = 64;
+    int nBlock = 0, bb = 0;
 
-      if(family == family_poisson){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = 1.0;
-          v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+    int nnBlockMax = n * nBlockMax;
+    int pnBlockMax = p * nBlockMax;
+    int nrnBlockMax = nr * nBlockMax;
+    double *V_eta = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(V_eta, nnBlockMax);
+    double *tmp_nb = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(tmp_nb, nnBlockMax);
+    double *tmp_pb = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(tmp_pb, pnBlockMax);
+    double *tmp_nrb = (double *) R_chk_calloc(nrnBlockMax, sizeof(double)); zeros(tmp_nrb, nrnBlockMax);
+    double *V_beta = NULL, *V_xi = NULL, *V_z = NULL;
+
+    // posterior samples of the nEps models, one after the other
+    for(e = 0; e < nEps; e++){
+
+      epsilon = epsVec[e];
+
+      for(s = 0; s < nSamples; s += nBlockMax){
+
+        nBlock = std::min(nBlockMax, nSamples - s);
+        V_beta = &REAL(VECTOR_ELT(samples_beta_l, e))[(R_xlen_t) s * p];
+        V_xi = &REAL(VECTOR_ELT(samples_xi_l, e))[(R_xlen_t) s * n];
+        V_z = &REAL(VECTOR_ELT(samples_z_l, e))[(R_xlen_t) s * nr];
+
+        for(bb = 0; bb < nBlock; bb++){
+
+
+            if(family == family_poisson){
+              for(i = 0; i < n; i++){
+                dtemp1 = Y[i] + epsilon;
+                dtemp2 = 1.0;
+                V_eta[bb*n + i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+              }
+            }
+
+            if(family == family_binomial){
+              for(i = 0; i < n; i++){
+                dtemp1 = Y[i] + epsilon;
+                dtemp2 = nBinom[i];
+                dtemp2 += 2.0 * epsilon;
+                dtemp2 -= dtemp1;
+                V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+              }
+            }
+
+            if(family == family_binary){
+              for(i = 0; i < n; i++){
+                dtemp1 = Y[i] + epsilon;
+                dtemp2 = nBinom[i];
+                dtemp2 += 2.0 * epsilon;
+                dtemp2 -= dtemp1;
+                V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+              }
+            }
+
+            for(i = 0; i < n; i++){
+              V_xi[bb*n + i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, sigmaSq_xi)
+            }
+
+            dtemp1 = 0.5 * nu_beta;
+            dtemp2 = 1.0 / dtemp1;
+            dtemp3 = rgamma(dtemp1, dtemp2);
+            dtemp3 = 1.0 / dtemp3;
+            dtemp3 = sqrt(dtemp3);
+            for(j = 0; j < p; j++){
+              V_beta[bb*p + j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
+            }
+
+            if(processType == "independent.shared"){
+              dtemp1 = 0.5 * nu_z;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp3 = 1.0 / dtemp3;
+              dtemp3 = sqrt(dtemp3);
+              for(k = 0; k < r; k++){
+                for(i = 0; i < n; i++){
+                  V_z[bb*nr + k*n + i] = rnorm(0.0, dtemp3);
+                }
+              }
+            }else if(processType == "independent"){
+              for(k = 0; k < r; k++){
+                dtemp1 = 0.5 * nu_z;
+                dtemp2 = 1.0 / dtemp1;
+                dtemp3 = rgamma(dtemp1, dtemp2);
+                dtemp3 = 1.0 / dtemp3;
+                dtemp3 = sqrt(dtemp3);
+                for(i = 0; i < n; i++){
+                  V_z[bb*nr + k*n + i] = rnorm(0.0, dtemp3);
+                }
+              }
+            }else if(processType == "multivariate"){
+
+              for(k = 0; k < r; k++){
+                for(i = 0; i < n; i++){
+                  tmp_nr[k*n + i] = rnorm(0.0, 1.0);
+                }
+              }
+              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+              F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, &V_z[bb*nr], &n FCONE FCONE);
+
+            }
+
         }
-      }
 
-      if(family == family_binomial){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-        }
-      }
-
-      if(family == family_binary){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-        }
-      }
-
-      for(i = 0; i < n; i++){
-        v_xi[i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, sigmaSq_xi)
-      }
-
-      dtemp1 = 0.5 * nu_beta;
-      dtemp2 = 1.0 / dtemp1;
-      dtemp3 = rgamma(dtemp1, dtemp2);
-      dtemp3 = 1.0 / dtemp3;
-      dtemp3 = sqrt(dtemp3);
-      for(j = 0; j < p; j++){
-        v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
-      }
-
-      if(processType == "independent.shared"){
-        dtemp1 = 0.5 * nu_z;
-        dtemp2 = 1.0 / dtemp1;
-        dtemp3 = rgamma(dtemp1, dtemp2);
-        dtemp3 = 1.0 / dtemp3;
-        dtemp3 = sqrt(dtemp3);
-        for(k = 0; k < r; k++){
-          for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);
-          }
-        }
-      }else if(processType == "independent"){
-        for(k = 0; k < r; k++){
-          dtemp1 = 0.5 * nu_z;
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp3 = 1.0 / dtemp3;
-          dtemp3 = sqrt(dtemp3);
-          for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);
-          }
-        }
-      }else if(processType == "multivariate"){
-
-        for(k = 0; k < r; k++){
-          for(i = 0; i < n; i++){
-            tmp_nr[k*n + i] = rnorm(0.0, 1.0);
-          }
-        }
-        rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-        F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-        F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, v_z, &n FCONE FCONE);
+        // projection step for the block
+        projGLMvcbatch(n, p, r, nBlock, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
+                       V_eta, V_xi, V_beta, V_z, D1Inv, D1InvB1, cholschurA1,
+                       DInvB_pn, DInvB_nrn, cholschurA, tmp_nrb, tmp_nb, tmp_pb);
 
       }
-
-      // projection step
-      projGLMvc(n, p, r, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
-                v_eta, v_xi, v_beta, v_z, D1Inv, D1InvB1, cholschurA1,
-                DInvB_pn, DInvB_nrn, cholschurA, tmp_nr);
-
-      // copy samples into SEXP return object
-      F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
-      F77_NAME(dcopy)(&nr, &v_z[0], &incOne, &REAL(samples_z_r)[s*nr], &incOne);
-      F77_NAME(dcopy)(&n, &v_xi[0], &incOne, &REAL(samples_xi_r)[s*n], &incOne);
 
     }
+
+    R_chk_free(V_eta);
+    R_chk_free(tmp_nb);
+    R_chk_free(tmp_pb);
+    R_chk_free(tmp_nrb);
 
     PutRNGstate();
 
@@ -437,15 +466,13 @@ extern "C" {
     R_chk_free(v_z);
     R_chk_free(tmp_nr);
 
-    R_chk_free(D1Inv);
-    R_chk_free(D1InvB1);
     R_chk_free(cholschurA1);
-    R_chk_free(DInvB_pn);
-    R_chk_free(DInvB_nrn);
-    R_chk_free(cholschurA);
+    // D1Inv, D1InvB1, DInvB_pn, DInvB_nrn and cholschurA are kept: the exact LOO and CV pre-processing is
+    // obtained from them by deletion updates (cholSchurGLMvcDel); they are freed at the end
 
     // make return object
     SEXP result_r, resultName_r;
+    SEXP loopd_out_l = R_NilValue;                                                       // leave-one-out predictive densities, one per epsilon
 
     if(loopd){
 
@@ -453,7 +480,10 @@ extern "C" {
         Rprintf("Evaluating leave-one-out predictive densities.\n");
       }
 
-      SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
+      loopd_out_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+      for(e = 0; e < nEps; e++){
+        SET_VECTOR_ELT(loopd_out_l, e, Rf_allocVector(REALSXP, n));
+      }
 
       // Exact leave-one-out predictive densities (LOO-PD) calculation
       if(loopd_method == exact_str){
@@ -475,31 +505,20 @@ extern "C" {
         double *X_tilde_pred = (double *) R_chk_calloc(r, sizeof(double)); zeros(X_tilde_pred, r);
 
         // Set-up storage for pre-processing for leave-one-out data
-        double *looVz = NULL;
         double *looCholVz = NULL;
-        double *looCholR = NULL;
         double *looCz = NULL;
 
         if(corfn == "gneiting-decay"){
 
           if(processType == "independent.shared" || processType == "multivariate"){
 
-            looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
             looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
             looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
 
           }else if(processType == "independent"){
 
-            looVz = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(looVz, n1n1r);
             looCholVz = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(looCholVz, n1n1r);
             looCz = (double *) R_chk_calloc(n1r, sizeof(double)); zeros(looCz, n1r);
-
-          }else if(processType == "multivariate2"){
-
-            looVz = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looVz, n1rn1r);
-            looCholVz = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looCholVz, n1rn1r);
-            looCholR = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholR, n1n1);
-            looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
 
           }
 
@@ -507,7 +526,6 @@ extern "C" {
 
         double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);
         double *looXTildetX = (double *) R_chk_calloc(n1rp, sizeof(double)); zeros(looXTildetX, n1rp);
-        double *looCholIplusXTildeVzXTildet = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholIplusXTildeVzXTildet, n1n1);
 
         // set-up pre-processing memory allocations for priming on leave-one-out data
         double *looD1Inv = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looD1Inv, n1rn1r);
@@ -516,9 +534,22 @@ extern "C" {
         double *looDInvB_pn = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(looDInvB_pn, n1p);
         double *looDInvB_nrn = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(looDInvB_nrn, n1n1r);
         double *looCholschurA = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholschurA, n1n1);
-        double *tmp_n1n1r = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(tmp_n1n1r, n1n1r);
         double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
         double *tmp_n1r = (double *) R_chk_calloc(n1r, sizeof(double)); zeros(tmp_n1r, n1r);
+
+        // Workspace for the deletion update of the pre-processing (cholSchurGLMvcDel with a block of size 1)
+        double *del_PB = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_PB, n);
+        double *del_QB = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_QB, n);
+        double *del_QBK = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_QBK, n);
+        double *del_LP = (double *) R_chk_calloc(1, sizeof(double)); zeros(del_LP, 1);
+        double *del_LQ = (double *) R_chk_calloc(1, sizeof(double)); zeros(del_LQ, 1);
+        double *del_WB = (double *) R_chk_calloc(p, sizeof(double)); zeros(del_WB, p);
+        double *del_Z = (double *) R_chk_calloc(p, sizeof(double)); zeros(del_Z, p);
+        double *del_H = (double *) R_chk_calloc(nr, sizeof(double)); zeros(del_H, nr);
+        double *del_HK = (double *) R_chk_calloc(nr, sizeof(double)); zeros(del_HK, nr);
+        double *del_A2 = (double *) R_chk_calloc(nr, sizeof(double)); zeros(del_A2, nr);
+        double *del_tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(del_tmp_np, np);
+        double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
         // Set-up storage for sampling for leave-one-out model fit
         double *loo_v_eta = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_eta, n1);
@@ -536,6 +567,23 @@ extern "C" {
         double *Mdist_r = (double *) R_chk_calloc(r, sizeof(double)); zeros(Mdist_r, r);
         double *Mdist_rr = (double *) R_chk_calloc(rr, sizeof(double)); zeros(Mdist_rr, rr);
         double *tmp_r = (double *) R_chk_calloc(r, sizeof(double)); zeros(tmp_r, r);
+
+        // blocks of nBlockMax Monte Carlo draws
+        int n1BlockMax = n1 * nBlockMax;
+        int n1rBlockMax = n1r * nBlockMax;
+        int pBlockMax = p * nBlockMax;
+        int rBlockMax = r * nBlockMax;
+        int rrBlockMax = rr * nBlockMax;
+        double *LV_eta = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_eta, n1BlockMax);
+        double *LV_xi = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_xi, n1BlockMax);
+        double *LV_tmpn = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_tmpn, n1BlockMax);
+        double *LV_z = (double *) R_chk_calloc(n1rBlockMax, sizeof(double)); zeros(LV_z, n1rBlockMax);
+        double *LV_tmpnr = (double *) R_chk_calloc(n1rBlockMax, sizeof(double)); zeros(LV_tmpnr, n1rBlockMax);
+        double *LV_beta = (double *) R_chk_calloc(pBlockMax, sizeof(double)); zeros(LV_beta, pBlockMax);
+        double *LV_tmpp = (double *) R_chk_calloc(pBlockMax, sizeof(double)); zeros(LV_tmpp, pBlockMax);
+        double *LV_gam = (double *) R_chk_calloc(rBlockMax, sizeof(double)); zeros(LV_gam, rBlockMax);
+        double *LV_nrm = (double *) R_chk_calloc(rBlockMax, sizeof(double)); zeros(LV_nrm, rBlockMax);
+        double *LV_bart = (double *) R_chk_calloc(rrBlockMax, sizeof(double)); zeros(LV_bart, rrBlockMax);
 
         GetRNGstate();
 
@@ -560,7 +608,6 @@ extern "C" {
           // Constructing leave-one-out Vz for each spatial-temporal process model, and also Schur complement for prediction
           if(processType == "independent.shared" || processType == "multivariate"){
 
-            copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);
             cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);
 
             copyVecExcludingOne(&Vz[loo_index*n], looCz, n, loo_index);                                            // looCz = Vz[-i,i]
@@ -571,7 +618,6 @@ extern "C" {
           }else if(processType == "independent"){
 
             for(k = 0; k < r; k++){
-              copyMatrixDelRowCol(&Vz[nn*k], n, n, &looVz[n1n1*k], loo_index, loo_index);
               cholRowDelUpdate(n, &cholVz[nn*k], loo_index, &looCholVz[n1n1*k], tmp_n11);
 
               copyVecExcludingOne(&Vz[nn*k + loo_index*n], &looCz[n1*k], n, loo_index);                                     // looCz = Vz[-i,i]
@@ -581,218 +627,249 @@ extern "C" {
 
             }
 
-          }else if(processType == "multivariate2"){
+          }
 
-            copyMatrixDelRowCol_vc(Vz, nr, nr, looVz, loo_index, loo_index, n);   // Row-column deleted Vz
-            cholRowDelUpdate(n, cholR, loo_index, looCholR, tmp_n11);             // Row-column deleted R
-            chol_kron(r, n1, chol_iwScale, looCholR, looCholVz);                  // Find kron(chol(Psi), chol(looR))
-            mkLT(looCholVz, n1r);
+          // Pre-processing for projGLMvc() on the leave-one-out data by deletion updates of the full-data outputs
+          // (O(n^2 r^2)); chol(I/sigmaSqxi + Q) is row-deleted first and then downdated in place by cholSchurGLMvcDel
+          cholRowDelUpdate(n, cholschurA, loo_index, looCholschurA, tmp_n11);
+          if(cholSchurGLMvcDel(n, p, r, loo_index, loo_index, X, X_tilde, cholIplusXTildeVzXTildet,
+                               D1Inv, D1InvB1, DInvB_pn, DInvB_nrn, VbetaInv,
+                               looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA,
+                               del_PB, del_QB, del_QBK, del_LP, del_LQ, del_WB, del_Z, del_H, del_HK, del_A2,
+                               del_tmp_np, del_w) != 0){
 
-            copyVecExcludingOne(&R[loo_index*n], looCz, n, loo_index);                                             // looCz = R[-i,i]
-            F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholR, &n1, looCz, &incOne FCONE FCONE FCONE);            // looCz = LzInv * Cz
-            dtemp1 = pow(F77_NAME(dnrm2)(&n1, looCz, &incOne), 2);                                                 // dtemp1 = Czt*VzInv*Cz
-            z_tilde_var[0] = R[loo_index*n + loo_index] - dtemp1;                                                  // z_tilde_var = Vz_tilde - Czt*VzInv*Cz
+            // not numerically positive definite: recompute directly on the leave-one-out data (O(n^3 r^2)).
+            // The leave-one-out Cholesky factor of I + XTilde*Vz*t(XTilde) is the row-deletion update of the
+            // full-data factor.
+            int looVz_size = n1n1;
+            if(processType == "independent"){
+              looVz_size = n1n1r;
+            }
+            double *looVz = (double *) R_chk_calloc(looVz_size, sizeof(double)); zeros(looVz, looVz_size);
+            double *looCholIplusXTildeVzXTildet = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholIplusXTildeVzXTildet, n1n1);
+            double *tmp_n1n1r = (double *) R_chk_calloc(n1n1r, sizeof(double)); zeros(tmp_n1n1r, n1n1r);
+
+            if(processType == "independent.shared" || processType == "multivariate"){
+              copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);
+            }else if(processType == "independent"){
+              for(k = 0; k < r; k++){
+                copyMatrixDelRowCol(&Vz[nn*k], n, n, &looVz[n1n1*k], loo_index, loo_index);
+              }
+            }
+            cholRowDelUpdate(n, cholIplusXTildeVzXTildet, loo_index, looCholIplusXTildeVzXTildet, tmp_n11);
+
+            primingGLMvc(n1, p, r, looX, looX_tilde, looXtX, looXTildetX, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
+                         sigmaSq_xi, tmp_n1n1r, looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA);
+
+            R_chk_free(looVz);
+            R_chk_free(looCholIplusXTildeVzXTildet);
+            R_chk_free(tmp_n1n1r);
 
           }
 
-          // Constructing leave-one-out Cholesky factor for I + XTilde*Vz*t(XTilde)
-          // It can be shown that it is equivalent to updating Cholesky factor
-          // after removing i-th row and i-th column from original chol(I + XTilde*Vz*t(XTilde))
-          cholRowDelUpdate(n, cholIplusXTildeVzXTildet, loo_index, looCholIplusXTildeVzXTildet, tmp_n11);
+          // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
+          for(e = 0; e < nEps; e++){
 
-          primingGLMvc(n1, p, r, looX, looX_tilde, looXtX, looXTildetX, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
-                       sigmaSq_xi, tmp_n1n1r, looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA);
+            epsilon = epsVec[e];
 
-          for(sMC = 0; sMC < loopd_nMC; sMC++){
+            int nBlockr = 0;
+            double *Zb = NULL;
 
-            if(family == family_poisson){
-              for(loo_i = 0; loo_i < n1; loo_i++){
-                dtemp1 = looY[loo_i] + epsilon;
-                dtemp2 = 1.0;
-                loo_v_eta[loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
-              }
-            }
+            for(sMC = 0; sMC < loopd_nMC; sMC += nBlockMax){
 
-            if(family == family_binomial){
-              for(loo_i = 0; loo_i < n1; loo_i++){
-                dtemp1 = looY[loo_i] + epsilon;
-                dtemp2 = loo_nBinom[loo_i];
-                dtemp2 += 2.0 * epsilon;
-                dtemp2 -= dtemp1;
-                loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-              }
-            }
+              nBlock = std::min(nBlockMax, loopd_nMC - sMC);
 
-            if(family == family_binary){
-              for(loo_i = 0; loo_i < n1; loo_i++){
-                dtemp1 = looY[loo_i] + epsilon;
-                dtemp2 = loo_nBinom[loo_i];
-                dtemp2 += 2.0 * epsilon;
-                dtemp2 -= dtemp1;
-                loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-              }
-            }
+              // random variates of the block, in the order of a draw-by-draw loop
+              for(bb = 0; bb < nBlock; bb++){
 
-            for(loo_i = 0; loo_i < n1; loo_i++){
-              loo_v_xi[loo_i] = rnorm(0.0, sigma_xi);
-            }
 
-            dtemp1 = 0.5 * nu_beta;
-            dtemp2 = 1.0 / dtemp1;
-            dtemp3 = rgamma(dtemp1, dtemp2);
-            dtemp1 = 1.0 / dtemp3;
-            dtemp2 = sqrt(dtemp1);
-            for(j = 0; j < p; j++){
-              loo_v_beta[j] = rnorm(0.0, dtemp2);                                                  // loo_v_beta ~ t_nu_beta(0, 1)
-            }
-
-            if(processType == "independent.shared"){
-              dtemp1 = 0.5 * nu_z;
-              dtemp2 = 1.0 / dtemp1;
-              dtemp3 = rgamma(dtemp1, dtemp2);
-              dtemp3 = 1.0 / dtemp3;
-              dtemp3 = sqrt(dtemp3);
-              for(k = 0; k < r; k++){
-                for(loo_i = 0; loo_i < n1; loo_i++){
-                  loo_v_z[k*n1 + loo_i] = rnorm(0.0, dtemp3);
+                if(family == family_poisson){
+                  for(loo_i = 0; loo_i < n1; loo_i++){
+                    dtemp1 = looY[loo_i] + epsilon;
+                    dtemp2 = 1.0;
+                    LV_eta[bb*n1 + loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+                  }
                 }
-              }
-            }else if(processType == "independent"){
-              for(k = 0; k < r; k++){
-                dtemp1 = 0.5 * nu_z;
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp3 = 1.0 / dtemp3;
-                dtemp3 = sqrt(dtemp3);
-                for(loo_i = 0; loo_i < n1; loo_i++){
-                  loo_v_z[k*n1 + loo_i] = rnorm(0.0, dtemp3);
+
+                if(family == family_binomial){
+                  for(loo_i = 0; loo_i < n1; loo_i++){
+                    dtemp1 = looY[loo_i] + epsilon;
+                    dtemp2 = loo_nBinom[loo_i];
+                    dtemp2 += 2.0 * epsilon;
+                    dtemp2 -= dtemp1;
+                    LV_eta[bb*n1 + loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                  }
                 }
-              }
-            }else if(processType == "multivariate"){
-              for(k = 0; k < r; k++){
-                for(loo_i = 0; loo_i < n1; loo_i++){
-                  tmp_n1r[k*n1 + loo_i] = rnorm(0.0, 1.0);
+
+                if(family == family_binary){
+                  for(loo_i = 0; loo_i < n1; loo_i++){
+                    dtemp1 = looY[loo_i] + epsilon;
+                    dtemp2 = loo_nBinom[loo_i];
+                    dtemp2 += 2.0 * epsilon;
+                    dtemp2 -= dtemp1;
+                    LV_eta[bb*n1 + loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                  }
                 }
-              }
-              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-              mkLT(samp_Sigma, r);
-              F77_NAME(dgemm)(ntran, ytran, &n1, &r, &r, &one, tmp_n1r, &n1, samp_Sigma, &r, &zero, loo_v_z, &n1 FCONE FCONE);
 
-            }
+                for(loo_i = 0; loo_i < n1; loo_i++){
+                  LV_xi[bb*n1 + loo_i] = rnorm(0.0, sigma_xi);
+                }
 
-            // projection step
-            projGLMvc(n1, p, r, looX, looX_tilde, sigmaSq_xi, Lbeta, looCholVz, processType,
-                      loo_v_eta, loo_v_xi, loo_v_beta, loo_v_z, looD1Inv, looD1InvB1, looCholschurA1,
-                      looDInvB_pn, looDInvB_nrn, looCholschurA, tmp_n1r);
-
-            // Prediction at held-out point for each spatial-temporal process model
-            if(processType == "independent.shared"){
-
-              for(k = 0; k < r; k++){
-                F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholVz, &n1, &loo_v_z[n1*k], &incOne FCONE FCONE FCONE);    // loo_v_z = LzInv * v_z
-                z_tilde_mu[k] = F77_CALL(ddot)(&n1, looCz, &incOne, &loo_v_z[n1*k], &incOne);                            // z_tilde_mu = Czt*VzInv*v_z
-                Mdist_r[k] = pow(F77_NAME(dnrm2)(&n1, &loo_v_z[n1*k], &incOne), 2);                                      // Mdist = v_zt*VzInv*v_z
-
-                // sample z_tilde
-                dtemp1 = 0.5 * (nu_z + n1);
+                dtemp1 = 0.5 * nu_beta;
                 dtemp2 = 1.0 / dtemp1;
                 dtemp3 = rgamma(dtemp1, dtemp2);
                 dtemp1 = 1.0 / dtemp3;
-                dtemp2 = dtemp1 * (Mdist_r[k] + nu_z) / (nu_z + n1);
-                dtemp3 = sqrt(dtemp2);
-                z_tilde[k] = rnorm(0.0, dtemp3);
-                z_tilde[k] = z_tilde[k] * sqrt(z_tilde_var[0]);
-                z_tilde[k] = z_tilde[k] + z_tilde_mu[k];
-              }
+                dtemp2 = sqrt(dtemp1);
+                for(j = 0; j < p; j++){
+                  LV_beta[bb*p + j] = rnorm(0.0, dtemp2);                                                  // loo_v_beta ~ t_nu_beta(0, 1)
+                }
 
-            }else if(processType == "independent"){
-
-                for(k = 0; k < r; k++){
-                  F77_NAME(dtrsv)(lower, ntran, nunit, &n1, &looCholVz[n1n1*k], &n1, &loo_v_z[n1*k], &incOne FCONE FCONE FCONE); // loo_v_z = LzInv * v_z
-                  z_tilde_mu[k] = F77_CALL(ddot)(&n1, &looCz[n1*k], &incOne, &loo_v_z[n1*k], &incOne);                           // z_tilde_mu = Czt*VzInv*v_z
-                  Mdist_r[k] = pow(F77_NAME(dnrm2)(&n1, &loo_v_z[n1*k], &incOne), 2);                                            // Mdist = v_zt*VzInv*v_z
-
-                  // sample z_tilde
-                  dtemp1 = 0.5 * (nu_z + n1);
+                if(processType == "independent.shared"){
+                  dtemp1 = 0.5 * nu_z;
                   dtemp2 = 1.0 / dtemp1;
                   dtemp3 = rgamma(dtemp1, dtemp2);
-                  dtemp1 = 1.0 / dtemp3;
-                  dtemp2 = dtemp1 * (Mdist_r[k] + nu_z) / (nu_z + n1);
-                  dtemp3 = sqrt(dtemp2);
-                  z_tilde[k] = rnorm(0.0, dtemp3);
-                  z_tilde[k] = z_tilde[k] * sqrt(z_tilde_var[k]);
-                  z_tilde[k] = z_tilde[k] + z_tilde_mu[k];
+                  dtemp3 = 1.0 / dtemp3;
+                  dtemp3 = sqrt(dtemp3);
+                  for(k = 0; k < r; k++){
+                    for(loo_i = 0; loo_i < n1; loo_i++){
+                      LV_z[bb*n1r + k*n1 + loo_i] = rnorm(0.0, dtemp3);
+                    }
+                  }
+                }else if(processType == "independent"){
+                  for(k = 0; k < r; k++){
+                    dtemp1 = 0.5 * nu_z;
+                    dtemp2 = 1.0 / dtemp1;
+                    dtemp3 = rgamma(dtemp1, dtemp2);
+                    dtemp3 = 1.0 / dtemp3;
+                    dtemp3 = sqrt(dtemp3);
+                    for(loo_i = 0; loo_i < n1; loo_i++){
+                      LV_z[bb*n1r + k*n1 + loo_i] = rnorm(0.0, dtemp3);
+                    }
+                  }
+                }else if(processType == "multivariate"){
+                  for(k = 0; k < r; k++){
+                    for(loo_i = 0; loo_i < n1; loo_i++){
+                      tmp_n1r[k*n1 + loo_i] = rnorm(0.0, 1.0);
+                    }
+                  }
+                  rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  mkLT(samp_Sigma, r);
+                  F77_NAME(dgemm)(ntran, ytran, &n1, &r, &r, &one, tmp_n1r, &n1, samp_Sigma, &r, &zero, &LV_z[bb*n1r], &n1 FCONE FCONE);
+
+                }
+
+                // variates of the z_tilde draw, scaled below once the projection gives the scales:
+                // rgamma(0.5*(nu_z + n1), .) and the standard normal of rnorm(0, sd) = sd*norm_rand() per process
+                // (independent processes), or the Bartlett factor of the inverse-Wishart draw and r standard
+                // normals (multivariate)
+                if(processType == "independent.shared" || processType == "independent"){
+                  for(k = 0; k < r; k++){
+                    dtemp1 = 0.5 * (nu_z + n1);
+                    dtemp2 = 1.0 / dtemp1;
+                    LV_gam[bb*r + k] = rgamma(dtemp1, dtemp2);
+                    LV_nrm[bb*r + k] = norm_rand();
+                  }
+                }else if(processType == "multivariate"){
+                  rWishartBartlett(r, nu_z + n1 + 2*r, &LV_bart[bb*rr]);
+                  for(k = 0; k < r; k++){
+                    LV_nrm[bb*r + k] = norm_rand();
+                  }
+                }
+
               }
 
-            }else if(processType == "multivariate"){
+              // projection step for the block
+              projGLMvcbatch(n1, p, r, nBlock, looX, looX_tilde, sigmaSq_xi, Lbeta, looCholVz, processType,
+                             LV_eta, LV_xi, LV_beta, LV_z, looD1Inv, looD1InvB1, looCholschurA1,
+                             looDInvB_pn, looDInvB_nrn, looCholschurA, LV_tmpnr, LV_tmpn, LV_tmpp);
 
-              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &r, &one, looCholVz, &n1, loo_v_z, &n1 FCONE FCONE FCONE FCONE);          // loo_v_z = cholinv(Vz)*Z
-              F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, loo_v_z, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);   // z_tilde_mu = t(C)*inv(R)*Z
-              F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, loo_v_z, &n1, loo_v_z, &n1, &zero, Mdist_rr, &r FCONE FCONE);             // Mdist = t(Z)*inv(R)*Z
-              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Mdist_rr, &incOne);                                                           // Mdist = iwScale + t(Z)*inv(R)*Z
-              F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              F77_NAME(dpotri)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
-              F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              mkLT(Mdist_rr, r);
-              rInvWishart(r, nu_z + n1 + 2*r, Mdist_rr, samp_Sigma, tmp_rr);
-              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-              mkLT(samp_Sigma, r);
-
-              dtemp1 = sqrt(z_tilde_var[0]);
-              for(k = 0; k < r; k++){
-                tmp_r[k] = rnorm(0.0, dtemp1);
+              // LV_z <- inv(Lz)*LV_z for every process block of every draw
+              nBlockr = nBlock * r;
+              if(processType == "independent.shared" || processType == "multivariate"){
+                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &nBlockr, &one, looCholVz, &n1, LV_z, &n1 FCONE FCONE FCONE FCONE);
+              }else if(processType == "independent"){
+                for(k = 0; k < r; k++){
+                  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &nBlock, &one, &looCholVz[n1n1*k], &n1, &LV_z[n1*k], &n1r FCONE FCONE FCONE FCONE);
+                }
               }
-              F77_NAME(dgemv)(ntran, &r, &r, &one, samp_Sigma, &r, tmp_r, &incOne, &zero, z_tilde, &incOne FCONE);
-              F77_NAME(daxpy)(&r, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
 
-            }else if(processType == "multivariate2"){
+              // Prediction at held-out point for each draw of the block
+              for(bb = 0; bb < nBlock; bb++){
 
-              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &r, &one, looCholR, &n1, loo_v_z, &n1 FCONE FCONE FCONE FCONE);          // loo_v_z = cholinv(R)*Z
-              F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, loo_v_z, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);  // z_tilde_mu = t(C)*inv(R)*Z
-              F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, loo_v_z, &n1, loo_v_z, &n1, &zero, Mdist_rr, &r FCONE FCONE);            // Mdist = t(Z)*inv(R)*Z
-              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Mdist_rr, &incOne);                                                          // Mdist = iwScale + t(Z)*inv(R)*Z
-              F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              mkLT(Mdist_rr, r);
+                Zb = &LV_z[bb*n1r];
 
-              // sample z_tilde
-              dtemp1 = 0.5 * (nu_z + n1);
-              dtemp2 = 1.0 / dtemp1;
-              dtemp3 = rgamma(dtemp1, dtemp2);
-              dtemp1 = 1.0 / dtemp3;
-              dtemp3 = sqrt(dtemp1 * z_tilde_var[0]);
-              for(k = 0; k < r; k++){
-                z_tilde[k] = rnorm(0.0, dtemp3);
+                if(processType == "independent.shared" || processType == "independent"){
+
+                  for(k = 0; k < r; k++){
+                    if(processType == "independent.shared"){
+                      z_tilde_mu[k] = F77_CALL(ddot)(&n1, looCz, &incOne, &Zb[n1*k], &incOne);                        // z_tilde_mu = Czt*VzInv*v_z
+                    }else{
+                      z_tilde_mu[k] = F77_CALL(ddot)(&n1, &looCz[n1*k], &incOne, &Zb[n1*k], &incOne);
+                    }
+                    Mdist_r[k] = pow(F77_NAME(dnrm2)(&n1, &Zb[n1*k], &incOne), 2);                                    // Mdist = v_zt*VzInv*v_z
+
+                    // sample z_tilde
+                    dtemp1 = 1.0 / LV_gam[bb*r + k];
+                    dtemp2 = dtemp1 * (Mdist_r[k] + nu_z) / (nu_z + n1);
+                    dtemp3 = sqrt(dtemp2);
+                    z_tilde[k] = dtemp3 * LV_nrm[bb*r + k];                                                          // = rnorm(0.0, dtemp3)
+                    if(processType == "independent.shared"){
+                      z_tilde[k] = z_tilde[k] * sqrt(z_tilde_var[0]);
+                    }else{
+                      z_tilde[k] = z_tilde[k] * sqrt(z_tilde_var[k]);
+                    }
+                    z_tilde[k] = z_tilde[k] + z_tilde_mu[k];
+                  }
+
+                }else if(processType == "multivariate"){
+
+                  F77_NAME(dgemm)(ytran, ntran, &incOne, &r, &n1, &one, looCz, &n1, Zb, &n1, &zero, z_tilde_mu, &incOne FCONE FCONE);   // z_tilde_mu = t(C)*inv(R)*Z
+                  F77_NAME(dgemm)(ytran, ntran, &r, &r, &n1, &one, Zb, &n1, Zb, &n1, &zero, Mdist_rr, &r FCONE FCONE);                  // Mdist = t(Z)*inv(R)*Z
+                  F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, Mdist_rr, &incOne);                                                      // Mdist = iwScale + t(Z)*inv(R)*Z
+                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  F77_NAME(dpotri)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
+                  F77_NAME(dpotrf)(lower, &r, Mdist_rr, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  mkLT(Mdist_rr, r);
+                  invWishartFromBartlett(r, &LV_bart[bb*rr], Mdist_rr, samp_Sigma, tmp_rr);                                            // = rInvWishart(r, nu_z + n1 + 2r, Mdist_rr, ...)
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  mkLT(samp_Sigma, r);
+
+                  dtemp1 = sqrt(z_tilde_var[0]);
+                  for(k = 0; k < r; k++){
+                    tmp_r[k] = dtemp1 * LV_nrm[bb*r + k];                                                            // = rnorm(0.0, dtemp1)
+                  }
+                  F77_NAME(dgemv)(ntran, &r, &r, &one, samp_Sigma, &r, tmp_r, &incOne, &zero, z_tilde, &incOne FCONE);
+                  F77_NAME(daxpy)(&r, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
+
+                }
+
+                dtemp1 = F77_CALL(ddot)(&p, X_pred, &incOne, &LV_beta[bb*p], &incOne);
+                dtemp1 += F77_CALL(ddot)(&r, X_tilde_pred, &incOne, z_tilde, &incOne);
+
+                // Find predictive densities from canonical parameter dtemp2 = (X*beta + z)
+                if(family == family_poisson){
+                  dtemp2 = exp(dtemp1);
+                  loopd_val_MC[sMC + bb] = dpois(Y[loo_index], dtemp2, 1);
+                }
+
+                if(family == family_binomial){
+                  dtemp2 = inverse_logit(dtemp1);
+                  loopd_val_MC[sMC + bb] = dbinom(Y[loo_index], nBinom[loo_index], dtemp2, 1);
+                }
+
+                if(family == family_binary){
+                  dtemp2 = inverse_logit(dtemp1);
+                  loopd_val_MC[sMC + bb] = dbinom(Y[loo_index], 1.0, dtemp2, 1);
+                }
+
               }
-              // multiply chol(Mdist) * z_tilde, then add z_tilde_mu
-              F77_NAME(dgemv)(ntran, &r, &r, &one, Mdist_rr, &r, z_tilde, &incOne, &zero, tmp_r, &incOne FCONE);
-              F77_NAME(dcopy)(&r, tmp_r, &incOne, z_tilde, &incOne);
-              F77_NAME(daxpy)(&r, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
 
             }
 
-            dtemp1 = F77_CALL(ddot)(&p, X_pred, &incOne, loo_v_beta, &incOne);
-            dtemp1 += F77_CALL(ddot)(&r, X_tilde_pred, &incOne, z_tilde, &incOne);
-
-            // Find predictive densities from canonical parameter dtemp2 = (X*beta + z)
-            if(family == family_poisson){
-              dtemp2 = exp(dtemp1);
-              loopd_val_MC[sMC] = dpois(Y[loo_index], dtemp2, 1);
-            }
-
-            if(family == family_binomial){
-              dtemp2 = inverse_logit(dtemp1);
-              loopd_val_MC[sMC] = dbinom(Y[loo_index], nBinom[loo_index], dtemp2, 1);
-            }
-
-            if(family == family_binary){
-              dtemp2 = inverse_logit(dtemp1);
-              loopd_val_MC[sMC] = dbinom(Y[loo_index], 1.0, dtemp2, 1);
-            }
+            REAL(VECTOR_ELT(loopd_out_l, e))[loo_index] = logMeanExp(loopd_val_MC, loopd_nMC);
 
           }
-
-          REAL(loopd_out_r)[loo_index] = logMeanExp(loopd_val_MC, loopd_nMC);
 
         }
 
@@ -804,20 +881,28 @@ extern "C" {
         R_chk_free(looX_tilde);
         R_chk_free(X_pred);
         R_chk_free(X_tilde_pred);
-        R_chk_free(looVz);
         R_chk_free(looCholVz);
-        R_chk_free(looCholR);
         R_chk_free(looCz);
         R_chk_free(looXtX);
         R_chk_free(looXTildetX);
-        R_chk_free(looCholIplusXTildeVzXTildet);
         R_chk_free(looD1Inv);
         R_chk_free(looD1InvB1);
         R_chk_free(looCholschurA1);
         R_chk_free(looDInvB_pn);
         R_chk_free(looDInvB_nrn);
         R_chk_free(looCholschurA);
-        R_chk_free(tmp_n1n1r);
+        R_chk_free(del_PB);
+        R_chk_free(del_QB);
+        R_chk_free(del_QBK);
+        R_chk_free(del_LP);
+        R_chk_free(del_LQ);
+        R_chk_free(del_WB);
+        R_chk_free(del_Z);
+        R_chk_free(del_H);
+        R_chk_free(del_HK);
+        R_chk_free(del_A2);
+        R_chk_free(del_tmp_np);
+        R_chk_free(del_w);
         R_chk_free(tmp_n11);
         R_chk_free(tmp_n1r);
         R_chk_free(loo_v_eta);
@@ -831,6 +916,16 @@ extern "C" {
         R_chk_free(Mdist_r);
         R_chk_free(Mdist_rr);
         R_chk_free(tmp_r);
+        R_chk_free(LV_eta);
+        R_chk_free(LV_xi);
+        R_chk_free(LV_tmpn);
+        R_chk_free(LV_z);
+        R_chk_free(LV_tmpnr);
+        R_chk_free(LV_beta);
+        R_chk_free(LV_tmpp);
+        R_chk_free(LV_gam);
+        R_chk_free(LV_nrm);
+        R_chk_free(LV_bart);
 
       }
 
@@ -870,16 +965,14 @@ extern "C" {
         double *cvY = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cvY, nnkmax);                   // Store block-deleted Y
         double *cv_nBinom = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_nBinom, nnkmax);       // Store block-deleted nBinom
         double *cvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvX, nnkmaxp);                 // Store block-deleted X
-        double *cvX_tilde = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvX_tilde, nnkmaxr);     // Store block-deleted X
+        double *cvX_tilde = (double *) R_chk_calloc(nnkmaxr, sizeof(double)); zeros(cvX_tilde, nnkmaxr);     // Store block-deleted X_tilde
         double *X_pred = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(X_pred, nkmaxp);             // Store held-out X
         double *X_tilde_pred = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(X_tilde_pred, nkmaxr); // Store held-out X
         double *Y_pred = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(Y_pred, nkmax);               // Store held-out Y
         double *nBinom_pred = (double *) R_chk_calloc(nkmax, sizeof(double)); zeros(nBinom_pred, nkmax);     // Store held-out X
 
         // Set-up storage for pre-processing for cross-validated data
-        double *cvVz = NULL;
         double *cvCholVz = NULL;
-        double *cvCholR = NULL;
         double *cvCz = NULL;
         double *z_tilde_cov = NULL;
         double *z_tilde_mu = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(z_tilde_mu, nkmaxr);
@@ -890,25 +983,15 @@ extern "C" {
 
           if(processType == "independent.shared" || processType == "multivariate"){
 
-            cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);
             cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);
             cvCz = (double *) R_chk_calloc(nnkmaxnkmax, sizeof(double)); zeros(cvCz, nnkmaxnkmax);
             z_tilde_cov = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(z_tilde_cov, nknkmax);
 
           }else if(processType == "independent"){
 
-            cvVz = (double *) R_chk_calloc(nnknnkmaxr, sizeof(double)); zeros(cvVz, nnknnkmaxr);
             cvCholVz = (double *) R_chk_calloc(nnknnkmaxr, sizeof(double)); zeros(cvCholVz, nnknnkmaxr);
             cvCz = (double *) R_chk_calloc(nnkmaxnkmaxr, sizeof(double)); zeros(cvCz, nnkmaxnkmaxr);
             z_tilde_cov = (double *) R_chk_calloc(nknkmaxr, sizeof(double)); zeros(z_tilde_cov, nknkmaxr);
-
-          }else if(processType == "multivariate2"){
-
-            cvVz = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvVz, nnkmaxrnnkmaxr);
-            cvCholVz = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvCholVz, nnkmaxrnnkmaxr);
-            cvCholR = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholR, nnknnkmax);
-            cvCz = (double *) R_chk_calloc(nnkmaxnkmax, sizeof(double)); zeros(cvCz, nnkmaxnkmax);
-            z_tilde_cov = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(z_tilde_cov, nknkmax);
 
           }
 
@@ -916,7 +999,6 @@ extern "C" {
 
         double *cvXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cvXtX, pp);
         double *cvXTildetX = (double *) R_chk_calloc(nnkmaxrp, sizeof(double)); zeros(cvXTildetX, nnkmaxrp);
-        double *cvCholIplusXTildeVzXTildet = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholIplusXTildeVzXTildet, nnknnkmax);
 
         // set-up pre-processing memory allocations for priming on leave-one-out data
         double *cvD1Inv = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvD1Inv, nnkmaxrnnkmaxr);
@@ -925,12 +1007,27 @@ extern "C" {
         double *cvDInvB_pn = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvDInvB_pn, nnkmaxp);
         double *cvDInvB_nrn = (double *) R_chk_calloc(nnknnkmaxr, sizeof(double)); zeros(cvDInvB_nrn, nnknnkmaxr);
         double *cvCholschurA = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholschurA, nnknnkmax);
-        double *tmp_n1n1r = (double *) R_chk_calloc(nnknnkmaxr, sizeof(double)); zeros(tmp_n1n1r, nnknnkmaxr);
         double *tmp_n11 = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(tmp_n11, nnkmax);
         double *tmp_n1r = (double *) R_chk_calloc(nnkmaxr, sizeof(double)); zeros(tmp_n1r, nnkmaxr);
         double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);
         double *tmp_nknkmax = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(tmp_nknkmax, nknkmax);
         double *tmp_nkmaxr = (double *) R_chk_calloc(nkmaxr, sizeof(double)); zeros(tmp_nkmaxr, nkmaxr);
+
+        // Workspace for the deletion update of the pre-processing (cholSchurGLMvcDel)
+        int nnkmax_del = n * nkmax;
+        int nrnkmax_del = nr * nkmax;
+        double *del_PB = (double *) R_chk_calloc(nnkmax_del, sizeof(double)); zeros(del_PB, nnkmax_del);        // n x max(nk)
+        double *del_QB = (double *) R_chk_calloc(nnkmax_del, sizeof(double)); zeros(del_QB, nnkmax_del);
+        double *del_QBK = (double *) R_chk_calloc(nnkmax_del, sizeof(double)); zeros(del_QBK, nnkmax_del);
+        double *del_LP = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(del_LP, nknkmax);              // max(nk) x max(nk)
+        double *del_LQ = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(del_LQ, nknkmax);
+        double *del_WB = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(del_WB, nkmaxp);                // max(nk) x p
+        double *del_Z = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(del_Z, nkmaxp);
+        double *del_H = (double *) R_chk_calloc(nrnkmax_del, sizeof(double)); zeros(del_H, nrnkmax_del);        // nr x max(nk)
+        double *del_HK = (double *) R_chk_calloc(nrnkmax_del, sizeof(double)); zeros(del_HK, nrnkmax_del);
+        double *del_A2 = (double *) R_chk_calloc(nrnkmax_del, sizeof(double)); zeros(del_A2, nrnkmax_del);
+        double *del_tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(del_tmp_np, np);
+        double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
         // Set-up storage for sampling for leave-one-out model fit
         double *cv_v_eta = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_eta, nnkmax);
@@ -945,6 +1042,24 @@ extern "C" {
         int sMC_CV = 0;
         int loopd_nMC_nkmax = loopd_nMC * nkmax;
         double *loopd_val_MC_CV = (double *) R_chk_calloc(loopd_nMC_nkmax, sizeof(double)); zeros(loopd_val_MC_CV, loopd_nMC_nkmax);
+
+        // blocks of nBlockMax Monte Carlo draws
+        int nnkBlockMax = nnkmax * nBlockMax;
+        int nnkrBlockMax = nnkmaxr * nBlockMax;
+        int pBlockMax_cv = p * nBlockMax;
+        int rBlockMax_cv = r * nBlockMax;
+        int rrBlockMax_cv = rr * nBlockMax;
+        int nkrBlockMax = nkmaxr * nBlockMax;
+        double *CV_eta = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_eta, nnkBlockMax);
+        double *CV_xi = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_xi, nnkBlockMax);
+        double *CV_tmpn = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_tmpn, nnkBlockMax);
+        double *CV_z = (double *) R_chk_calloc(nnkrBlockMax, sizeof(double)); zeros(CV_z, nnkrBlockMax);
+        double *CV_tmpnr = (double *) R_chk_calloc(nnkrBlockMax, sizeof(double)); zeros(CV_tmpnr, nnkrBlockMax);
+        double *CV_beta = (double *) R_chk_calloc(pBlockMax_cv, sizeof(double)); zeros(CV_beta, pBlockMax_cv);
+        double *CV_tmpp = (double *) R_chk_calloc(pBlockMax_cv, sizeof(double)); zeros(CV_tmpp, pBlockMax_cv);
+        double *CV_gam = (double *) R_chk_calloc(rBlockMax_cv, sizeof(double)); zeros(CV_gam, rBlockMax_cv);
+        double *CV_nrm = (double *) R_chk_calloc(nkrBlockMax, sizeof(double)); zeros(CV_nrm, nkrBlockMax);
+        double *CV_bart = (double *) R_chk_calloc(rrBlockMax_cv, sizeof(double)); zeros(CV_bart, rrBlockMax_cv);
 
         GetRNGstate();
 
@@ -986,8 +1101,13 @@ extern "C" {
           if(processType == "independent.shared" || processType == "multivariate"){
 
             // spatial-temporal covariance matrix
-            copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);
-            cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_n11);
+            if(cvUpdate){
+              cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_n11);
+            }else{
+              copyMatrixDelRowColBlock(Vz, n, n, cvCholVz, start_index, end_index, start_index, end_index);
+              F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
+              mkLT(cvCholVz, nnk);
+            }
 
             // Pre-processing for spatial prediction
             copyMatrixColDelRowBlock(Vz, n, n, cvCz, start_index, end_index, start_index, end_index);                          // cvCz = Vz[-ids, ids]
@@ -1003,8 +1123,13 @@ extern "C" {
             for(k = 0; k < r; k++){
 
               // spatial-temporal covariance matrix
-              copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvVz[nnknnk * k], start_index, end_index, start_index, end_index);
-              cholBlockDelUpdate(n, &cholVz[nn * k], start_index, end_index, &cvCholVz[nnknnk * k], tmp_nnknnkmax, tmp_n11);
+              if(cvUpdate){
+                cholBlockDelUpdate(n, &cholVz[nn * k], start_index, end_index, &cvCholVz[nnknnk * k], tmp_nnknnkmax, tmp_n11);
+              }else{
+                copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvCholVz[nnknnk * k], start_index, end_index, start_index, end_index);
+                F77_NAME(dpotrf)(lower, &nnk, &cvCholVz[nnknnk * k], &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
+                mkLT(&cvCholVz[nnknnk * k], nnk);
+              }
 
               // Pre-processing for spatial prediction
               copyMatrixColDelRowBlock(&Vz[nn * k], n, n, &cvCz[nnk * nk * k], start_index, end_index, start_index, end_index);
@@ -1017,254 +1142,297 @@ extern "C" {
 
             }
 
-          }else if(processType == "multivariate2"){
+          }
 
-            // spatial-temporal covariance matrix
-            copyMatrixDelRowColBlock_vc(Vz, nr, nr, cvVz, start_index, end_index, start_index, end_index, n);
-            cholBlockDelUpdate(n, cholR, start_index, end_index, cvCholR, tmp_nnknnkmax, tmp_n11);
-            chol_kron(r, nnk, chol_iwScale, cvCholR, cvCholVz);
-            mkLT(cvCholVz, nnkr);
+          // Pre-processing for projGLMvc() on the block-deleted data
+          int cvDirect = !cvUpdate;
+          if(cvUpdate){
+            // by deletion updates of the full-data outputs (O(n^2 r^2 nk)); chol(I/sigmaSqxi + Q) is block-deleted
+            // first and then downdated in place (nk rank-1 downdates)
+            cholBlockDelUpdate(n, cholschurA, start_index, end_index, cvCholschurA, tmp_nnknnkmax, tmp_n11);
+            cvDirect = (cholSchurGLMvcDel(n, p, r, start_index, end_index, X, X_tilde, cholIplusXTildeVzXTildet,
+                                          D1Inv, D1InvB1, DInvB_pn, DInvB_nrn, VbetaInv,
+                                          cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA,
+                                          del_PB, del_QB, del_QBK, del_LP, del_LQ, del_WB, del_Z, del_H, del_HK, del_A2,
+                                          del_tmp_np, del_w) != 0);
+          }
+          if(cvDirect){
 
-            // Pre-processing for spatial prediction
-            copyMatrixColDelRowBlock(R, n, n, cvCz, start_index, end_index, start_index, end_index);
-            F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nk, &one, cvCholR, &nnk, cvCz, &nnk FCONE FCONE FCONE FCONE);
-            F77_NAME(dgemm)(ytran, ntran, &nk, &nk, &nnk, &one, cvCz, &nnk, cvCz, &nnk, &zero, tmp_nknkmax, &nk FCONE FCONE);
-            copyMatrixRowColBlock(R, n, n, z_tilde_cov, start_index, end_index, start_index, end_index);
-            F77_NAME(daxpy)(&nknk, &negOne, tmp_nknkmax, &incOne, z_tilde_cov, &incOne);
-            F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_schur dpotrf failed\n");}
-            mkLT(z_tilde_cov, nk);
+            // directly on the block-deleted data (O(n^3 r^2)): requested (cvUpdate = 0), or the deletion update was
+            // not numerically positive definite. In the latter case the block-deleted Cholesky factor of
+            // I + XTilde*Vz*t(XTilde) is the block-deletion update of the full-data factor.
+            int cvVz_size = nnknnk;
+            if(processType == "independent"){
+              cvVz_size = nnknnk * r;
+            }
+            int nnknnkr = nnknnk * r;
+            double *cvVz = (double *) R_chk_calloc(cvVz_size, sizeof(double)); zeros(cvVz, cvVz_size);
+            double *cvCholIplusXTildeVzXTildet = (double *) R_chk_calloc(nnknnk, sizeof(double)); zeros(cvCholIplusXTildeVzXTildet, nnknnk);
+            double *tmp_n1n1r = (double *) R_chk_calloc(nnknnkr, sizeof(double)); zeros(tmp_n1n1r, nnknnkr);
+
+            if(processType == "independent.shared" || processType == "multivariate"){
+              copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);
+            }else if(processType == "independent"){
+              for(k = 0; k < r; k++){
+                copyMatrixDelRowColBlock(&Vz[nn * k], n, n, &cvVz[nnknnk * k], start_index, end_index, start_index, end_index);
+              }
+            }
+            if(cvUpdate){
+              cholBlockDelUpdate(n, cholIplusXTildeVzXTildet, start_index, end_index, cvCholIplusXTildeVzXTildet, tmp_nnknnkmax, tmp_n11);
+            }else{
+              rmul_Vz_XTildeT(nnk, r, cvX_tilde, cvVz, tmp_n1n1r, processType);                                          // Vz*t(X_tilde)
+              lmulm_XTilde_VC(ntran, nnk, r, nnk, cvX_tilde, tmp_n1n1r, cvCholIplusXTildeVzXTildet);                    // X_tilde*Vz*t(X_tilde)
+              for(cv_i = 0; cv_i < nnk; cv_i++){
+                cvCholIplusXTildeVzXTildet[cv_i*nnk + cv_i] += 1.0;
+              }
+              F77_NAME(dpotrf)(lower, &nnk, cvCholIplusXTildeVzXTildet, &nnk, &info FCONE);
+              if(info != 0){perror("c++ error: capacitance matrix dpotrf failed\n");}
+              mkLT(cvCholIplusXTildeVzXTildet, nnk);
+            }
+
+            primingGLMvc(nnk, p, r, cvX, cvX_tilde, cvXtX, cvXTildetX, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
+                         sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
+
+            R_chk_free(cvVz);
+            R_chk_free(cvCholIplusXTildeVzXTildet);
+            R_chk_free(tmp_n1n1r);
 
           }
 
-          // Constructing leave-one-out Cholesky factor for I + XTilde*Vz*t(XTilde)
-          // It can be shown that it is equivalent to updating Cholesky factor
-          // after removing i-th row and i-th column blocks from original chol(I + XTilde*Vz*t(XTilde))
-          cholBlockDelUpdate(n, cholIplusXTildeVzXTildet, start_index, end_index, cvCholIplusXTildeVzXTildet, tmp_nnknnkmax, tmp_n11);
+          // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
+          for(e = 0; e < nEps; e++){
 
-          primingGLMvc(nnk, p, r, cvX, cvX_tilde, cvXtX, cvXTildetX, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
-                       sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
+            epsilon = epsVec[e];
 
-          // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
-          for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV++){
+            // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
+            int nBlockr = 0;
+            double *Zb = NULL;
 
-            if(family == family_poisson){
-              for(cv_i = 0; cv_i < nnk; cv_i++){
-                dtemp1 = cvY[cv_i] + epsilon;
-                dtemp2 = 1.0;
-                cv_v_eta[cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
-              }
-            }
+            for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV += nBlockMax){
 
-            if(family == family_binomial){
-              for(cv_i = 0; cv_i < nnk; cv_i++){
-                dtemp1 = cvY[cv_i] + epsilon;
-                dtemp2 = cv_nBinom[cv_i];
-                dtemp2 += 2.0 * epsilon;
-                dtemp2 -= dtemp1;
-                cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-              }
-            }
+              nBlock = std::min(nBlockMax, loopd_nMC - sMC_CV);
 
-            if(family == family_binary){
-              for(cv_i = 0; cv_i < nnk; cv_i++){
-                dtemp1 = cvY[cv_i] + epsilon;
-                dtemp2 = cv_nBinom[cv_i];
-                dtemp2 += 2.0 * epsilon;
-                dtemp2 -= dtemp1;
-                cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-              }
-            }
+              // random variates of the block, in the order of a draw-by-draw loop
+              for(bb = 0; bb < nBlock; bb++){
 
-            dtemp1 = 0.5 * nu_beta;
-            dtemp2 = 1.0 / dtemp1;
-            dtemp3 = rgamma(dtemp1, dtemp2);
-            dtemp3 = 1.0 / dtemp3;
-            dtemp3 = sqrt(dtemp3);
-            for(j = 0; j < p; j++){
-              cv_v_beta[j] = rnorm(0.0, dtemp3);
-            }
 
-            for(cv_i = 0; cv_i < nnk; cv_i++){
-              cv_v_xi[cv_i] = rnorm(0.0, sigma_xi);
-            }
-
-            if(processType == "independent.shared"){
-              dtemp1 = 0.5 * nu_z;
-              dtemp2 = 1.0 / dtemp1;
-              dtemp3 = rgamma(dtemp1, dtemp2);
-              dtemp3 = 1.0 / dtemp3;
-              dtemp3 = sqrt(dtemp3);
-              for(k = 0; k < r; k++){
-                for(cv_i = 0; cv_i < nnk; cv_i++){
-                  cv_v_z[k*nnk + cv_i] = rnorm(0.0, dtemp3);
+                if(family == family_poisson){
+                  for(cv_i = 0; cv_i < nnk; cv_i++){
+                    dtemp1 = cvY[cv_i] + epsilon;
+                    dtemp2 = 1.0;
+                    CV_eta[bb*nnk + cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+                  }
                 }
-              }
-            }else if(processType == "independent"){
-              for(k = 0; k < r; k++){
-                dtemp1 = 0.5 * nu_z;
+
+                if(family == family_binomial){
+                  for(cv_i = 0; cv_i < nnk; cv_i++){
+                    dtemp1 = cvY[cv_i] + epsilon;
+                    dtemp2 = cv_nBinom[cv_i];
+                    dtemp2 += 2.0 * epsilon;
+                    dtemp2 -= dtemp1;
+                    CV_eta[bb*nnk + cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                  }
+                }
+
+                if(family == family_binary){
+                  for(cv_i = 0; cv_i < nnk; cv_i++){
+                    dtemp1 = cvY[cv_i] + epsilon;
+                    dtemp2 = cv_nBinom[cv_i];
+                    dtemp2 += 2.0 * epsilon;
+                    dtemp2 -= dtemp1;
+                    CV_eta[bb*nnk + cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                  }
+                }
+
+                dtemp1 = 0.5 * nu_beta;
                 dtemp2 = 1.0 / dtemp1;
                 dtemp3 = rgamma(dtemp1, dtemp2);
                 dtemp3 = 1.0 / dtemp3;
                 dtemp3 = sqrt(dtemp3);
+                for(j = 0; j < p; j++){
+                  CV_beta[bb*p + j] = rnorm(0.0, dtemp3);
+                }
+
                 for(cv_i = 0; cv_i < nnk; cv_i++){
-                  cv_v_z[k*nnk + cv_i] = rnorm(0.0, dtemp3);
+                  CV_xi[bb*nnk + cv_i] = rnorm(0.0, sigma_xi);
                 }
-              }
-            }else if(processType == "multivariate"){
 
-              for(k = 0; k < r; k++){
-                for(cv_i = 0; cv_i < nnk; cv_i++){
-                  tmp_n1r[k*nnk + cv_i] = rnorm(0.0, 1.0);
-                }
-              }
-              rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-              mkLT(samp_Sigma, r);
-              F77_NAME(dgemm)(ntran, ytran, &nnk, &r, &r, &one, tmp_n1r, &nnk, samp_Sigma, &r, &zero, cv_v_z, &nnk FCONE FCONE);
+                if(processType == "independent.shared"){
+                  dtemp1 = 0.5 * nu_z;
+                  dtemp2 = 1.0 / dtemp1;
+                  dtemp3 = rgamma(dtemp1, dtemp2);
+                  dtemp3 = 1.0 / dtemp3;
+                  dtemp3 = sqrt(dtemp3);
+                  for(k = 0; k < r; k++){
+                    for(cv_i = 0; cv_i < nnk; cv_i++){
+                      CV_z[bb*nnkr + k*nnk + cv_i] = rnorm(0.0, dtemp3);
+                    }
+                  }
+                }else if(processType == "independent"){
+                  for(k = 0; k < r; k++){
+                    dtemp1 = 0.5 * nu_z;
+                    dtemp2 = 1.0 / dtemp1;
+                    dtemp3 = rgamma(dtemp1, dtemp2);
+                    dtemp3 = 1.0 / dtemp3;
+                    dtemp3 = sqrt(dtemp3);
+                    for(cv_i = 0; cv_i < nnk; cv_i++){
+                      CV_z[bb*nnkr + k*nnk + cv_i] = rnorm(0.0, dtemp3);
+                    }
+                  }
+                }else if(processType == "multivariate"){
 
-            }else if(processType == "multivariate2"){
-              for(k = 0; k < r; k++){
-                dtemp1 = 0.5 * nu_z;
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp3 = 1.0 / dtemp3;
-                dtemp3 = sqrt(dtemp3);
-                for(cv_i = 0; cv_i < nnk; cv_i++){
-                  cv_v_z[k*nnk + cv_i] = rnorm(0.0, dtemp3);
+                  for(k = 0; k < r; k++){
+                    for(cv_i = 0; cv_i < nnk; cv_i++){
+                      tmp_n1r[k*nnk + cv_i] = rnorm(0.0, 1.0);
+                    }
+                  }
+                  rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  mkLT(samp_Sigma, r);
+                  F77_NAME(dgemm)(ntran, ytran, &nnk, &r, &r, &one, tmp_n1r, &nnk, samp_Sigma, &r, &zero, &CV_z[bb*nnkr], &nnk FCONE FCONE);
+
+                }
+
+                // variates of the z_tilde draws, scaled below once the projection gives the scales:
+                // per process rgamma(0.5*(nu_z + nnk), .) and the nk standard normals of rnorm(0, sd) = sd*norm_rand()
+                // (independent processes), or the Bartlett factor of the inverse-Wishart draw and nk x r standard
+                // normals (multivariate)
+                if(processType == "independent.shared" || processType == "independent"){
+                  for(k = 0; k < r; k++){
+                    dtemp1 = 0.5 * (nu_z + nnk);
+                    dtemp2 = 1.0 / dtemp1;
+                    CV_gam[bb*r + k] = rgamma(dtemp1, dtemp2);
+                    for(cv_i = 0; cv_i < nk; cv_i++){
+                      CV_nrm[bb*nkmaxr + k*nk + cv_i] = norm_rand();
+                    }
+                  }
+                }else if(processType == "multivariate"){
+                  rWishartBartlett(r, nu_z + nnk + 2*r, &CV_bart[bb*rr]);
+                  for(k = 0; k < r; k++){
+                    for(cv_i = 0; cv_i < nk; cv_i++){
+                      CV_nrm[bb*nkmaxr + k*nk + cv_i] = norm_rand();                                       // = rnorm(0.0, 1.0)
+                    }
+                  }
+                }
+
+              }
+
+              // projection step for the block
+              projGLMvcbatch(nnk, p, r, nBlock, cvX, cvX_tilde, sigmaSq_xi, Lbeta, cvCholVz, processType,
+                             CV_eta, CV_xi, CV_beta, CV_z, cvD1Inv, cvD1InvB1, cvCholschurA1,
+                             cvDInvB_pn, cvDInvB_nrn, cvCholschurA, CV_tmpnr, CV_tmpn, CV_tmpp);
+
+              // CV_z <- inv(Lz)*CV_z for every process block of every draw
+              nBlockr = nBlock * r;
+              if(processType == "independent.shared" || processType == "multivariate"){
+                F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nBlockr, &one, cvCholVz, &nnk, CV_z, &nnk FCONE FCONE FCONE FCONE);
+              }else if(processType == "independent"){
+                for(k = 0; k < r; k++){
+                  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nBlock, &one, &cvCholVz[nnknnk * k], &nnk, &CV_z[nnk * k], &nnkr FCONE FCONE FCONE FCONE);
                 }
               }
+
+              // Prediction at held-out points for each draw of the block
+              for(bb = 0; bb < nBlock; bb++){
+
+                Zb = &CV_z[bb*nnkr];
+
+                if(processType == "independent.shared"){
+
+                  F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, Zb, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(Cz)*inv(Vz)*v_z
+                  for(k = 0; k < r; k++){
+                    PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &Zb[nnk * k], &incOne), 2);
+
+                    // sample z_tilde
+                    dtemp2 = 1.0 / CV_gam[bb*r + k];
+                    dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
+                    dtemp3 = dtemp1 * dtemp2;
+                    dtemp1 = sqrt(dtemp3);
+                    for(cv_i = 0; cv_i < nk; cv_i++){
+                      z_tilde[k*nk + cv_i] = dtemp1 * CV_nrm[bb*nkmaxr + k*nk + cv_i];                                 // = rnorm(0.0, dtemp1)
+                    }
+                  }
+                  F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+                  F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+                  F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
+
+                }else if(processType == "independent"){
+
+                  for(k = 0; k < r; k++){
+                    F77_NAME(dgemv)(ytran, &nnk, &nk, &one, &cvCz[nnk * nk * k], &nnk, &Zb[nnk * k], &incOne, &zero, &z_tilde_mu[nk * k], &incOne FCONE);
+                    PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &Zb[nnk * k], &incOne), 2);
+
+                    // sample z_tilde
+                    dtemp2 = 1.0 / CV_gam[bb*r + k];
+                    dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
+                    dtemp3 = dtemp1 * dtemp2;
+                    dtemp1 = sqrt(dtemp3);
+                    for(cv_i = 0; cv_i < nk; cv_i++){
+                      z_tilde[k*nk + cv_i] = dtemp1 * CV_nrm[bb*nkmaxr + k*nk + cv_i];                                 // = rnorm(0.0, dtemp1)
+                    }
+                    F77_NAME(dgemv)(ntran, &nk, &nk, &one, &z_tilde_cov[nknk * k], &nk, &z_tilde[nk * k], &incOne, &zero, &tmp_nkmaxr[nk * k], &incOne FCONE);
+                  }
+                  F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
+                  F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
+
+                }else if(processType == "multivariate"){
+
+                  F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, Zb, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
+                  F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, Zb, &nnk, Zb, &nnk, &zero, PCM_dist, &r FCONE FCONE);          // PCM_dist <- t(v_z)*inv(R)*v_z
+                  F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                 // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
+                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  F77_NAME(dpotri)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
+                  F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
+                  mkLT(PCM_dist, r);
+                  invWishartFromBartlett(r, &CV_bart[bb*rr], PCM_dist, samp_Sigma, tmp_rr);                                      // = rInvWishart(r, nu_z + nnk + 2r, PCM_dist, ...)
+                  F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+                  mkLT(samp_Sigma, r);
+
+                  for(k = 0; k < r; k++){
+                    for(cv_i = 0; cv_i < nk; cv_i++){
+                      z_tilde[k*nk + cv_i] = CV_nrm[bb*nkmaxr + k*nk + cv_i];
+                    }
+                  }
+                  F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
+                  F77_NAME(dgemm)(ntran, ytran, &nk, &r, &r, &one, tmp_nkmaxr, &nk, samp_Sigma, &r, &zero, z_tilde, &nk FCONE FCONE);
+                  F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
+
+                }
+
+                // Find canonical parameter (X*beta + X_tilde*z_tilde)
+                lmulm_XTilde_VC(ntran, nk, r, 1, X_tilde_pred, z_tilde, tmp_nkmaxr);
+                F77_NAME(dgemv)(ntran, &nk, &p, &one, X_pred, &nk, &CV_beta[bb*p], &incOne, &one, tmp_nkmaxr, &incOne FCONE);
+
+                // Find CV-LOO-PD
+                if(family == family_poisson){
+                  for(cv_i = 0; cv_i < nk; cv_i++){
+                    dtemp1 = exp(tmp_nkmaxr[cv_i]);
+                    loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dpois(Y_pred[cv_i], dtemp1, 1);
+                  }
+                }
+
+                if(family == family_binomial){
+                  for(cv_i = 0; cv_i < nk; cv_i++){
+                    dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
+                    loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dbinom(Y_pred[cv_i], nBinom_pred[cv_i], dtemp1, 1);
+                  }
+                }
+
+                if(family == family_binary){
+                  for(cv_i = 0; cv_i < nk; cv_i++){
+                    dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
+                    loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dbinom(Y_pred[cv_i], 1.0, dtemp1, 1);
+                  }
+                }
+
+              }
+
             }
 
-            // projection step
-            projGLMvc(nnk, p, r, cvX, cvX_tilde, sigmaSq_xi, Lbeta, cvCholVz, processType,
-                      cv_v_eta, cv_v_xi, cv_v_beta, cv_v_z, cvD1Inv, cvD1InvB1, cvCholschurA1,
-                      cvDInvB_pn, cvDInvB_nrn, cvCholschurA, tmp_n1r);
-
-            // Prediction at held-out point for each spatial-temporal process model
-            if(processType == "independent.shared"){
-
-              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholVz, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);  // cv_v_z <- inv(Lz)*v_z
-              F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(Cz)*inv(Vz)*v_z
-              for(k = 0; k < r; k++){
-                PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &cv_v_z[nnk * k], &incOne), 2);
-
-                // sample z_tilde
-                dtemp1 = 0.5 * (nu_z + nnk);
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp2 = 1.0 / dtemp3;
-                dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
-                dtemp3 = dtemp1 * dtemp2;
-                dtemp1 = sqrt(dtemp3);
-                for(cv_i = 0; cv_i < nk; cv_i++){
-                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
-                }
-              }
-              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
-              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
-              F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
-
-            }else if(processType == "independent"){
-
-              for(k = 0; k < r; k++){
-                F77_NAME(dtrsv)(lower, ntran, nunit, &nnk, &cvCholVz[nnknnk * k], &nnk, &cv_v_z[nnk * k], &incOne FCONE FCONE FCONE);
-                F77_NAME(dgemv)(ytran, &nnk, &nk, &one, &cvCz[nnk * nk * k], &nnk, &cv_v_z[nnk * k], &incOne, &zero, &z_tilde_mu[nk * k], &incOne FCONE);
-                PCM_dist[0] = pow(F77_NAME(dnrm2)(&nnk, &cv_v_z[nnk * k], &incOne), 2);
-
-                // sample z_tilde
-                dtemp1 = 0.5 * (nu_z + nnk);
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp2 = 1.0 / dtemp3;
-                dtemp1 = (PCM_dist[0] + nu_z) / (nu_z + nnk);
-                dtemp3 = dtemp1 * dtemp2;
-                dtemp1 = sqrt(dtemp3);
-                for(cv_i = 0; cv_i < nk; cv_i++){
-                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
-                }
-                F77_NAME(dgemv)(ntran, &nk, &nk, &one, &z_tilde_cov[nknk * k], &nk, &z_tilde[nk * k], &incOne, &zero, &tmp_nkmaxr[nk * k], &incOne FCONE);
-              }
-              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, tmp_nkmaxr, &incOne);
-              F77_NAME(dcopy)(&nkr, tmp_nkmaxr, &incOne, z_tilde, &incOne);
-
-            }else if(processType == "multivariate"){
-
-              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholVz, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);  // cv_v_z <- invchol(R)*v_z
-              F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
-              F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, cv_v_z, &nnk, cv_v_z, &nnk, &zero, PCM_dist, &r FCONE FCONE);     // PCM_dist <- t(v_z)*inv(R)*v_z
-              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                    // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
-              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              F77_NAME(dpotri)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotri failed\n");}
-              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              mkLT(PCM_dist, r);
-              rInvWishart(r, nu_z + nnk + 2*r, PCM_dist, samp_Sigma, tmp_rr);
-              F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-              mkLT(samp_Sigma, r);
-
-              for(k = 0; k < r; k++){
-                for(cv_i = 0; cv_i < nk; cv_i++){
-                  z_tilde[k*nk + cv_i] = rnorm(0.0, 1.0);
-                }
-              }
-              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
-              F77_NAME(dgemm)(ntran, ytran, &nk, &r, &r, &one, tmp_nkmaxr, &nk, samp_Sigma, &r, &zero, z_tilde, &nk FCONE FCONE);
-              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
-
-            }else if(processType == "multivariate2"){
-
-              F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &r, &one, cvCholR, &nnk, cv_v_z, &nnk FCONE FCONE FCONE FCONE);   // cv_v_z <- invchol(R)*v_z
-              F77_NAME(dgemm)(ytran, ntran, &nk, &r, &nnk, &one, cvCz, &nnk, cv_v_z, &nnk, &zero, z_tilde_mu, &nk FCONE FCONE);   // z_tilde_mu <- t(C)*inv(R)*v_z
-              F77_NAME(dgemm)(ytran, ntran, &r, &r, &nnk, &one, cv_v_z, &nnk, cv_v_z, &nnk, &zero, PCM_dist, &r FCONE FCONE);     // PCM_dist <- t(v_z)*inv(R)*v_z
-              F77_NAME(daxpy)(&rr, &one, iwScale, &incOne, PCM_dist, &incOne);                                                    // PCM_dist <- iwScale + t(v_z)*inv(R)*v_z
-              F77_NAME(dpotrf)(lower, &r, PCM_dist, &r, &info FCONE); if(info != 0){perror("c++ error: post_iwScale dpotrf failed\n");}
-              mkLT(PCM_dist, r);
-              for(k = 0; k < r; k++){
-                dtemp1 = 0.5 * (nu_z + nnk);
-                dtemp2 = 1.0 / dtemp1;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                dtemp2 = 1.0 / dtemp3;
-                dtemp1 = sqrt(dtemp3);
-                for(cv_i = 0; cv_i < nk; cv_i++){
-                  z_tilde[k*nk + cv_i] = rnorm(0.0, dtemp1);
-                }
-              }
-              F77_NAME(dgemm)(ntran, ntran, &nk, &r, &nk, &one, z_tilde_cov, &nk, z_tilde, &nk, &zero, tmp_nkmaxr, &nk FCONE FCONE);
-              F77_NAME(dgemm)(ntran, ytran, &nk, &r, &r, &one, tmp_nkmaxr, &nk, PCM_dist, &r, &zero, z_tilde, &nk FCONE FCONE);
-              F77_NAME(daxpy)(&nkr, &one, z_tilde_mu, &incOne, z_tilde, &incOne);
-
+            for(cv_i = 0; cv_i < nk; cv_i++){
+              REAL(VECTOR_ELT(loopd_out_l, e))[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
             }
 
-            // Find canonical parameter (X*beta + X_tilde*z_tilde)
-            lmulm_XTilde_VC(ntran, nk, r, 1, X_tilde_pred, z_tilde, tmp_nkmaxr);
-            F77_NAME(dgemv)(ntran, &nk, &p, &one, X_pred, &nk, cv_v_beta, &incOne, &one, tmp_nkmaxr, &incOne FCONE);
-
-            // Find CV-LOO-PD
-            if(family == family_poisson){
-              for(cv_i = 0; cv_i < nk; cv_i++){
-                dtemp1 = exp(tmp_nkmaxr[cv_i]);
-                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dpois(Y_pred[cv_i], dtemp1, 1);
-              }
-            }
-
-            if(family == family_binomial){
-              for(cv_i = 0; cv_i < nk; cv_i++){
-                dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
-                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_pred[cv_i], nBinom_pred[cv_i], dtemp1, 1);
-              }
-            }
-
-            if(family == family_binary){
-              for(cv_i = 0; cv_i < nk; cv_i++){
-                dtemp1 = inverse_logit(tmp_nkmaxr[cv_i]);
-                loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_pred[cv_i], 1.0, dtemp1, 1);
-              }
-            }
-
-
-          }
-
-          for(cv_i = 0; cv_i < nk; cv_i++){
-            REAL(loopd_out_r)[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
           }
 
         }
@@ -1281,9 +1449,7 @@ extern "C" {
         R_chk_free(X_tilde_pred);
         R_chk_free(Y_pred);
         R_chk_free(nBinom_pred);
-        R_chk_free(cvVz);
         R_chk_free(cvCholVz);
-        R_chk_free(cvCholR);
         R_chk_free(cvCz);
         R_chk_free(z_tilde_cov);
         R_chk_free(z_tilde_mu);
@@ -1291,14 +1457,24 @@ extern "C" {
         R_chk_free(PCM_dist);
         R_chk_free(cvXtX);
         R_chk_free(cvXTildetX);
-        R_chk_free(cvCholIplusXTildeVzXTildet);
         R_chk_free(cvD1Inv);
         R_chk_free(cvD1InvB1);
         R_chk_free(cvCholschurA1);
         R_chk_free(cvDInvB_pn);
         R_chk_free(cvDInvB_nrn);
         R_chk_free(cvCholschurA);
-        R_chk_free(tmp_n1n1r);
+        R_chk_free(del_PB);
+        R_chk_free(del_QB);
+        R_chk_free(del_QBK);
+        R_chk_free(del_LP);
+        R_chk_free(del_LQ);
+        R_chk_free(del_WB);
+        R_chk_free(del_Z);
+        R_chk_free(del_H);
+        R_chk_free(del_HK);
+        R_chk_free(del_A2);
+        R_chk_free(del_tmp_np);
+        R_chk_free(del_w);
         R_chk_free(tmp_n11);
         R_chk_free(tmp_n1r);
         R_chk_free(tmp_nnknnkmax);
@@ -1309,63 +1485,101 @@ extern "C" {
         R_chk_free(cv_v_beta);
         R_chk_free(cv_v_z);
         R_chk_free(loopd_val_MC_CV);
+        R_chk_free(CV_eta);
+        R_chk_free(CV_xi);
+        R_chk_free(CV_tmpn);
+        R_chk_free(CV_z);
+        R_chk_free(CV_tmpnr);
+        R_chk_free(CV_beta);
+        R_chk_free(CV_tmpp);
+        R_chk_free(CV_gam);
+        R_chk_free(CV_nrm);
+        R_chk_free(CV_bart);
 
       }
 
-      // make return object for posterior samples and leave-one-out predictive densities
-      int nResultListObjs = 4;
-
-      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-      // samples of beta
-      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
-
-      // samples of z
-      SET_VECTOR_ELT(result_r, 1, samples_z_r);
-      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
-
-      // samples of z
-      SET_VECTOR_ELT(result_r, 2, samples_xi_r);
-      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
-
-      // loo-pd
-      // leave-one-out predictive densities
-      SET_VECTOR_ELT(result_r, 3, loopd_out_r);
-      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
-
-      Rf_namesgets(result_r, resultName_r);
-
-    }else{
-
-      // make return object for posterior samples and leave-one-out predictive densities
-      int nResultListObjs = 3;
-
-      result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-      resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-      // samples of beta
-      SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-      SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
-
-      // samples of z
-      SET_VECTOR_ELT(result_r, 1, samples_z_r);
-      SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
-
-      // samples of z
-      SET_VECTOR_ELT(result_r, 2, samples_xi_r);
-      SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
-
-      Rf_namesgets(result_r, resultName_r);
-
     }
+
+    // return object: a list of nEps fits, each a list of the posterior samples (and leave-one-out predictive densities)
+    int nResultListObjs = loopd ? 4 : 3;
+    SEXP fit_r;
+    result_r = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+    if(loopd){
+      SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
+    }
+
+    for(e = 0; e < nEps; e++){
+      fit_r = Rf_allocVector(VECSXP, nResultListObjs);
+      SET_VECTOR_ELT(result_r, e, fit_r);                                                // protected through result_r
+      SET_VECTOR_ELT(fit_r, 0, VECTOR_ELT(samples_beta_l, e));                           // samples of beta
+      SET_VECTOR_ELT(fit_r, 1, VECTOR_ELT(samples_z_l, e));                              // samples of z
+      SET_VECTOR_ELT(fit_r, 2, VECTOR_ELT(samples_xi_l, e));                             // samples of xi
+      if(loopd){
+        SET_VECTOR_ELT(fit_r, 3, VECTOR_ELT(loopd_out_l, e));                            // leave-one-out predictive densities
+      }
+      Rf_namesgets(fit_r, resultName_r);
+    }
+
+    R_chk_free(D1Inv);
+    R_chk_free(D1InvB1);
+    R_chk_free(DInvB_pn);
+    R_chk_free(DInvB_nrn);
+    R_chk_free(cholschurA);
 
     UNPROTECT(nProtect);
     // return R_NilValue;
 
     return result_r;
 
+}
+
+extern "C" {
+
+  // fit of a single candidate model
+  SEXP stvcGLMexactLOO(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
+                       SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
+                       SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                       SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                       SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
+                       SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r, SEXP verbose_r){
+
+    if(Rf_length(epsilon_r) != 1){
+      Rf_error("c++ error: stvcGLMexactLOO expects a single boundary adjustment parameter.");
+    }
+
+    SEXP result_r = PROTECT(stvcGLMexactLOO_fit(Y_r, X_r, X_tilde_r, n_r, p_r, r_r, family_r, nBinom_r,
+                                                sp_coords_r, time_coords_r, corfn_r,
+                                                betaV_r, nu_beta_r, nu_z_r, sigmaSq_xi_r, iwScale_r,
+                                                processType_r, phi_s_r, phi_t_r, epsilon_r,
+                                                nSamples_r, loopd_r, loopd_method_r,
+                                                CV_K_r, loopd_nMC_r, cvUpdate_r, verbose_r));
+    UNPROTECT(1);
+
+    return VECTOR_ELT(result_r, 0);
+
   } // end stvcGLMexactLOO
+
+  // Fits of the candidate models sharing (phi_s, phi_t) for a vector of boundary adjustment parameters epsilon_r.
+  // All the pre-processing depends on (phi_s, phi_t) only; it is computed once and shared by the fits (see
+  // stvcGLMexactLOO_fit). Returns a list with one element per epsilon, each as returned by stvcGLMexactLOO.
+  SEXP stvcGLMexactLOOgrid(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SEXP p_r, SEXP r_r, SEXP family_r, SEXP nBinom_r,
+                           SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r,
+                           SEXP betaV_r, SEXP nu_beta_r, SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP iwScale_r,
+                           SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
+                           SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
+                           SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r, SEXP verbose_r){
+
+    return stvcGLMexactLOO_fit(Y_r, X_r, X_tilde_r, n_r, p_r, r_r, family_r, nBinom_r,
+                               sp_coords_r, time_coords_r, corfn_r,
+                               betaV_r, nu_beta_r, nu_z_r, sigmaSq_xi_r, iwScale_r,
+                               processType_r, phi_s_r, phi_t_r, epsilon_r,
+                               nSamples_r, loopd_r, loopd_method_r,
+                               CV_K_r, loopd_nMC_r, cvUpdate_r, verbose_r);
+
+  } // end stvcGLMexactLOOgrid
 
 }

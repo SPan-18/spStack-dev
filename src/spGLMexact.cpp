@@ -164,84 +164,90 @@ extern "C" {
     const char *family_binary = "binary";
     const char *family_binomial = "binomial";
 
-    double *v_eta = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_eta, n);
-    double *v_xi = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_xi, n);
-    double *v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(v_beta, p);
-    double *v_z = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_z, n);
-
-    double *tmp_n = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n, n);           // allocate memory for n x 1 vector
-    double *tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(tmp_p, p);           // allocate memory for p x 1 vector
+    // Posterior samples are drawn in blocks of nBlockMax: within a block the random variates are drawn in
+    // exactly the order of a draw-by-draw loop, directly into the output matrices, and the block is then
+    // projected at once with level-3 BLAS (projGLMbatch).
+    const int nBlockMax = 64;
+    int nBlock = 0, bb = 0;
+    int nnBlockMax = n * nBlockMax;
+    int pnBlockMax = p * nBlockMax;
+    double *V_eta = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(V_eta, nnBlockMax);
+    double *tmp_nb = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(tmp_nb, nnBlockMax);
+    double *tmp_pb = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(tmp_pb, pnBlockMax);
+    double *V_beta = NULL, *V_z = NULL, *V_xi = NULL;
 
     GetRNGstate();
 
-    for(s = 0; s < nSamples; s++){
+    for(s = 0; s < nSamples; s += nBlockMax){
 
-      if(family == family_poisson){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = 1.0;
-          v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+      nBlock = std::min(nBlockMax, nSamples - s);
+      V_beta = &REAL(samples_beta_r)[(R_xlen_t) s * p];
+      V_xi = &REAL(samples_xi_r)[(R_xlen_t) s * n];
+      V_z = &REAL(samples_z_r)[(R_xlen_t) s * n];
+
+      for(bb = 0; bb < nBlock; bb++){
+
+
+        if(family == family_poisson){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = 1.0;
+            V_eta[bb*n + i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+          }
         }
-      }
 
-      if(family == family_binomial){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+        if(family == family_binomial){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = nBinom[i];
+            dtemp2 += 2.0 * epsilon;
+            dtemp2 -= dtemp1;
+            V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+          }
         }
-      }
 
-      if(family == family_binary){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+        if(family == family_binary){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = nBinom[i];
+            dtemp2 += 2.0 * epsilon;
+            dtemp2 -= dtemp1;
+            V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+          }
         }
+
+        dtemp1 = 0.5 * nu_beta;
+        dtemp2 = 1.0 / dtemp1;
+        dtemp3 = rgamma(dtemp1, dtemp2);
+        dtemp3 = 1.0 / dtemp3;
+        dtemp3 = sqrt(dtemp3);
+        for(j = 0; j < p; j++){
+          V_beta[bb*p + j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ N(0, 1)
+        }
+
+        dtemp1 = 0.5 * nu_z;
+        dtemp2 = 1.0 / dtemp1;
+        dtemp3 = rgamma(dtemp1, dtemp2);
+        dtemp3 = 1.0 / dtemp3;
+        dtemp3 = sqrt(dtemp3);
+        for(i = 0; i < n; i++){
+          V_xi[bb*n + i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, 1)
+          V_z[bb*n + i] = rnorm(0.0, dtemp3);                                                     // v_z ~ N(0, 1)
+        }
+
       }
 
-      dtemp1 = 0.5 * nu_beta;
-      dtemp2 = 1.0 / dtemp1;
-      dtemp3 = rgamma(dtemp1, dtemp2);
-      dtemp3 = 1.0 / dtemp3;
-      dtemp3 = sqrt(dtemp3);
-      for(j = 0; j < p; j++){
-        v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ N(0, 1)
-      }
-
-      dtemp1 = 0.5 * nu_z;
-      dtemp2 = 1.0 / dtemp1;
-      dtemp3 = rgamma(dtemp1, dtemp2);
-      dtemp3 = 1.0 / dtemp3;
-      dtemp3 = sqrt(dtemp3);
-      for(i = 0; i < n; i++){
-        v_xi[i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, 1)
-        v_z[i] = rnorm(0.0, dtemp3);                                                     // v_z ~ N(0, 1)
-      }
-
-      // projection step
-      projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-              cholVz, cholVzPlusI, D1invX, DinvB_pn, tmp_n, tmp_p);
-
-      // copy samples into SEXP return object
-      F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
-      F77_NAME(dcopy)(&n, &v_z[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
-      F77_NAME(dcopy)(&n, &v_xi[0], &incOne, &REAL(samples_xi_r)[s*n], &incOne);
+      // projection step for the block
+      projGLMbatch(X, n, p, nBlock, V_eta, V_xi, V_beta, V_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta, cholVz, cholVzPlusI, D1invX, DinvB_pn,
+                   tmp_nb, tmp_pb);
 
     }
 
     PutRNGstate();
 
-    R_chk_free(tmp_n);
-    R_chk_free(tmp_p);
-    R_chk_free(v_eta);
-    R_chk_free(v_xi);
-    R_chk_free(v_beta);
-    R_chk_free(v_z);
+    R_chk_free(V_eta);
+    R_chk_free(tmp_nb);
+    R_chk_free(tmp_pb);
 
     // make return object
     SEXP result_r, resultName_r;

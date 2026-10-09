@@ -17,13 +17,14 @@ static const R_CallMethodDef CallEntries[] = {
   {"predict_stvcGLM",         (DL_FUNC) &predict_stvcGLM,         21},
   {"predict_spLM",            (DL_FUNC) &predict_spLM,            15},
   {"spGLMexact",              (DL_FUNC) &spGLMexact,              17},
-  {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           21},
-  {"spGLMexactLOOgrid",       (DL_FUNC) &spGLMexactLOOgrid,       20},
+  {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           22},
+  {"spGLMexactLOOgrid",       (DL_FUNC) &spGLMexactLOOgrid,       21},
   {"spLMexact",               (DL_FUNC) &spLMexact,               14},
   {"spLMexactLOO",            (DL_FUNC) &spLMexactLOO,            16},
   {"spLMexactLOOgrid",        (DL_FUNC) &spLMexactLOOgrid,        15},
   {"stvcGLMexact",            (DL_FUNC) &stvcGLMexact,            22},
-  {"stvcGLMexactLOO",         (DL_FUNC) &stvcGLMexactLOO,         26},
+  {"stvcGLMexactLOO",         (DL_FUNC) &stvcGLMexactLOO,         27},
+  {"stvcGLMexactLOOgrid",     (DL_FUNC) &stvcGLMexactLOOgrid,     27},
   {NULL, NULL, 0}
 };
 

@@ -194,6 +194,17 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
     }
   }
 
+  ##### process type #####
+  if(missing(process.type)){
+    stop("process.type must be specified. Choose from c('independent',
+         'independent.shared', 'multivariate').")
+  }
+  if(!is.character(process.type) || length(process.type) != 1 ||
+     !process.type %in% c('independent', 'independent.shared', 'multivariate')){
+    stop("Invalid process.type. Choose from c('independent', 'independent.shared',
+         'multivariate').")
+  }
+
   ##### formula #####
   if(missing(formula)){
     stop("Formula must be specified")
@@ -516,11 +527,15 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
+    # K-fold CV pre-processing: deletion updates, or direct recomputation if R
+    # uses an optimized BLAS (see 'CV.update' in stvcGLMstack)
+    CV.update <- as.integer(resolve_CV_update("auto") == "update")
     samps <- .Call(C_stvcGLMexactLOO, y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale,
                    process.type, phi_s, phi_t, epsilon,
-                   n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
+                   n.samples, loopd, loopd.method, CV.K, loopd.nMC, CV.update,
+                   verbose)
   }else{
     samps <- .Call(C_stvcGLMexact, y, X, X_tilde, n, p, r, family, n.binom,
                    sp_coords, time_coords, cor.fn,

@@ -671,9 +671,6 @@ void primingGLMvc(int n, int p, int r, double *X, double *XTilde, double *XtX, d
         }
       }
     }
-  }else if(processtype == "multivariate2"){
-    int nrnr = nr * nr;
-    F77_NAME(daxpy)(&nrnr, &one, Vz, &incOne, D1inv, &incOne);
   }
 
   // DinvB_np = W*inv(Schur(A1)) via T = W*t(L1inv); Q = P - T*t(T)
@@ -758,9 +755,6 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
     for(i = 0; i < r; i++){
       F77_NAME(dtrsv)(lower, ytran, nunit, &n, &cholVz[i*nn], &n, &v_z[i*n], &incOne FCONE FCONE FCONE);
     }
-  }else if(processtype == "multivariate2"){
-    // can it be made efficient by passing cholR and chol_iwScale, instead of cholVz? [probably not.]
-    F77_NAME(dtrsv)(lower, ytran, nunit, &nr, cholVz, &nr, v_z, &incOne FCONE FCONE FCONE);
   }
 
   lmulv_XTilde_VC(ytran, n, r, XTilde, v_eta, tmp_nr);
@@ -788,61 +782,6 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
 
 }
 
-// Find Kronecker product of two matrices A (rxr) and B (nxn), and store in C (nrxnr)
-void kronecker(int r, int n, double *A, double *B, double *C){
-
-  int nr = n * r;
-  int i = 0, j = 0, k = 0, l = 0;
-  double a_ij = 0.0;
-  int C_base = 0;                     // Compute block starting position in C
-
-  for(j = 0; j < r; j++){
-    for(i = 0; i < r; i++){
-
-      // A(i, j) in column-major order
-      a_ij = A[i + j * r];
-
-      // Compute block starting position in C
-      C_base = (j * n) * nr + (i * n);
-
-      // Insert scaled B into the corresponding block of C
-      for(l = 0; l < n; l++){
-        for(k = 0; k < n; k++){
-          C[C_base + l * nr + k] = a_ij * B[k + l * n];
-        }
-      }
-    }
-  }
-}
-
-// Find Cholesky factor of Kronecker product from the individual Cholesky factors
-// Cholesky factors are always considered to be lower-triangular (just kronecker of two triangular matrices)
-void chol_kron(int r, int n, double *cholA, double *cholB, double *cholC){
-
-  int nr = n * r;
-  int i = 0, j = 0, k = 0, l = 0;
-  double a_ij = 0.0;
-  int C_base = 0; // Compute block starting position in C
-
-  for(j = 0; j < r; j++){
-    for(i = j; i < r; i++){
-
-      // A(i, j) in column-major order
-      a_ij = cholA[i + j * r];
-
-      // Compute block starting position in C
-      C_base = (j * n) * nr + (i * n);
-
-      // Insert scaled B into the corresponding block of C
-      for(l = 0; l < n; l++){
-        for(k = l; k < n; k++){
-          cholC[C_base + l * nr + k] = a_ij * cholB[k + l * n];
-        }
-      }
-    }
-  }
-
-}
 // In-place rank-1 downdate of a lower Cholesky factor: L <- chol(L*t(L) - v*t(v)), Krause and Igel (2015)
 // with alpha = 1, beta = -1. Column j of the result depends only on column j of the input, so the update
 // can overwrite L (the old diagonal entry is kept in ljj). Only the lower triangle is read and written.
@@ -981,5 +920,293 @@ int cholSchurGLMdel(int n, int p, int del_start, int del_end, double *X, double 
   }
 
   return 0;
+
+}
+
+// Fast pre-processing for projGLMvc() on the data with the contiguous block B = [del_start, del_end] of sites
+// (0-based, k = del_end - del_start + 1; k = 1 gives leave-one-out) deleted, obtained from the full-data outputs
+// of primingGLMvc(). Notation as in primingGLMvc(): XTf = [diag(XTilde[,1]) ... diag(XTilde[,r])] (n x nr),
+// Cap = I + XTf*Vzf*t(XTf), P = inv(Cap), W = P*X, G = Vzf*t(XTf), Q = P - W*inv(S1)*t(W); J = {k*n + j : j in B,
+// k = 0, ..., r-1} are the coordinates of the deleted sites in the nr-vectors, K the complement of B. Deleting
+// sites deletes rows/columns J of Vzf and rows B / columns J of XTf, so Cap_{-B} = Cap[K,K] and, by the
+// partitioned inverse identity (H = (G*P)[,B] = D1inv*t(XTf)*E_B):
+//   D1inv_{-B}    = D1inv[-J,-J] + H[-J,]*inv(P[B,B])*t(H[-J,])           (rank-k update, positive definite),
+//   D1invB1_{-B}  = D1invB1[-J,] - H[-J,]*inv(P[B,B])*W[B,],
+//   W_{-B}        = X[K,] - XTf_{-B}*D1invB1_{-B},   S1_{-B} = t(X[K,])*W_{-B} + inv(Vbeta),
+//   DinvB_np_{-B} = W_{-B}*inv(S1_{-B}),
+//   DinvB_nrn_{-B}= DinvB_nrn[-J,K] - DinvB_nrn[-J,B]*inv(Q[B,B])*Q[B,K],
+//   I/sigmaSqxi + Q_{-B} = (I/sigmaSqxi + Q)[K,K] - U*t(U),  U = Q[K,B]*t(inv(chol(Q[B,B]))),
+// with P[,B] from two triangular solves with chol(Cap), W[B,] = t(P[,B])*X and Q[,B] = P[,B] - DinvB_np*t(W[B,]).
+// S1 and DinvB_np are formed directly from W_{-B}, as in primingGLMvc(), since the downdated forms cancel when
+// the block is large. The last line is applied as k rank-1 downdates of cholSchurDel_n =
+// chol((I/sigmaSqxi + Q)[K,K]) (from cholRowDelUpdate/cholBlockDelUpdate of cholSchurA_nn), in place.
+// Inputs:  X (n x p), XTilde (n x r), cholCap (n x n), D1inv (nr x nr, full), D1invB1 (nr x p), DinvB_np (n x p),
+//          DinvB_nrn (nr x n) of the full data; VbetaInv (p x p).
+// Outputs (m = n - k): D1inv_out (mr x mr, full), D1invB1_out (mr x p), cholSchurA1_out (p x p), DinvB_np_out (m x p),
+//          DinvB_nrn_out (mr x m), cholSchurDel_n (m x m, in place).
+// Workspace: PB, QB, QBK (n x k), LP, LQ (k x k), WB, Z (k x p), H, HK, A2 (nr x k), tmp_np (n x p), w (n x 1).
+// Returns 0 on success; nonzero if a factorization or downdate was not numerically positive definite, in which
+// case the caller should recompute the outputs directly (primingGLMvc on the reduced data).
+int cholSchurGLMvcDel(int n, int p, int r, int del_start, int del_end, double *X, double *XTilde, double *cholCap,
+                      double *D1inv, double *D1invB1, double *DinvB_np, double *DinvB_nrn, double *VbetaInv,
+                      double *D1inv_out, double *D1invB1_out, double *cholSchurA1_out, double *DinvB_np_out,
+                      double *DinvB_nrn_out, double *cholSchurDel_n,
+                      double *PB, double *QB, double *QBK, double *LP, double *LQ, double *WB, double *Z,
+                      double *H, double *HK, double *A2, double *tmp_np, double *w){
+
+  int i, ii, j, jj, c, l, kk;
+  int info = 0;
+  int k = del_end - del_start + 1;
+  int nk = n * k;
+  int nr = n * r;
+  int nrk = nr * k;
+  int pp = p * p;
+  int nMs = n - del_start;
+  int m = n - k;
+  int mr = m * r;
+  int mp = m * p;
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  char const *lside = "L";
+  char const *rside = "R";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  double dtemp = 0.0;
+
+  // PB = P[,B] = inv(Cap)*E_B; rows above del_start of inv(L)*E_B are zero
+  zeros(PB, nk);
+  for(l = 0; l < k; l++){
+    PB[l*n + del_start + l] = 1.0;
+  }
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nMs, &k, &one, &cholCap[del_start*n + del_start], &n, &PB[del_start], &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &k, &one, cholCap, &n, PB, &n FCONE FCONE FCONE FCONE);          // PB = P[,B]
+
+  // LP = chol(P[B,B])
+  copyMatrixRowBlock(PB, n, k, LP, del_start, del_end);
+  F77_NAME(dpotrf)(lower, &k, LP, &k, &info FCONE); if(info != 0){return 1;}
+
+  // WB = W[B,] = t(P[,B])*X; QB = Q[,B] = P[,B] - DinvB_np*t(W[B,])
+  F77_NAME(dgemm)(ytran, ntran, &k, &p, &n, &one, PB, &n, X, &n, &zero, WB, &k FCONE FCONE);
+  F77_NAME(dcopy)(&nk, PB, &incOne, QB, &incOne);
+  F77_NAME(dgemm)(ntran, ytran, &n, &k, &p, &negone, DinvB_np, &n, WB, &k, &one, QB, &n FCONE FCONE);
+
+  // H = (G*P)[,B] = D1inv*t(XTf)*E_B: column l is sum_kk XTilde[b,kk]*D1inv[,kk*n + b], b = del_start + l
+  zeros(H, nrk);
+  for(l = 0; l < k; l++){
+    i = del_start + l;
+    for(kk = 0; kk < r; kk++){
+      dtemp = XTilde[kk*n + i];
+      if(dtemp != 0.0){
+        F77_NAME(daxpy)(&nr, &dtemp, &D1inv[(R_xlen_t)(kk*n + i) * nr], &incOne, &H[l*nr], &incOne);
+      }
+    }
+  }
+  copyMatrixDelRowBlock_vc(H, nr, k, HK, del_start, del_end, n);                                                 // HK = H[-J,]
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &mr, &k, &one, LP, &k, HK, &mr FCONE FCONE FCONE FCONE);          // HK = H[-J,]*t(inv(LP))
+
+  // D1inv_out = D1inv[-J,-J] + HK*t(HK) (full storage, as used by projGLMvc)
+  copyMatrixDelRowColBlock_vc(D1inv, nr, nr, D1inv_out, del_start, del_end, del_start, del_end, n);
+  F77_NAME(dgemm)(ntran, ytran, &mr, &mr, &k, &one, HK, &mr, HK, &mr, &one, D1inv_out, &mr FCONE FCONE);
+
+  // D1invB1_out = D1invB1[-J,] - HK*inv(LP)*W[B,]
+  for(c = 0; c < k * p; c++){ Z[c] = WB[c]; }
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &k, &p, &one, LP, &k, Z, &k FCONE FCONE FCONE FCONE);              // Z = inv(LP)*W[B,]
+  copyMatrixDelRowBlock_vc(D1invB1, nr, p, D1invB1_out, del_start, del_end, n);
+  F77_NAME(dgemm)(ntran, ntran, &mr, &p, &k, &negone, HK, &mr, Z, &k, &one, D1invB1_out, &mr FCONE FCONE);
+
+  // W_{-B} = X[K,] - XTf_{-B}*D1invB1_{-B} (in tmp_np, leading dimension m); X[K,] held in DinvB_np_out for now
+  copyMatrixDelRowBlock(X, n, p, DinvB_np_out, del_start, del_end);                                               // DinvB_np_out = X[K,]
+  for(c = 0; c < p; c++){
+    for(i = 0, ii = 0; i < n; i++){
+      if(i >= del_start && i <= del_end) continue;
+      dtemp = DinvB_np_out[c*m + ii];
+      for(kk = 0; kk < r; kk++){
+        dtemp -= XTilde[kk*n + i] * D1invB1_out[c*mr + kk*m + ii];
+      }
+      tmp_np[c*m + ii] = dtemp;
+      ii++;
+    }
+  }
+
+  // cholSchurA1_out = chol(t(X[K,])*W_{-B} + inv(Vbeta)); DinvB_np_out = W_{-B}*inv(S1_{-B})
+  F77_NAME(dcopy)(&pp, VbetaInv, &incOne, cholSchurA1_out, &incOne);
+  F77_NAME(dgemm)(ytran, ntran, &p, &p, &m, &one, DinvB_np_out, &m, tmp_np, &m, &one, cholSchurA1_out, &p FCONE FCONE);
+  F77_NAME(dpotrf)(lower, &p, cholSchurA1_out, &p, &info FCONE); if(info != 0){return 2;}
+  F77_NAME(dcopy)(&mp, tmp_np, &incOne, DinvB_np_out, &incOne);
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &m, &p, &one, cholSchurA1_out, &p, DinvB_np_out, &m FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(rside, lower, ntran, nunit, &m, &p, &one, cholSchurA1_out, &p, DinvB_np_out, &m FCONE FCONE FCONE FCONE);
+
+  // LQ = chol(Q[B,B])
+  copyMatrixRowBlock(QB, n, k, LQ, del_start, del_end);
+  F77_NAME(dpotrf)(lower, &k, LQ, &k, &info FCONE); if(info != 0){return 3;}
+
+  // DinvB_nrn_out = DinvB_nrn[-J,K] - DinvB_nrn[-J,B]*inv(Q[B,B])*t(Q[K,B])
+  copyMatrixDelRowBlock_vc(&DinvB_nrn[(R_xlen_t) del_start * nr], nr, k, A2, del_start, del_end, n);             // A2 = DinvB_nrn[-J,B]
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &mr, &k, &one, LQ, &k, A2, &mr FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(rside, lower, ntran, nunit, &mr, &k, &one, LQ, &k, A2, &mr FCONE FCONE FCONE FCONE);          // A2 = DinvB_nrn[-J,B]*inv(Q[B,B])
+  copyMatrixDelRowBlock(QB, n, k, QBK, del_start, del_end);                                                       // QBK = Q[K,B]
+  for(j = 0, jj = 0; j < n; j++){
+    if(j >= del_start && j <= del_end) continue;
+    for(kk = 0; kk < r; kk++){
+      copyVecExcludingBlock(&DinvB_nrn[(R_xlen_t) j * nr + kk*n], &DinvB_nrn_out[(R_xlen_t) jj * mr + kk*m], n, del_start, del_end);
+    }
+    jj++;
+  }
+  F77_NAME(dgemm)(ntran, ytran, &mr, &m, &k, &negone, A2, &mr, QBK, &m, &one, DinvB_nrn_out, &mr FCONE FCONE);
+
+  // chol(I/sigmaSqxi + Q_{-B}): k rank-1 downdates by the columns of U = Q[K,B]*t(inv(LQ))
+  F77_NAME(dtrsm)(rside, lower, ytran, nunit, &m, &k, &one, LQ, &k, QBK, &m FCONE FCONE FCONE FCONE);           // QBK = U
+  for(l = 0; l < k; l++){
+    info = cholRankOneDowndate(m, cholSchurDel_n, &QBK[l*m], w);
+    if(info != 0){return 4;}
+  }
+
+  return 0;
+
+}
+
+// projGLM() for a block of b draws at once: the columns of V_eta, V_xi, V_z (n x b) and V_beta (p x b) are b
+// independent vectors v = [v_eta, v_xi, v_beta, v_z], and each column is transformed exactly as projGLM()
+// transforms one vector, with the triangular solves and matrix-vector products done as level-3 BLAS
+// (dtrsm/dgemm) over the block. Results equal b calls of projGLM() up to floating-point rounding.
+// Outputs overwrite V_xi, V_beta, V_z; V_eta is unchanged. Workspace: tmp_nb (n x b), tmp_pb (p x b).
+void projGLMbatch(double *X, int n, int p, int b, double *V_eta, double *V_xi, double *V_beta, double *V_z,
+                  double *cholpSchur, double *cholnSchur, double sigmaSqxi, double *Lbeta, double *Lz,
+                  double *cholVzPlusI, double *D1invB1, double *DinvBnp, double *tmp_nb, double *tmp_pb){
+
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  char const *lside = "L";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaxiInv = 1.0 / sqrt(sigmaSqxi);
+  int nb = n * b;
+  int pb = p * b;
+
+  // Find components of t(H)*v for each column v = [v_eta, v_xi, v_beta, v_z]
+  F77_NAME(dscal)(&nb, &sigmaxiInv, V_xi, &incOne);                                                                    // V_xi = V_xi/sigmaxi
+  F77_NAME(daxpy)(&nb, &one, V_eta, &incOne, V_xi, &incOne);                                                           // V_xi = V_eta + V_xi/sigmaxi
+
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &b, &one, Lbeta, &p, V_beta, &p FCONE FCONE FCONE FCONE);           // V_beta = LbetatInv*V_beta
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &one, X, &n, V_eta, &n, &one, V_beta, &p FCONE FCONE);                    // V_beta = Xt*V_eta + LbetatInv*V_beta
+
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, Lz, &n, V_z, &n FCONE FCONE FCONE FCONE);                 // V_z = LztInv*V_z
+  F77_NAME(daxpy)(&nb, &one, V_eta, &incOne, V_z, &incOne);                                                            // V_z = V_eta + LztInv*V_z
+
+  // inv(D1)*v22 = v22 - inv(Vz+I)*v22
+  F77_NAME(dcopy)(&nb, V_z, &incOne, tmp_nb, &incOne);
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &b, &one, cholVzPlusI, &n, tmp_nb, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, cholVzPlusI, &n, tmp_nb, &n FCONE FCONE FCONE FCONE);     // tmp_nb = inv(Vz+I)*V_z
+  F77_NAME(dscal)(&nb, &negone, tmp_nb, &incOne);
+  F77_NAME(daxpy)(&nb, &one, V_z, &incOne, tmp_nb, &incOne);                                                           // tmp_nb = D1inv*V_z
+
+  // v21 - t(B1)*D1inv*v22, then inv(schurA1)*(...)
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &negone, D1invB1, &n, V_z, &n, &one, V_beta, &p FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &b, &one, cholpSchur, &p, V_beta, &p FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &b, &one, cholpSchur, &p, V_beta, &p FCONE FCONE FCONE FCONE);      // V_beta = inv(sA1)*(v21 - t(B1)*D1inv*v22)
+
+  // V_z = D1inv*v22 - D1invB1*V_beta
+  F77_NAME(dgemm)(ntran, ntran, &n, &b, &p, &one, D1invB1, &n, V_beta, &p, &zero, V_z, &n FCONE FCONE);
+  F77_NAME(dscal)(&nb, &negone, V_z, &incOne);
+  F77_NAME(daxpy)(&nb, &one, tmp_nb, &incOne, V_z, &incOne);
+
+  // V_xi = V_xi - (X*V_beta + V_z), then inv(schurA)*V_xi
+  F77_NAME(dgemm)(ntran, ntran, &n, &b, &p, &one, X, &n, V_beta, &p, &zero, tmp_nb, &n FCONE FCONE);
+  F77_NAME(daxpy)(&nb, &one, V_z, &incOne, tmp_nb, &incOne);
+  F77_NAME(daxpy)(&nb, &negone, tmp_nb, &incOne, V_xi, &incOne);
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &b, &one, cholnSchur, &n, V_xi, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, cholnSchur, &n, V_xi, &n FCONE FCONE FCONE FCONE);       // V_xi = inv(sA)*(v1 - BtDinv*v2)
+
+  // p-block t(DinvB_np)*V_xi; n-block inv(D1)*V_xi - D1invB1*(t(DinvB_np)*V_xi)
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &one, DinvBnp, &n, V_xi, &n, &zero, tmp_pb, &p FCONE FCONE);
+  F77_NAME(dcopy)(&nb, V_xi, &incOne, tmp_nb, &incOne);
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &b, &one, cholVzPlusI, &n, tmp_nb, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, cholVzPlusI, &n, tmp_nb, &n FCONE FCONE FCONE FCONE);     // tmp_nb = inv(Vz+I)*V_xi
+  F77_NAME(dscal)(&nb, &negone, tmp_nb, &incOne);
+  F77_NAME(daxpy)(&nb, &one, V_xi, &incOne, tmp_nb, &incOne);                                                          // tmp_nb = inv(D1)*V_xi
+  F77_NAME(dgemm)(ntran, ntran, &n, &b, &p, &negone, D1invB1, &n, tmp_pb, &p, &one, tmp_nb, &n FCONE FCONE);
+
+  // V_beta, V_z
+  F77_NAME(daxpy)(&pb, &negone, tmp_pb, &incOne, V_beta, &incOne);
+  F77_NAME(daxpy)(&nb, &negone, tmp_nb, &incOne, V_z, &incOne);
+
+}
+
+// projGLMvc() for a block of b draws at once: the columns of V_eta, V_xi (n x b), V_beta (p x b) and V_z (nr x b)
+// are b independent vectors v = [v_eta, v_xi, v_beta, v_z], each transformed exactly as projGLMvc() transforms one
+// vector, with the triangular solves and matrix-vector products done as level-3 BLAS over the block (the sparse
+// t(XTf)*V_eta through lmulm_XTilde_VC). Results equal b calls of projGLMvc() up to floating-point rounding.
+// Outputs overwrite V_xi, V_beta, V_z; V_eta is unchanged. Workspace: tmp_nrb (nr x b), tmp_nb (n x b), tmp_pb (p x b).
+void projGLMvcbatch(int n, int p, int r, int b, double *X, double *XTilde, double sigmaSqxi, double *Lbeta,
+                    double *cholVz, std::string &processtype, double *V_eta, double *V_xi, double *V_beta, double *V_z,
+                    double *D1inv, double *D1invB1, double *cholSchurA1_pp,
+                    double *DinvB_np, double *DinvB_nrn, double *cholSchurA_nn,
+                    double *tmp_nrb, double *tmp_nb, double *tmp_pb){
+
+  int i = 0;
+  int nn = n * n;
+  int nr = n * r;
+  int nb = n * b;
+  int pb = p * b;
+  int nrb = nr * b;
+
+  char const *lower = "L";
+  char const *ytran = "T";
+  char const *ntran = "N";
+  char const *nunit = "N";
+  char const *lside = "L";
+  const double one = 1.0;
+  const double negone = -1.0;
+  const double zero = 0.0;
+  const int incOne = 1;
+  const double sigmaxiInv = 1.0 / sqrt(sigmaSqxi);
+
+  // Find components of t(H)*v for each column v = [v_eta, v_xi, v_beta, v_z]
+  F77_NAME(dscal)(&nb, &sigmaxiInv, V_xi, &incOne);                                                                     // V_xi = V_xi/sigmaxi
+  F77_NAME(daxpy)(&nb, &one, V_eta, &incOne, V_xi, &incOne);                                                            // V_xi = V_eta + V_xi/sigmaxi
+
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &b, &one, Lbeta, &p, V_beta, &p FCONE FCONE FCONE FCONE);            // V_beta = LbetatInv*V_beta
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &one, X, &n, V_eta, &n, &one, V_beta, &p FCONE FCONE);                     // V_beta = Xt*V_eta + LbetatInv*V_beta
+
+  // V_z = t(LzInv)*V_z, block by block of the nr rows (leading dimension nr)
+  if(processtype == "independent.shared" || processtype == "multivariate"){
+    for(i = 0; i < r; i++){
+      F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, cholVz, &n, &V_z[i*n], &nr FCONE FCONE FCONE FCONE);
+    }
+  }else if(processtype == "independent"){
+    for(i = 0; i < r; i++){
+      F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, &cholVz[i*nn], &n, &V_z[i*n], &nr FCONE FCONE FCONE FCONE);
+    }
+  }
+
+  lmulm_XTilde_VC(ytran, n, r, b, XTilde, V_eta, tmp_nrb);                                                             // tmp_nrb = t(XTf)*V_eta
+  F77_NAME(daxpy)(&nrb, &one, tmp_nrb, &incOne, V_z, &incOne);                                                          // V_z = t(XTf)*V_eta + t(LzInv)*V_z
+
+  F77_NAME(dgemm)(ytran, ntran, &n, &b, &nr, &one, DinvB_nrn, &nr, V_z, &nr, &zero, tmp_nb, &n FCONE FCONE);          // tmp_nb = (BtDInv*v2)_1
+  F77_NAME(dgemm)(ntran, ntran, &n, &b, &p, &one, DinvB_np, &n, V_beta, &p, &one, tmp_nb, &n FCONE FCONE);             // tmp_nb = BtDInv*v2
+  F77_NAME(daxpy)(&nb, &negone, tmp_nb, &incOne, V_xi, &incOne);                                                        // V_xi = V_xi - BtDInv*v2
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &b, &one, cholSchurA_nn, &n, V_xi, &n FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &n, &b, &one, cholSchurA_nn, &n, V_xi, &n FCONE FCONE FCONE FCONE);     // V_xi = inv(schurA)*(V_xi - BtDInv*v2)
+
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &nr, &negone, D1invB1, &nr, V_z, &nr, &zero, tmp_pb, &p FCONE FCONE);         // tmp_pb = - t(B1)*inv(D1)*V_z
+  F77_NAME(daxpy)(&pb, &one, tmp_pb, &incOne, V_beta, &incOne);                                                         // V_beta = V_beta - t(B1)*inv(D1)*V_z
+  F77_NAME(dtrsm)(lside, lower, ntran, nunit, &p, &b, &one, cholSchurA1_pp, &p, V_beta, &p FCONE FCONE FCONE FCONE);
+  F77_NAME(dtrsm)(lside, lower, ytran, nunit, &p, &b, &one, cholSchurA1_pp, &p, V_beta, &p FCONE FCONE FCONE FCONE);  // V_beta = inv(schurA1)*(v21 - t(B1)*inv(D1)*v22)
+
+  F77_NAME(dgemm)(ntran, ntran, &nr, &b, &p, &negone, D1invB1, &nr, V_beta, &p, &zero, tmp_nrb, &nr FCONE FCONE);     // tmp_nrb = - inv(D1)*B1*V_beta
+  F77_NAME(dgemm)(ntran, ntran, &nr, &b, &nr, &one, D1inv, &nr, V_z, &nr, &one, tmp_nrb, &nr FCONE FCONE);            // tmp_nrb = inv(D1)*V_z - inv(D1)*B1*V_beta
+  F77_NAME(dcopy)(&nrb, tmp_nrb, &incOne, V_z, &incOne);                                                                // V_z = inv(D1)*V_z - inv(D1)*B1*V_beta
+
+  // inv(D)*v2 - inv(D)*B*inv(schurA1)*(v1 - t(B)*inv(D)*v2)
+  F77_NAME(dgemm)(ytran, ntran, &p, &b, &n, &negone, DinvB_np, &n, V_xi, &n, &one, V_beta, &p FCONE FCONE);
+  F77_NAME(dgemm)(ntran, ntran, &nr, &b, &n, &negone, DinvB_nrn, &nr, V_xi, &n, &one, V_z, &nr FCONE FCONE);
 
 }

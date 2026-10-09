@@ -451,9 +451,13 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
+    # K-fold CV pre-processing: deletion updates, or direct recomputation if R
+    # uses an optimized BLAS (see 'CV.update' in spGLMstack)
+    CV.update <- as.integer(resolve_CV_update("auto") == "update")
     samps <- .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom, coords,
                    cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
-                   n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
+                   n.samples, loopd, loopd.method, CV.K, loopd.nMC, CV.update,
+                   verbose)
   }else{
     samps <- .Call(C_spGLMexact, y, X, p, n, family, n.binom, coords, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,

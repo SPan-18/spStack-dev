@@ -74,11 +74,15 @@ extern "C" {
 
     // spatial-temporal process parameters: create spatial-temporal covariance matrices
     std::string processType = CHAR(STRING_ELT(processType_r, 0));
+
+    // supported spatial-temporal process models
+    if(processType != "independent.shared" && processType != "independent" && processType != "multivariate"){
+      Rf_error("c++ error: process.type must be one of 'independent', 'independent.shared' or 'multivariate'.");
+    }
     double *phi_s_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_s_vec, r);
     double *phi_t_vec = (double *) R_alloc(r, sizeof(double)); zeros(phi_t_vec, r);
     double *thetaspt = (double *) R_alloc(2, sizeof(double));
     double *Vz = NULL;
-    double *R = NULL;
 
     if(corfn == "gneiting-decay"){
 
@@ -105,18 +109,6 @@ extern "C" {
           thetaspt[1] = phi_t_vec[k];
           sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
         }
-
-      }else if(processType == "multivariate2"){
-
-        phi_s_vec[0] = REAL(phi_s_r)[0];
-        phi_t_vec[0] = REAL(phi_t_r)[0];
-        thetaspt[0] = phi_s_vec[0];
-        thetaspt[1] = phi_t_vec[0];
-
-        R = (double *) R_alloc(nn, sizeof(double)); zeros(R, nn);
-        sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, R);
-        Vz = (double *) R_alloc(nrnr, sizeof(double)); zeros(Vz, nrnr);
-        kronecker(r, n, iwScale, R, Vz);
 
       }
     }
@@ -185,7 +177,6 @@ extern "C" {
      *****************************************/
 
     double *cholVz = NULL;               // define NULL pointer for chol(Vz)
-    double *cholR = NULL;
     double *chol_iwScale = NULL;
 
     // Find Cholesky of Vz
@@ -217,19 +208,6 @@ extern "C" {
       F77_NAME(dpotri)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotri failed\n");} // chol_iwScale = chol2inv(iwScale)
       F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: inv(iwScale) dpotrf failed\n");}
       mkLT(chol_iwScale, r);
-
-    }else if(processType == "multivariate2"){
-
-        // Efficient Cholesky for kronecker product: chol(kron(A, B)) = kron(chol(A), chol(B))
-        cholVz = (double *) R_alloc(nrnr, sizeof(double)); zeros(cholVz, nrnr);          // nrxnr matrix chol(Vz)
-        cholR = (double *) R_alloc(nn, sizeof(double)); zeros(cholR, nn);
-        chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
-        F77_NAME(dcopy)(&nn, R, &incOne, cholR, &incOne);
-        F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);
-        F77_NAME(dpotrf)(lower, &n, cholR, &n, &info FCONE); if(info != 0){perror("c++ error: R dpotrf failed\n");}
-        F77_NAME(dpotrf)(lower, &r, chol_iwScale, &r, &info FCONE); if(info != 0){perror("c++ error: iwScale dpotrf failed\n");}
-        chol_kron(r, n, chol_iwScale, cholR, cholVz);
-        mkLT(cholVz, nr);
 
     }
 
@@ -308,96 +286,121 @@ extern "C" {
 
     GetRNGstate();
 
-    for(s = 0; s < nSamples; s++){
+    // Posterior samples are drawn in blocks of nBlockMax: within a block the random variates are drawn in exactly
+    // the order of a draw-by-draw loop, directly into the output matrices, and the block is then projected at once
+    // with level-3 BLAS (projGLMvcbatch).
+    const int nBlockMax = 64;
+    int nBlock = 0, bb = 0;
 
-      if(family == family_poisson){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = 1.0;
-          v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
-        }
-      }
+    int nnBlockMax = n * nBlockMax;
+    int pnBlockMax = p * nBlockMax;
+    int nrnBlockMax = nr * nBlockMax;
+    double *V_eta = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(V_eta, nnBlockMax);
+    double *tmp_nb = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(tmp_nb, nnBlockMax);
+    double *tmp_pb = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(tmp_pb, pnBlockMax);
+    double *tmp_nrb = (double *) R_chk_calloc(nrnBlockMax, sizeof(double)); zeros(tmp_nrb, nrnBlockMax);
+    double *V_beta = NULL, *V_xi = NULL, *V_z = NULL;
 
-      if(family == family_binomial){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-        }
-      }
+    for(s = 0; s < nSamples; s += nBlockMax){
 
-      if(family == family_binary){
-        for(i = 0; i < n; i++){
-          dtemp1 = Y[i] + epsilon;
-          dtemp2 = nBinom[i];
-          dtemp2 += 2.0 * epsilon;
-          dtemp2 -= dtemp1;
-          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-        }
-      }
+      nBlock = std::min(nBlockMax, nSamples - s);
+      V_beta = &REAL(samples_beta_r)[(R_xlen_t) s * p];
+      V_xi = &REAL(samples_xi_r)[(R_xlen_t) s * n];
+      V_z = &REAL(samples_z_r)[(R_xlen_t) s * nr];
 
-      for(i = 0; i < n; i++){
-        v_xi[i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, sigmaSq_xi)
-      }
+      for(bb = 0; bb < nBlock; bb++){
 
-      dtemp1 = 0.5 * nu_beta;
-      dtemp2 = 1.0 / dtemp1;
-      dtemp3 = rgamma(dtemp1, dtemp2);
-      dtemp3 = 1.0 / dtemp3;
-      dtemp3 = sqrt(dtemp3);
-      for(j = 0; j < p; j++){
-        v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
-      }
 
-      if(processType == "independent.shared"){
-        dtemp1 = 0.5 * nu_z;
-        dtemp2 = 1.0 / dtemp1;
-        dtemp3 = rgamma(dtemp1, dtemp2);
-        dtemp3 = 1.0 / dtemp3;
-        dtemp3 = sqrt(dtemp3);
-        for(k = 0; k < r; k++){
-          for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          if(family == family_poisson){
+            for(i = 0; i < n; i++){
+              dtemp1 = Y[i] + epsilon;
+              dtemp2 = 1.0;
+              V_eta[bb*n + i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+            }
           }
-        }
-      }else if(processType == "independent"){
-        for(k = 0; k < r; k++){
-          dtemp1 = 0.5 * nu_z;
+
+          if(family == family_binomial){
+            for(i = 0; i < n; i++){
+              dtemp1 = Y[i] + epsilon;
+              dtemp2 = nBinom[i];
+              dtemp2 += 2.0 * epsilon;
+              dtemp2 -= dtemp1;
+              V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+            }
+          }
+
+          if(family == family_binary){
+            for(i = 0; i < n; i++){
+              dtemp1 = Y[i] + epsilon;
+              dtemp2 = nBinom[i];
+              dtemp2 += 2.0 * epsilon;
+              dtemp2 -= dtemp1;
+              V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+            }
+          }
+
+          for(i = 0; i < n; i++){
+            V_xi[bb*n + i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, sigmaSq_xi)
+          }
+
+          dtemp1 = 0.5 * nu_beta;
           dtemp2 = 1.0 / dtemp1;
           dtemp3 = rgamma(dtemp1, dtemp2);
           dtemp3 = 1.0 / dtemp3;
           dtemp3 = sqrt(dtemp3);
-          for(i = 0; i < n; i++){
-            v_z[k*n + i] = rnorm(0.0, dtemp3);
+          for(j = 0; j < p; j++){
+            V_beta[bb*p + j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ t
           }
-        }
-      }else if(processType == "multivariate"){
 
-        for(k = 0; k < r; k++){
-          for(i = 0; i < n; i++){
-            tmp_nr[k*n + i] = rnorm(0.0, 1.0);
+          if(processType == "independent.shared"){
+            dtemp1 = 0.5 * nu_z;
+            dtemp2 = 1.0 / dtemp1;
+            dtemp3 = rgamma(dtemp1, dtemp2);
+            dtemp3 = 1.0 / dtemp3;
+            dtemp3 = sqrt(dtemp3);
+            for(k = 0; k < r; k++){
+              for(i = 0; i < n; i++){
+                V_z[bb*nr + k*n + i] = rnorm(0.0, dtemp3);
+              }
+            }
+          }else if(processType == "independent"){
+            for(k = 0; k < r; k++){
+              dtemp1 = 0.5 * nu_z;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp3 = 1.0 / dtemp3;
+              dtemp3 = sqrt(dtemp3);
+              for(i = 0; i < n; i++){
+                V_z[bb*nr + k*n + i] = rnorm(0.0, dtemp3);
+              }
+            }
+          }else if(processType == "multivariate"){
+
+            for(k = 0; k < r; k++){
+              for(i = 0; i < n; i++){
+                tmp_nr[k*n + i] = rnorm(0.0, 1.0);
+              }
+            }
+            rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
+            F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
+            mkLT(samp_Sigma, r);
+            F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, &V_z[bb*nr], &n FCONE FCONE);
+
           }
-        }
-        rInvWishart(r, nu_z + 2*r, chol_iwScale, samp_Sigma, tmp_rr);
-        F77_NAME(dpotrf)(lower, &r, samp_Sigma, &r, &info FCONE); if(info != 0){perror("c++ error: samp_Sigma dpotrf failed\n");}
-        mkLT(samp_Sigma, r);
-        F77_NAME(dgemm)(ntran, ytran, &n, &r, &r, &one, tmp_nr, &n, samp_Sigma, &r, &zero, v_z, &n FCONE FCONE);
 
       }
 
-      // projection step
-      projGLMvc(n, p, r, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
-                v_eta, v_xi, v_beta, v_z, D1Inv, D1InvB1, cholschurA1,
-                DInvB_pn, DInvB_nrn, cholschurA, tmp_nr);
-
-      // copy samples into SEXP return object
-      F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
-      F77_NAME(dcopy)(&nr, &v_z[0], &incOne, &REAL(samples_z_r)[s*nr], &incOne);
-      F77_NAME(dcopy)(&n, &v_xi[0], &incOne, &REAL(samples_xi_r)[s*n], &incOne);
+      // projection step for the block
+      projGLMvcbatch(n, p, r, nBlock, X, X_tilde, sigmaSq_xi, Lbeta, cholVz, processType,
+                     V_eta, V_xi, V_beta, V_z, D1Inv, D1InvB1, cholschurA1,
+                     DInvB_pn, DInvB_nrn, cholschurA, tmp_nrb, tmp_nb, tmp_pb);
 
     }
+
+    R_chk_free(V_eta);
+    R_chk_free(tmp_nb);
+    R_chk_free(tmp_pb);
+    R_chk_free(tmp_nrb);
 
     PutRNGstate();
 

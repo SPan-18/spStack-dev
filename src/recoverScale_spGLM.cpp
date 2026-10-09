@@ -27,6 +27,8 @@ extern "C" {
     char const *lower = "L";
     char const *nUnit = "N";
     char const *ntran = "N";
+    char const *lside = "L";
+    const double one = 1.0;
     const double negOne = -1.0;
     const int incOne = 1;
 
@@ -65,22 +67,18 @@ extern "C" {
     int nSamples = INTEGER(nSamples_r)[0];
 
     // memory allocations
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                       // correlation matrix
-    double *thetasp = (double *) R_alloc(2, sizeof(double));                                  // spatial process parameters
-    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz
+    double thetasp[2] = {phi, nu};                                                            // spatial process parameters
+    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz, built in place
     double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
 
-    //construct covariance matrix (full)
-    thetasp[0] = phi;
-    thetasp[1] = nu;
-    spCorFull2(n, 2, coords, thetasp, corfn, Vz);
-
-    // Find Cholesky of Vz
-    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+    // chol(Vz)
+    spCorFull2(n, 2, coords, thetasp, corfn, cholVz);
+    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i).\n", info);}
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, Lbeta, &incOne);                                                            // Lbeta = Vbeta
-    F77_NAME(dpotrf)(lower, &p, Lbeta, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");}  // Lbeta = chol(Vbeta)
+    F77_NAME(dpotrf)(lower, &p, Lbeta, &p, &info FCONE);                                                             // Lbeta = chol(Vbeta)
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the prior covariance of beta failed (info = %i).\n", info);}
 
     /*****************************************
      Set-up posterior sampling
@@ -92,11 +90,18 @@ extern "C" {
     // temmporary variables for posterior recovery of scale parameters
     double QBeta = 0.0, Qz = 0.0, IGa = 0.0, IGb = 0.0;
     double *beta_s = (double *) R_alloc(p, sizeof(double)); zeros(beta_s, p);
-    double *z_s = (double *) R_alloc(n, sizeof(double)); zeros(z_s, n);
+
+    // the quadratic forms t(z)*inv(Vz)*z are found for blocks of nBlockMax samples with level-3 BLAS; the
+    // inverse-gamma draws are made in the original order
+    const int nBlockMax = 64;
+    int nBlock = 0, nzBlock = 0, b = 0, s = 0;
+    double *zBlock = (double *) R_alloc((size_t) n * nBlockMax, sizeof(double));             // n x nBlock work matrix
+
+    GetRNGstate();
 
     // recover posterior samples of scale parameter of beta
     for(i = 0; i < nSamples; i++){
-        F77_NAME(dcopy)(&p, &betaSamps[i * p], &incOne, beta_s, &incOne);
+        F77_NAME(dcopy)(&p, &betaSamps[(R_xlen_t) i * p], &incOne, beta_s, &incOne);
         F77_NAME(daxpy)(&p, &negOne, betaMu, &incOne, beta_s, &incOne);
         F77_NAME(dtrsv)(lower, ntran, nUnit, &p, Lbeta, &p, beta_s, &incOne FCONE FCONE FCONE);
         QBeta = F77_NAME(ddot)(&p, beta_s, &incOne, beta_s, &incOne);
@@ -106,14 +111,20 @@ extern "C" {
     }
 
     // recover posterior samples of scale parameter of z
-    for(i = 0; i < nSamples; i++){
-        F77_NAME(dcopy)(&n, &zSamps[i * n], &incOne, z_s, &incOne);
-        F77_NAME(dtrsv)(lower, ntran, nUnit, &n, cholVz, &n, z_s, &incOne FCONE FCONE FCONE);
-        Qz = F77_NAME(ddot)(&n, z_s, &incOne, z_s, &incOne);
-        IGa = 0.5 * (nu_z + n);
-        IGb = 0.5 * (nu_z + Qz);
-        REAL(samples_zScale_r)[i] = 1.0 / rgamma(IGa, 1.0 / IGb);
+    for(s = 0; s < nSamples; s += nBlockMax){
+        nBlock = std::min(nBlockMax, nSamples - s);
+        nzBlock = n * nBlock;
+        F77_NAME(dcopy)(&nzBlock, &zSamps[(R_xlen_t) s * n], &incOne, zBlock, &incOne);
+        F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &nBlock, &one, cholVz, &n, zBlock, &n FCONE FCONE FCONE FCONE);  // cholinv(Vz)*z
+        for(b = 0; b < nBlock; b++){
+            Qz = F77_NAME(ddot)(&n, &zBlock[n * b], &incOne, &zBlock[n * b], &incOne);
+            IGa = 0.5 * (nu_z + n);
+            IGb = 0.5 * (nu_z + Qz);
+            REAL(samples_zScale_r)[s + b] = 1.0 / rgamma(IGa, 1.0 / IGb);
+        }
     }
+
+    PutRNGstate();
 
     // make return object
     SEXP result_r, resultName_r;

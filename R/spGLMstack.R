@@ -27,12 +27,26 @@
 #' list of candidate models for stacking. See [candidateModels()] for details.
 #' @param n.samples number of posterior samples to be generated.
 #' @param loopd.controls a list with details on how leave-one-out predictive
-#' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`
-#' and `nMC`. The tag `method` can be either `'exact'` or `'CV'`. If sample size
-#' is more than 100, then the default is `'CV'` with `CV.K` equal to its default
-#' value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many Monte Carlo
-#' samples will be used to evaluate the leave-one-out predictive densities,
-#' which must be at least 500 (default).
+#' densities (LOO-PD) are to be calculated. Valid tags include `method`, `CV.K`,
+#' `nMC` and `CV.update`. The tag `method` can be either `'exact'` or `'CV'`. If
+#' sample size is more than 100, then the default is `'CV'` with `CV.K` equal to
+#' its default value 10 (Gelman *et al.* 2024). The tag `nMC` decides how many
+#' Monte Carlo samples will be used to evaluate the leave-one-out predictive
+#' densities, which must be at least 500 (default). The tag `CV.update` is an
+#' advanced option, used only if `method = 'CV'`, that decides how the
+#' pre-processing of the model fit on each fold is obtained, and should be
+#' changed with care as the faster choice depends on the BLAS library that R is
+#' linked with (see `sessionInfo()`). `CV.update = 'update'` obtains it by
+#' deletion updates of the full-data Cholesky factors, which is the faster
+#' choice with the reference BLAS that R ships with. `CV.update = 'direct'`
+#' recomputes it on each fold, which is faster only with an optimized BLAS such
+#' as OpenBLAS, Intel MKL or Apple Accelerate (vecLib), and is slower
+#' otherwise. The default `CV.update = 'auto'` uses `'direct'` if such an
+#' optimized BLAS is detected from the library paths reported by R and
+#' `'update'` otherwise; set it explicitly if the BLAS is not detected correctly
+#' (for example, an optimized BLAS installed in place of `Rblas.dll` on
+#' Windows). Both choices give the same results up to floating-point rounding,
+#' so only the run time is affected.
 #' @param parallel logical. If \code{parallel=FALSE}, the parallelization plan,
 #'  if set up by the user, is ignored. If \code{parallel=TRUE}, the function
 #'  inherits the parallelization plan that is set by the user via the function
@@ -59,7 +73,9 @@
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
 #' \item{`loopd.method`}{a list containing details of the algorithm used for
-#' calculation of leave-one-out predictive densities.}
+#' calculation of leave-one-out predictive densities. For K-fold
+#' cross-validation, its tag `cv.update` records the pre-processing method
+#' (`'update'` or `'direct'`) that was used.}
 #' \item{`n.models`}{number of candidate models that are fit.}
 #' \item{`candidate.models`}{a matrix with \code{n_model} rows with each row
 #'  containing details of the model parameters and its optimal weight.}
@@ -371,6 +387,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   #### Leave-one-out setup ####
   loopd <- TRUE
 
+  # defaults if loopd.controls is not supplied; parsed below like a user-supplied list
   if(missing(loopd.controls)){
     if(n > 99){
       loopd.controls <- list()
@@ -383,52 +400,70 @@ spGLMstack <- function(formula, data = parent.frame(), family,
       loopd.controls[["CV.K"]] <- 0
       loopd.controls[["nMC"]] <- 500
     }
-  }else{
-    names(loopd.controls) <- tolower(names(loopd.controls))
-    if(!"method" %in% names(loopd.controls)){
-      stop("error: method missing from loopd.controls.")
-    }
-    loopd.method <- loopd.controls[["method"]]
-    loopd.method <- tolower(loopd.method)
-    if(!loopd.method %in% c("exact", "cv")){
-      stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
-    }
-    if(loopd.method == "exact"){
+  }
+
+  if(!is.list(loopd.controls)){
+    stop("error: loopd.controls must be a list.")
+  }
+  names(loopd.controls) <- tolower(names(loopd.controls))
+  if(!"method" %in% names(loopd.controls)){
+    stop("error: method missing from loopd.controls.")
+  }
+  loopd.method <- loopd.controls[["method"]]
+  loopd.method <- tolower(loopd.method)
+  if(!loopd.method %in% c("exact", "cv")){
+    stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
+  }
+  if(loopd.method == "exact"){
+    CV.K <- as.integer(0)
+  }
+  if(loopd.method == "cv"){
+    if(n < 100){
+      message("Sample size too low for CV. Finding exact LOO-PD.")
+      loopd.method <- "exact"
       CV.K <- as.integer(0)
-    }
-    if(loopd.method == "cv"){
-      if(n < 100){
-        message("Sample size too low for CV. Finding exact LOO-PD.")
-        loopd.method <- "exact"
-        CV.K <- as.integer(0)
+    }else{
+      if(!"cv.k" %in% names(loopd.controls)){
+        message("CV.K missing from loopd.controls. Using defaults.")
+        CV.K <- 10
       }else{
-        if(!"cv.k" %in% names(loopd.controls)){
-          message("CV.K missing from loopd.controls. Using defaults.")
-          CV.K <- 10
-        }
         CV.K <- loopd.controls[["cv.k"]]
-        if(CV.K < 10){
-          message("CV.K must be at least 10. Setting it to 10.")
-          CV.K <- 10
-        }else if(CV.K > 20){
-          message("CV.K must be at most 20. Setting it to 20.")
-          CV.K <- 20
-        }
-        if(floor(CV.K) != CV.K){
-          message("CV.K must be integer. Setting it to nearest integer.")
-        }
+      }
+      if(CV.K < 10){
+        message("CV.K must be at least 10. Setting it to 10.")
+        CV.K <- 10
+      }else if(CV.K > 20){
+        message("CV.K must be at most 20. Setting it to 20.")
+        CV.K <- 20
+      }
+      if(floor(CV.K) != CV.K){
+        message("CV.K must be integer. Setting it to nearest integer.")
+        CV.K <- round(CV.K)
       }
     }
-    if(!"nmc" %in% names(loopd.controls)){
-      message("nMC missing from loopd.controls. Using defaults.")
-      loopd.nMC <- 500
-    }
-    loopd.nMC <- loopd.controls[["nmc"]]
-    if(loopd.nMC < 500){
-      message("Number of Monte Carlo samples too low. Using defaults = 500.")
-      loopd.nMC = 500
-    }
   }
+  if(!"nmc" %in% names(loopd.controls)){
+    message("nMC missing from loopd.controls. Using defaults.")
+    loopd.nMC <- 500
+  }else{
+    loopd.nMC <- loopd.controls[["nmc"]]
+  }
+  if(loopd.nMC < 500){
+    message("Number of Monte Carlo samples too low. Using defaults = 500.")
+    loopd.nMC = 500
+  }
+
+  # pre-processing of the K-fold CV subsets: deletion updates or direct recomputation (advanced)
+  if(!"cv.update" %in% names(loopd.controls)){
+    CV.update <- "auto"
+  }else{
+    CV.update <- loopd.controls[["cv.update"]]
+  }
+  CV.update <- resolve_CV_update(CV.update)
+  if(loopd.method == "cv"){
+    loopd.controls[["cv.update"]] <- CV.update
+  }
+  CV.update <- as.integer(CV.update == "update")
 
   storage.mode(CV.K) <- "integer"
   storage.mode(loopd.nMC) <- "integer"
@@ -443,7 +478,8 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   storage.mode(verbose) <- "integer"
 
   # candidate models sharing (phi, nu) are fitted in one call, which builds the
-  # spatial correlation matrix once and loops over their boundary values
+  # spatial correlation matrix and all the pre-processing (full data and
+  # leave-one-out/CV subsets) once and shares it across their boundary values
   cand_phi <- vapply(list_candidate, function(x) as.numeric(x[["phi"]]), numeric(1))
   cand_nu <- vapply(list_candidate, function(x) as.numeric(x[["nu"]]), numeric(1))
   cand_boundary <- vapply(list_candidate, function(x) as.numeric(x[["boundary"]]),
@@ -459,7 +495,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     .Call(C_spGLMexactLOOgrid, y, X, p, n, family, n.binom,
           coords, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
           cand_phi[idx[1]], cand_nu[idx[1]], cand_boundary[idx],
-          n.samples, loopd, loopd.method, CV.K, loopd.nMC)
+          n.samples, loopd, loopd.method, CV.K, loopd.nMC, CV.update)
   }
 
   # results of the groups, put back in the order of list_candidate

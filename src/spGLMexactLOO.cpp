@@ -14,18 +14,27 @@
 # define FCONE
 #endif
 
-// Fit of one candidate model (fixed phi, nu and boundary adjustment epsilon) with optional
-// leave-one-out predictive densities. Vz holds the n x n spatial correlation matrix; it is only
-// read (never modified), so candidate models sharing (phi, nu) can use the same Vz.
+// Fits of the candidate models sharing (phi, nu) that differ only in the boundary adjustment parameter
+// epsilon (nEps values in epsVec), with optional leave-one-out predictive densities. Vz holds the n x n
+// spatial correlation matrix; it is only read (never modified).
+// The pre-processing of the full data and of each leave-one-out or cross-validation subset does not depend
+// on epsilon, so it is computed once and shared by the nEps fits: the posterior samples of the nEps models are
+// drawn first (in the order of epsVec), and then, for each held-out site or fold, the Monte Carlo draws of the
+// nEps models are made in turn. With nEps = 1 the random-number stream is that of a single fit.
+// cvUpdate (K-fold CV only): 1 = the pre-processing of each block-deleted data set is obtained from the
+// full-data one by deletion updates (O(n^2 nk) per fold, scalar loops); 0 = it is recomputed directly
+// (O(n^3) per fold, level-3 BLAS; faster with an optimized multi-threaded BLAS). Both give the same result up
+// to floating-point rounding. Returns a list of nEps fits.
 static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p, std::string &family,
                               double *Vz, double *betaV, double nu_beta, double nu_z, double sigmaSq_xi,
-                              double epsilon, int nSamples, int loopd, std::string &loopd_method,
-                              int CV_K, int loopd_nMC){
+                              double *epsVec, int nEps, int nSamples, int loopd, std::string &loopd_method,
+                              int CV_K, int loopd_nMC, int cvUpdate){
 
   /*****************************************
    Common variables
    *****************************************/
-  int i, j, s, info, nProtect = 0;
+  int i, j, s, e, info, nProtect = 0;
+  double epsilon = 0.0;
   char const *lower = "L";
   char const *lside = "L";
   char const *ntran = "N";
@@ -91,102 +100,125 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
    Set-up posterior sampling
    *****************************************/
   // posterior samples of sigma-sq and beta
-  SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
-  SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
-  SEXP samples_xi_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
+  // (one entry per epsilon)
+  SEXP samples_beta_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+  SEXP samples_z_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+  SEXP samples_xi_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+  for(e = 0; e < nEps; e++){
+    SET_VECTOR_ELT(samples_beta_l, e, Rf_allocMatrix(REALSXP, p, nSamples));
+    SET_VECTOR_ELT(samples_z_l, e, Rf_allocMatrix(REALSXP, n, nSamples));
+    SET_VECTOR_ELT(samples_xi_l, e, Rf_allocMatrix(REALSXP, n, nSamples));
+  }
 
   const char *family_poisson = "poisson";
   const char *family_binary = "binary";
   const char *family_binomial = "binomial";
 
-  double *v_eta = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_eta, n);
-  double *v_xi = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_xi, n);
-  double *v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(v_beta, p);
-  double *v_z = (double *) R_chk_calloc(n, sizeof(double)); zeros(v_z, n);
-
-  double *tmp_n = (double *) R_chk_calloc(n, sizeof(double)); zeros(tmp_n, n);           // allocate memory for n x 1 vector
-  double *tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(tmp_p, p);           // allocate memory for p x 1 vector
+  // Posterior samples are drawn in blocks of nBlockMax: within a block the random variates are drawn in
+  // exactly the order of a draw-by-draw loop, directly into the output matrices, and the block is then
+  // projected at once with level-3 BLAS (projGLMbatch).
+  const int nBlockMax = 64;
+  int nBlock = 0, bb = 0;
+  int nnBlockMax = n * nBlockMax;
+  int pnBlockMax = p * nBlockMax;
+  double *V_eta = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(V_eta, nnBlockMax);
+  double *tmp_nb = (double *) R_chk_calloc(nnBlockMax, sizeof(double)); zeros(tmp_nb, nnBlockMax);
+  double *tmp_pb = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(tmp_pb, pnBlockMax);
+  double *V_beta = NULL, *V_z = NULL, *V_xi = NULL;
 
   GetRNGstate();
 
-  for(s = 0; s < nSamples; s++){
+  // posterior samples of the nEps models, one after the other
+  for(e = 0; e < nEps; e++){
 
-    if(family == family_poisson){
-      for(i = 0; i < n; i++){
-        dtemp1 = Y[i] + epsilon;
-        dtemp2 = 1.0;
-        v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+    epsilon = epsVec[e];
+
+    for(s = 0; s < nSamples; s += nBlockMax){
+
+      nBlock = std::min(nBlockMax, nSamples - s);
+      V_beta = &REAL(VECTOR_ELT(samples_beta_l, e))[(R_xlen_t) s * p];
+      V_xi = &REAL(VECTOR_ELT(samples_xi_l, e))[(R_xlen_t) s * n];
+      V_z = &REAL(VECTOR_ELT(samples_z_l, e))[(R_xlen_t) s * n];
+
+      for(bb = 0; bb < nBlock; bb++){
+
+
+        if(family == family_poisson){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = 1.0;
+            V_eta[bb*n + i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+          }
+        }
+
+        if(family == family_binomial){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = nBinom[i];
+            dtemp2 += 2.0 * epsilon;
+            dtemp2 -= dtemp1;
+            V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+          }
+        }
+
+        if(family == family_binary){
+          for(i = 0; i < n; i++){
+            dtemp1 = Y[i] + epsilon;
+            dtemp2 = nBinom[i];
+            dtemp2 += 2.0 * epsilon;
+            dtemp2 -= dtemp1;
+            V_eta[bb*n + i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+          }
+        }
+
+        dtemp1 = 0.5 * nu_beta;
+        dtemp2 = 1.0 / dtemp1;
+        dtemp3 = rgamma(dtemp1, dtemp2);
+        dtemp3 = 1.0 / dtemp3;
+        dtemp3 = sqrt(dtemp3);
+        for(j = 0; j < p; j++){
+          V_beta[bb*p + j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ N(0, 1)
+        }
+
+        dtemp1 = 0.5 * nu_z;
+        dtemp2 = 1.0 / dtemp1;
+        dtemp3 = rgamma(dtemp1, dtemp2);
+        dtemp3 = 1.0 / dtemp3;
+        dtemp3 = sqrt(dtemp3);
+        for(i = 0; i < n; i++){
+          V_xi[bb*n + i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, 1)
+          V_z[bb*n + i] = rnorm(0.0, dtemp3);                                                     // v_z ~ N(0, 1)
+        }
+
       }
+
+      // projection step for the block
+      projGLMbatch(X, n, p, nBlock, V_eta, V_xi, V_beta, V_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta, cholVz, cholVzPlusI, D1invX, DinvB_pn,
+                   tmp_nb, tmp_pb);
+
     }
-
-    if(family == family_binomial){
-      for(i = 0; i < n; i++){
-        dtemp1 = Y[i] + epsilon;
-        dtemp2 = nBinom[i];
-        dtemp2 += 2.0 * epsilon;
-        dtemp2 -= dtemp1;
-        v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-      }
-    }
-
-    if(family == family_binary){
-      for(i = 0; i < n; i++){
-        dtemp1 = Y[i] + epsilon;
-        dtemp2 = nBinom[i];
-        dtemp2 += 2.0 * epsilon;
-        dtemp2 -= dtemp1;
-        v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-      }
-    }
-
-    dtemp1 = 0.5 * nu_beta;
-    dtemp2 = 1.0 / dtemp1;
-    dtemp3 = rgamma(dtemp1, dtemp2);
-    dtemp3 = 1.0 / dtemp3;
-    dtemp3 = sqrt(dtemp3);
-    for(j = 0; j < p; j++){
-      v_beta[j] = rnorm(0.0, dtemp3);                                                  // v_beta ~ N(0, 1)
-    }
-
-    dtemp1 = 0.5 * nu_z;
-    dtemp2 = 1.0 / dtemp1;
-    dtemp3 = rgamma(dtemp1, dtemp2);
-    dtemp3 = 1.0 / dtemp3;
-    dtemp3 = sqrt(dtemp3);
-    for(i = 0; i < n; i++){
-      v_xi[i] = rnorm(0.0, sigma_xi);                                                  // v_xi ~ N(0, 1)
-      v_z[i] = rnorm(0.0, dtemp3);                                                     // v_z ~ N(0, 1)
-    }
-
-    // projection step
-    projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-            cholVz, cholVzPlusI, D1invX, DinvB_pn, tmp_n, tmp_p);
-
-    // copy samples into SEXP return object
-    F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
-    F77_NAME(dcopy)(&n, &v_z[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
-    F77_NAME(dcopy)(&n, &v_xi[0], &incOne, &REAL(samples_xi_r)[s*n], &incOne);
 
   }
 
   PutRNGstate();
 
-  R_chk_free(tmp_n);
-  R_chk_free(tmp_p);
-  R_chk_free(v_eta);
-  R_chk_free(v_xi);
-  R_chk_free(v_beta);
-  R_chk_free(v_z);
+  R_chk_free(V_eta);
+  R_chk_free(tmp_nb);
+  R_chk_free(tmp_pb);
   R_chk_free(cholSchur_p);
   // cholSchur_n, D1invX and DinvB_pn are kept: the exact LOO and CV pre-processing is obtained from
   // them by deletion updates (cholSchurGLMdel); they are freed at the end
 
   // make return object
   SEXP result_r, resultName_r;
+  SEXP loopd_out_l = R_NilValue;                                                       // leave-one-out predictive densities, one per epsilon
 
   if(loopd){
 
-    SEXP loopd_out_r = PROTECT(Rf_allocVector(REALSXP, n)); nProtect++;
+    loopd_out_l = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+    for(e = 0; e < nEps; e++){
+      SET_VECTOR_ELT(loopd_out_l, e, Rf_allocVector(REALSXP, n));
+    }
 
     // Exact leave-one-out predictive densities (LOO-PD) calculation
     if(loopd_method == exact_str){
@@ -224,11 +256,16 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
       // Set-up storage for sampling for leave-one-out model fit
-      double *loo_v_eta = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_eta, n1);
-      double *loo_v_xi = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_xi, n1);
-      double *loo_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_v_beta, p);
-      double *loo_v_z = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_z, n1);
-      double *loo_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(loo_tmp_p, p);                       // temporary p x 1 vector
+      // (blocks of nBlockMax Monte Carlo draws: n1 x nBlockMax and p x nBlockMax matrices)
+      int n1BlockMax = n1 * nBlockMax;
+      double *LV_eta = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_eta, n1BlockMax);
+      double *LV_xi = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_xi, n1BlockMax);
+      double *LV_z = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_z, n1BlockMax);
+      double *LV_tmpn = (double *) R_chk_calloc(n1BlockMax, sizeof(double)); zeros(LV_tmpn, n1BlockMax);
+      double *LV_beta = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(LV_beta, pnBlockMax);
+      double *LV_tmpp = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(LV_tmpp, pnBlockMax);
+      double *LV_gam = (double *) R_chk_calloc(nBlockMax, sizeof(double)); zeros(LV_gam, nBlockMax);
+      double *LV_nrm = (double *) R_chk_calloc(nBlockMax, sizeof(double)); zeros(LV_nrm, nBlockMax);
 
       // Set-up storage for spatial prediction
       double *looCz = (double *) R_chk_calloc(n1, sizeof(double)); zeros(looCz, n1);
@@ -270,97 +307,121 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
                        DinvB_pn1, cholSchur_p1, cholSchur_n1, D1invlooX);
         }
 
-        for(sMC = 0; sMC < loopd_nMC; sMC++){
+        // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
+        for(e = 0; e < nEps; e++){
 
-          if(family == family_poisson){
-            for(loo_i = 0; loo_i < n1; loo_i++){
-              dtemp1 = looY[loo_i] + epsilon;
-              dtemp2 = 1.0;
-              loo_v_eta[loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+          epsilon = epsVec[e];
+
+          for(sMC = 0; sMC < loopd_nMC; sMC += nBlockMax){
+
+            nBlock = std::min(nBlockMax, loopd_nMC - sMC);
+
+            // random variates of the block, in the order of a draw-by-draw loop
+            for(bb = 0; bb < nBlock; bb++){
+
+
+              if(family == family_poisson){
+                for(loo_i = 0; loo_i < n1; loo_i++){
+                  dtemp1 = looY[loo_i] + epsilon;
+                  dtemp2 = 1.0;
+                  LV_eta[bb*n1 + loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+                }
+              }
+
+              if(family == family_binomial){
+                for(loo_i = 0; loo_i < n1; loo_i++){
+                  dtemp1 = looY[loo_i] + epsilon;
+                  dtemp2 = loo_nBinom[loo_i];
+                  dtemp2 += 2.0 * epsilon;
+                  dtemp2 -= dtemp1;
+                  LV_eta[bb*n1 + loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                }
+              }
+
+              if(family == family_binary){
+                for(loo_i = 0; loo_i < n1; loo_i++){
+                  dtemp1 = looY[loo_i] + epsilon;
+                  dtemp2 = loo_nBinom[loo_i];
+                  dtemp2 += 2.0 * epsilon;
+                  dtemp2 -= dtemp1;
+                  LV_eta[bb*n1 + loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                }
+              }
+
+              dtemp1 = 0.5 * nu_beta;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp1 = 1.0 / dtemp3;
+              dtemp2 = sqrt(dtemp1);
+              for(j = 0; j < p; j++){
+                LV_beta[bb*p + j] = rnorm(0.0, dtemp2);                                                  // loo_v_beta ~ t_nu_beta(0, 1)
+              }
+
+              dtemp1 = 0.5 * nu_z;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp1 = 1.0 / dtemp3;
+              dtemp2 = sqrt(dtemp1);
+              for(loo_i = 0; loo_i < n1; loo_i++){
+                LV_xi[bb*n1 + loo_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
+                LV_z[bb*n1 + loo_i] = rnorm(0.0, dtemp2);                                                 // loo_v_z ~ t_nu_z(0, 1)
+              }
+
+              // variates of the z_tilde draw: rgamma(0.5*(nu_z + n1), .) and the standard normal of
+              // rnorm(0, sd) = sd*norm_rand(); scaled below once the projection gives sd
+              dtemp1 = 0.5 * (nu_z + n1);
+              dtemp2 = 1.0 / dtemp1;
+              LV_gam[bb] = rgamma(dtemp1, dtemp2);
+              LV_nrm[bb] = norm_rand();
+
             }
-          }
 
-          if(family == family_binomial){
-            for(loo_i = 0; loo_i < n1; loo_i++){
-              dtemp1 = looY[loo_i] + epsilon;
-              dtemp2 = loo_nBinom[loo_i];
-              dtemp2 += 2.0 * epsilon;
-              dtemp2 -= dtemp1;
-              loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+            // LOO projection step for the block
+            projGLMbatch(looX, n1, p, nBlock, LV_eta, LV_xi, LV_beta, LV_z, cholSchur_p1, cholSchur_n1, sigmaSq_xi, Lbeta,
+                         looCholVz, looCholVzPlusI, D1invlooX, DinvB_pn1, LV_tmpn, LV_tmpp);
+
+            // predict z at the loo_index location
+            F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n1, &nBlock, &one, looCholVz, &n1, LV_z, &n1 FCONE FCONE FCONE FCONE);  // LV_z = LzInv * V_z
+
+            for(bb = 0; bb < nBlock; bb++){
+
+              z_tilde_mu = F77_CALL(ddot)(&n1, looCz, &incOne, &LV_z[bb*n1], &incOne);                         // z_tilde_mu = Czt*VzInv*v_z
+              Mdist = pow(F77_NAME(dnrm2)(&n1, &LV_z[bb*n1], &incOne), 2);                                     // Mdist = v_zt*VzInv*v_z
+
+              // sample z_tilde
+              dtemp1 = 1.0 / LV_gam[bb];
+              dtemp2 = dtemp1 * (Mdist + nu_z) / (nu_z + n1);
+              dtemp3 = sqrt(dtemp2);
+              z_tilde = dtemp3 * LV_nrm[bb];                                                                  // = rnorm(0.0, dtemp3)
+              z_tilde = z_tilde * sqrt(z_tilde_var);
+              z_tilde = z_tilde + z_tilde_mu;
+
+              dtemp1 = F77_CALL(ddot)(&p, X_tilde, &incOne, &LV_beta[bb*p], &incOne);
+              dtemp2 = dtemp1 + z_tilde;                                                                      // dtemp2 = X_tilde*beta + z_tilde
+
+              // Find predictive densities from canonical parameter dtemp2 = (X*beta + z)
+              if(family == family_poisson){
+                dtemp3 = exp(dtemp2);
+                loopd_val_MC[sMC + bb] = dpois(Y[loo_index], dtemp3, 1);
+              }
+
+              if(family == family_binomial){
+                dtemp3 = inverse_logit(dtemp2);
+                loopd_val_MC[sMC + bb] = dbinom(Y[loo_index], nBinom[loo_index], dtemp3, 1);
+              }
+
+              if(family == family_binary){
+                dtemp3 = inverse_logit(dtemp2);
+                loopd_val_MC[sMC + bb] = dbinom(Y[loo_index], 1.0, dtemp3, 1);
+              }
+
             }
+
           }
 
-          if(family == family_binary){
-            for(loo_i = 0; loo_i < n1; loo_i++){
-              dtemp1 = looY[loo_i] + epsilon;
-              dtemp2 = loo_nBinom[loo_i];
-              dtemp2 += 2.0 * epsilon;
-              dtemp2 -= dtemp1;
-              loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-            }
-          }
-
-          dtemp1 = 0.5 * nu_beta;
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp1 = 1.0 / dtemp3;
-          dtemp2 = sqrt(dtemp1);
-          for(j = 0; j < p; j++){
-            loo_v_beta[j] = rnorm(0.0, dtemp2);                                                  // loo_v_beta ~ t_nu_beta(0, 1)
-          }
-
-          dtemp1 = 0.5 * nu_z;
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp1 = 1.0 / dtemp3;
-          dtemp2 = sqrt(dtemp1);
-          for(loo_i = 0; loo_i < n1; loo_i++){
-            loo_v_xi[loo_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
-            loo_v_z[loo_i] = rnorm(0.0, dtemp2);                                                 // loo_v_z ~ t_nu_z(0, 1)
-          }
-
-          // LOO projection step
-          projGLM(looX, n1, p, loo_v_eta, loo_v_xi, loo_v_beta, loo_v_z, cholSchur_p1, cholSchur_n1, sigmaSq_xi, Lbeta,
-                  looCholVz, looCholVzPlusI, D1invlooX, DinvB_pn1, tmp_n11, loo_tmp_p);
-
-          // predict z at the loo_index location
-          F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholVz, &n1, loo_v_z, &incOne FCONE FCONE FCONE);    // loo_v_z = LzInv * v_z
-          z_tilde_mu = F77_CALL(ddot)(&n1, looCz, &incOne, loo_v_z, &incOne);                               // z_tilde_mu = Czt*VzInv*v_z
-          Mdist = pow(F77_NAME(dnrm2)(&n1, loo_v_z, &incOne), 2);                                           // Mdist = v_zt*VzInv*v_z
-
-          // sample z_tilde
-          dtemp1 = 0.5 * (nu_z + n1);
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp1 = 1.0 / dtemp3;
-          dtemp2 = dtemp1 * (Mdist + nu_z) / (nu_z + n1);
-          dtemp3 = sqrt(dtemp2);
-          z_tilde = rnorm(0.0, dtemp3);
-          z_tilde = z_tilde * sqrt(z_tilde_var);
-          z_tilde = z_tilde + z_tilde_mu;
-
-          dtemp1 = F77_CALL(ddot)(&p, X_tilde, &incOne, loo_v_beta, &incOne);
-          dtemp2 = dtemp1 + z_tilde;                                                                        // dtemp2 = X_tilde*beta + z_tilde
-
-          // Find predictive densities from canonical parameter dtemp2 = (X*beta + z)
-          if(family == family_poisson){
-            dtemp3 = exp(dtemp2);
-            loopd_val_MC[sMC] = dpois(Y[loo_index], dtemp3, 1);
-          }
-
-          if(family == family_binomial){
-            dtemp3 = inverse_logit(dtemp2);
-            loopd_val_MC[sMC] = dbinom(Y[loo_index], nBinom[loo_index], dtemp3, 1);
-          }
-
-          if(family == family_binary){
-            dtemp3 = inverse_logit(dtemp2);
-            loopd_val_MC[sMC] = dbinom(Y[loo_index], 1.0, dtemp3, 1);
-          }
+          REAL(VECTOR_ELT(loopd_out_l, e))[loo_index] = logMeanExp(loopd_val_MC, loopd_nMC);
 
         }
-
-        REAL(loopd_out_r)[loo_index] = logMeanExp(loopd_val_MC, loopd_nMC);
 
       }
 
@@ -388,11 +449,14 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       R_chk_free(del_Z);
       R_chk_free(del_u);
       R_chk_free(del_w);
-      R_chk_free(loo_v_eta);
-      R_chk_free(loo_v_xi);
-      R_chk_free(loo_v_beta);
-      R_chk_free(loo_v_z);
-      R_chk_free(loo_tmp_p);
+      R_chk_free(LV_eta);
+      R_chk_free(LV_xi);
+      R_chk_free(LV_z);
+      R_chk_free(LV_tmpn);
+      R_chk_free(LV_beta);
+      R_chk_free(LV_tmpp);
+      R_chk_free(LV_gam);
+      R_chk_free(LV_nrm);
 
     }
 
@@ -409,6 +473,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       int nknk = 0;
       // int nknk = 0;       // nknk = nk x nk
       int nnk = 0;        // nnk = (n - nk); size of k-th partition deleted data
+      int nnknnk = 0;     // nnknnk = (n - nk) x (n - nk)
       // int nnknk = 0;
       // int nnknnk = 0;     // nnknnk = (n - nk) x (n - nk)
       // int nkp = 0;        // nkp = (n - nk) x p
@@ -451,11 +516,17 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
       // Set-up storage for sampling for block-deleted model
-      double *cv_v_eta = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_eta, nnkmax);
-      double *cv_v_xi = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_xi, nnkmax);
-      double *cv_v_beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(cv_v_beta, p);
-      double *cv_v_z = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_z, nnkmax);
-      double *cv_tmp_p = (double *) R_chk_calloc(p, sizeof(double)); zeros(cv_tmp_p, p);                       // temporary p x 1 vector
+      // (blocks of nBlockMax Monte Carlo draws: max(n-nk) x nBlockMax and p x nBlockMax matrices)
+      int nnkBlockMax = nnkmax * nBlockMax;
+      int nkBlockMax = nkmax * nBlockMax;
+      double *CV_eta = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_eta, nnkBlockMax);
+      double *CV_xi = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_xi, nnkBlockMax);
+      double *CV_z = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_z, nnkBlockMax);
+      double *CV_tmpn = (double *) R_chk_calloc(nnkBlockMax, sizeof(double)); zeros(CV_tmpn, nnkBlockMax);
+      double *CV_beta = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(CV_beta, pnBlockMax);
+      double *CV_tmpp = (double *) R_chk_calloc(pnBlockMax, sizeof(double)); zeros(CV_tmpp, pnBlockMax);
+      double *CV_gam = (double *) R_chk_calloc(nBlockMax, sizeof(double)); zeros(CV_gam, nBlockMax);
+      double *CV_nrm = (double *) R_chk_calloc(nkBlockMax, sizeof(double)); zeros(CV_nrm, nkBlockMax);
 
       // Set-up storage for held-out
       double *X_tilde = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(X_tilde, nkmaxp);         // Store held-out X
@@ -486,6 +557,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         nk = sizesCV[cv_index];
         nknk = nk * nk;
         nnk = n - nk;
+        nnknnk = nnk * nnk;
         // nnkp = nnk * p;
         start_index = startsCV[cv_index];
         end_index = endsCV[cv_index];
@@ -500,9 +572,21 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         copyVecBlock(Y, Y_tilde, n, start_index, end_index);                                                      // Held-out Y = Y_tilde
         copyVecBlock(nBinom, nBinom_tilde, n, start_index, end_index);                                            // Held-out nBinom = nBinom_tilde
 
-        // Block-deleted Cholesky updates
-        cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
-        cholBlockDelUpdate(n, cholVzPlusI, start_index, end_index, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmax);
+        // Cholesky factors of the block-deleted Vz and Vz+I
+        if(cvUpdate){
+          // block-deletion updates of the full-data factors (O(n^2 nk))
+          cholBlockDelUpdate(n, cholVz, start_index, end_index, cvCholVz, tmp_nnknnkmax, tmp_nnkmax);
+          cholBlockDelUpdate(n, cholVzPlusI, start_index, end_index, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmax);
+        }else{
+          // direct factorization (O(n^3), level-3 BLAS)
+          copyMatrixDelRowColBlock(Vz, n, n, cvCholVz, start_index, end_index, start_index, end_index);              // Vz[-ids, -ids]
+          F77_NAME(dcopy)(&nnknnk, cvCholVz, &incOne, cvCholVzPlusI, &incOne);
+          for(cv_i = 0; cv_i < nnk; cv_i++){
+            cvCholVzPlusI[cv_i*nnk + cv_i] += 1.0;                                                                   // Vz[-ids, -ids] + I
+          }
+          F77_NAME(dpotrf)(lower, &nnk, cvCholVz, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVz dpotrf failed\n");}
+          F77_NAME(dpotrf)(lower, &nnk, cvCholVzPlusI, &nnk, &info FCONE); if(info != 0){perror("c++ error: cvVzPlusI dpotrf failed\n");}
+        }
 
         // Spatial process prediction
         copyMatrixRowColBlock(Vz, n, n, z_tilde_cov, start_index, end_index, start_index, end_index);                                 // z_tilde_cov = Vz[ids, ids]
@@ -513,121 +597,154 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_tilde_schur dpotrf failed\n");}
         mkLT(z_tilde_cov, nk);
 
-        // Pre-processing for projGLM() on block-deleted data, by deletion updates of the full-data outputs
-        // (O(n^2 nk)); chol(I/sigmaSqxi + Q) is block-deleted first and then downdated in place (nk rank-1 downdates)
-        cholBlockDelUpdate(n, cholSchur_n, start_index, end_index, cholSchur_nnkmax, tmp_nnknnkmax, tmp_nnkmax);
-        if(cholSchurGLMdel(n, p, start_index, end_index, X, cholVzPlusI, D1invX, DinvB_pn, VbetaInv,
-                           D1invcvX, DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax,
-                           del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
-          // not numerically positive definite: recompute directly on the block-deleted data (O(n^3))
+        // Pre-processing for projGLM() on block-deleted data
+        if(cvUpdate){
+          // by deletion updates of the full-data outputs (O(n^2 nk)); chol(I/sigmaSqxi + Q) is block-deleted
+          // first and then downdated in place (nk rank-1 downdates)
+          cholBlockDelUpdate(n, cholSchur_n, start_index, end_index, cholSchur_nnkmax, tmp_nnknnkmax, tmp_nnkmax);
+          if(cholSchurGLMdel(n, p, start_index, end_index, X, cholVzPlusI, D1invX, DinvB_pn, VbetaInv,
+                             D1invcvX, DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax,
+                             del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
+            // not numerically positive definite: recompute directly on the block-deleted data (O(n^3))
+            cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
+                         DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
+          }
+        }else{
+          // directly on the block-deleted data (O(n^3))
           cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
                        DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
         }
 
-        // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
-        for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV++){
+        // Monte Carlo LOO-PD of the nEps models, sharing the pre-processing above
+        for(e = 0; e < nEps; e++){
 
-          if(family == family_poisson){
-            for(cv_i = 0; cv_i < nnk; cv_i++){
-              dtemp1 = cvY[cv_i] + epsilon;
-              dtemp2 = 1.0;
-              cv_v_eta[cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+          epsilon = epsVec[e];
+
+          // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
+          for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV += nBlockMax){
+
+            nBlock = std::min(nBlockMax, loopd_nMC - sMC_CV);
+
+            // random variates of the block, in the order of a draw-by-draw loop
+            for(bb = 0; bb < nBlock; bb++){
+
+
+              if(family == family_poisson){
+                for(cv_i = 0; cv_i < nnk; cv_i++){
+                  dtemp1 = cvY[cv_i] + epsilon;
+                  dtemp2 = 1.0;
+                  CV_eta[bb*nnk + cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
+                }
+              }
+
+              if(family == family_binomial){
+                for(cv_i = 0; cv_i < nnk; cv_i++){
+                  dtemp1 = cvY[cv_i] + epsilon;
+                  dtemp2 = cv_nBinom[cv_i];
+                  dtemp2 += 2.0 * epsilon;
+                  dtemp2 -= dtemp1;
+                  CV_eta[bb*nnk + cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                }
+              }
+
+              if(family == family_binary){
+                for(cv_i = 0; cv_i < nnk; cv_i++){
+                  dtemp1 = cvY[cv_i] + epsilon;
+                  dtemp2 = cv_nBinom[cv_i];
+                  dtemp2 += 2.0 * epsilon;
+                  dtemp2 -= dtemp1;
+                  CV_eta[bb*nnk + cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+                }
+              }
+
+              dtemp1 = 0.5 * nu_beta;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp3 = 1.0 / dtemp3;
+              dtemp3 = sqrt(dtemp3);
+              for(j = 0; j < p; j++){
+                CV_beta[bb*p + j] = rnorm(0.0, dtemp3);                                                  // loo_v_beta ~ N(0, 1)
+              }
+
+              dtemp1 = 0.5 * nu_z;
+              dtemp2 = 1.0 / dtemp1;
+              dtemp3 = rgamma(dtemp1, dtemp2);
+              dtemp3 = 1.0 / dtemp3;
+              dtemp3 = sqrt(dtemp3);
+              for(cv_i = 0; cv_i < nnk; cv_i++){
+                CV_xi[bb*nnk + cv_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
+                CV_z[bb*nnk + cv_i] = rnorm(0.0, dtemp3);                                                 // loo_v_z ~ N(0, 1)
+              }
+
+              // variates of the z_tilde draw: rgamma(0.5*(nu_z + nnk), .) and the nk standard normals of
+              // rnorm(0, sd) = sd*norm_rand(); scaled below once the projection gives sd
+              dtemp1 = 0.5 * (nu_z + nnk);
+              dtemp2 = 1.0 / dtemp1;
+              CV_gam[bb] = rgamma(dtemp1, dtemp2);
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                CV_nrm[bb*nkmax + cv_i] = norm_rand();
+              }
+
             }
-          }
 
-          if(family == family_binomial){
-            for(cv_i = 0; cv_i < nnk; cv_i++){
-              dtemp1 = cvY[cv_i] + epsilon;
-              dtemp2 = cv_nBinom[cv_i];
-              dtemp2 += 2.0 * epsilon;
-              dtemp2 -= dtemp1;
-              cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
+            // projection step for the block
+            projGLMbatch(cvX, nnk, p, nBlock, CV_eta, CV_xi, CV_beta, CV_z, cholSchur_p2, cholSchur_nnkmax, sigmaSq_xi, Lbeta,
+                         cvCholVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, CV_tmpn, CV_tmpp);
+
+            // Prediction of spatial process at held-out locations
+            F77_NAME(dtrsm)(lside, lower, ntran, nunit, &nnk, &nBlock, &one, cvCholVz, &nnk, CV_z, &nnk FCONE FCONE FCONE FCONE);   // CV_z = LzInv * V_z
+
+            for(bb = 0; bb < nBlock; bb++){
+
+              F77_NAME(dgemv)(ytran, &nnk, &nk, &one, LzInvCz_cv, &nnk, &CV_z[bb*nnk], &incOne, &zero, z_tilde_mu, &incOne FCONE); // z_tilde_mu = t(Cz)*inv(Vz)*v_z
+              PCMdist = pow(F77_NAME(dnrm2)(&nnk, &CV_z[bb*nnk], &incOne), 2);                                                     // Mahalanobis distance t(v_z)*inv(Vz)*v_z
+
+              // sample z_tilde
+              dtemp2 = 1.0 / CV_gam[bb];
+              dtemp1 = (PCMdist + nu_z) / (nu_z + nnk);
+              dtemp3 = dtemp1 * dtemp2;
+              dtemp1 = sqrt(dtemp3);
+              for(cv_i = 0; cv_i < nk; cv_i++){
+                z_tilde[cv_i] = dtemp1 * CV_nrm[bb*nkmax + cv_i];                                                                // = rnorm(0.0, dtemp1)
+              }
+              F77_NAME(dgemv)(ntran, &nk, &nk, &one, z_tilde_cov, &nk, z_tilde, &incOne, &zero, tmp_nkmax, &incOne FCONE);
+              F77_NAME(daxpy)(&nk, &one, z_tilde_mu, &incOne, tmp_nkmax, &incOne);
+              F77_NAME(dcopy)(&nk, tmp_nkmax, &incOne, z_tilde, &incOne);
+
+              // Find canonical parameter (X_tilde*v_beta + z_tilde)
+              F77_NAME(dgemv)(ntran, &nk, &p, &one, X_tilde, &nk, &CV_beta[bb*p], &incOne, &zero, tmp_nkmax, &incOne FCONE);
+              F77_NAME(daxpy)(&nk, &one, z_tilde, &incOne, tmp_nkmax, &incOne);
+
+              // Find CV-LOO-PD
+              if(family == family_poisson){
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  dtemp1 = exp(tmp_nkmax[cv_i]);
+                  loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dpois(Y_tilde[cv_i], dtemp1, 1);
+                }
+              }
+
+              if(family == family_binomial){
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
+                  loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dbinom(Y_tilde[cv_i], nBinom_tilde[cv_i], dtemp1, 1);
+                }
+              }
+
+              if(family == family_binary){
+                for(cv_i = 0; cv_i < nk; cv_i++){
+                  dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
+                  loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV + bb] = dbinom(Y_tilde[cv_i], 1.0, dtemp1, 1);
+                }
+              }
+
             }
+
           }
 
-          if(family == family_binary){
-            for(cv_i = 0; cv_i < nnk; cv_i++){
-              dtemp1 = cvY[cv_i] + epsilon;
-              dtemp2 = cv_nBinom[cv_i];
-              dtemp2 += 2.0 * epsilon;
-              dtemp2 -= dtemp1;
-              cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
-            }
-          }
-
-          dtemp1 = 0.5 * nu_beta;
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp3 = 1.0 / dtemp3;
-          dtemp3 = sqrt(dtemp3);
-          for(j = 0; j < p; j++){
-            cv_v_beta[j] = rnorm(0.0, dtemp3);                                                  // loo_v_beta ~ N(0, 1)
-          }
-
-          dtemp1 = 0.5 * nu_z;
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp3 = 1.0 / dtemp3;
-          dtemp3 = sqrt(dtemp3);
-          for(cv_i = 0; cv_i < nnk; cv_i++){
-            cv_v_xi[cv_i] = rnorm(0.0, sigma_xi);                                              // loo_v_xi ~ N(0, 1)
-            cv_v_z[cv_i] = rnorm(0.0, dtemp3);                                                 // loo_v_z ~ N(0, 1)
-          }
-
-          // LOO projection step
-          projGLM(cvX, nnk, p, cv_v_eta, cv_v_xi, cv_v_beta, cv_v_z, cholSchur_p2, cholSchur_nnkmax, sigmaSq_xi, Lbeta,
-                  cvCholVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, tmp_nnkmax, cv_tmp_p);
-
-          // Prediction of spatial process at held-out locations
-          F77_NAME(dtrsv)(lower, ntran, nunit, &nnk, cvCholVz, &nnk, cv_v_z, &incOne FCONE FCONE FCONE);                // cv_v_z = LzInv * v_z
-          F77_NAME(dgemv)(ytran, &nnk, &nk, &one, LzInvCz_cv, &nnk, cv_v_z, &incOne, &zero, z_tilde_mu, &incOne FCONE); // z_tilde_mu = t(Cz)*inv(Vz)*v_z
-          PCMdist = pow(F77_NAME(dnrm2)(&nnk, cv_v_z, &incOne), 2);                                                     // Mahalanobis distance t(v_z)&inv(Vz)*v_z
-
-          // sample z_tilde
-          dtemp1 = 0.5 * (nu_z + nnk);
-          dtemp2 = 1.0 / dtemp1;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          dtemp2 = 1.0 / dtemp3;
-          dtemp1 = (PCMdist + nu_z) / (nu_z + nnk);
-          dtemp3 = dtemp1 * dtemp2;
-          dtemp1 = sqrt(dtemp3);
           for(cv_i = 0; cv_i < nk; cv_i++){
-            z_tilde[cv_i] = rnorm(0.0, dtemp1);
-          }
-          F77_NAME(dgemv)(ntran, &nk, &nk, &one, z_tilde_cov, &nk, z_tilde, &incOne, &zero, tmp_nkmax, &incOne FCONE);
-          F77_NAME(daxpy)(&nk, &one, z_tilde_mu, &incOne, tmp_nkmax, &incOne);
-          F77_NAME(dcopy)(&nk, tmp_nkmax, &incOne, z_tilde, &incOne);
-
-          // Find canonical parameter (X_tilde*v_beta + z_tilde)
-          F77_NAME(dgemv)(ntran, &nk, &p, &one, X_tilde, &nk, cv_v_beta, &incOne, &zero, tmp_nkmax, &incOne FCONE);
-          F77_NAME(daxpy)(&nk, &one, z_tilde, &incOne, tmp_nkmax, &incOne);
-
-          // Find CV-LOO-PD
-          if(family == family_poisson){
-            for(cv_i = 0; cv_i < nk; cv_i++){
-              dtemp1 = exp(tmp_nkmax[cv_i]);
-              loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dpois(Y_tilde[cv_i], dtemp1, 1);
-            }
+            REAL(VECTOR_ELT(loopd_out_l, e))[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
           }
 
-          if(family == family_binomial){
-            for(cv_i = 0; cv_i < nk; cv_i++){
-              dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
-              loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_tilde[cv_i], nBinom_tilde[cv_i], dtemp1, 1);
-            }
-          }
-
-          if(family == family_binary){
-            for(cv_i = 0; cv_i < nk; cv_i++){
-              dtemp1 = inverse_logit(tmp_nkmax[cv_i]);
-              loopd_val_MC_CV[cv_i*loopd_nMC + sMC_CV] = dbinom(Y_tilde[cv_i], 1.0, dtemp1, 1);
-            }
-          }
-
-        }
-
-        for(cv_i = 0; cv_i < nk; cv_i++){
-          REAL(loopd_out_r)[start_index + cv_i] = logMeanExp(&loopd_val_MC_CV[cv_i*loopd_nMC], loopd_nMC);
         }
       }
 
@@ -656,11 +773,14 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       R_chk_free(del_Z);
       R_chk_free(del_u);
       R_chk_free(del_w);
-      R_chk_free(cv_v_eta);
-      R_chk_free(cv_v_xi);
-      R_chk_free(cv_v_beta);
-      R_chk_free(cv_v_z);
-      R_chk_free(cv_tmp_p);
+      R_chk_free(CV_eta);
+      R_chk_free(CV_xi);
+      R_chk_free(CV_z);
+      R_chk_free(CV_tmpn);
+      R_chk_free(CV_beta);
+      R_chk_free(CV_tmpp);
+      R_chk_free(CV_gam);
+      R_chk_free(CV_nrm);
       R_chk_free(X_tilde);
       R_chk_free(Y_tilde);
       R_chk_free(nBinom_tilde);
@@ -703,8 +823,13 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       double *tmp_M3 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M3, M);
       double *ksigma = (double *) R_chk_calloc(2, sizeof(double)); zeros(ksigma, 2);
 
-      double *pointer_beta = REAL(samples_beta_r);
-      double *pointer_z = REAL(samples_z_r);
+      double *pointer_beta = NULL;
+      double *pointer_z = NULL;
+
+      for(e = 0; e < nEps; e++){
+
+      pointer_beta = REAL(VECTOR_ELT(samples_beta_l, e));
+      pointer_z = REAL(VECTOR_ELT(samples_z_l, e));
 
       for(loo_index = 0; loo_index < n; loo_index++){
 
@@ -739,7 +864,9 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
         ParetoSmoothedIR(rawIR, M, nSamples, sortedIR, orderIR, stableIR, ksigma, tmp_M1, tmp_M2, tmp_M3);
 
-        REAL(loopd_out_r)[loo_index] = logWeightedSumExp(dens_i, rawIR, nSamples);
+        REAL(VECTOR_ELT(loopd_out_l, e))[loo_index] = logWeightedSumExp(dens_i, rawIR, nSamples);
+
+      }
 
       }
 
@@ -757,56 +884,31 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
     }
 
-    // make return object for posterior samples and leave-one-out predictive densities
-    int nResultListObjs = 4;
-
-    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-    // samples of beta
-    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
-
-    // samples of z
-    SET_VECTOR_ELT(result_r, 1, samples_z_r);
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
-
-    // samples of z
-    SET_VECTOR_ELT(result_r, 2, samples_xi_r);
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
-
-    // loo-pd
-    // leave-one-out predictive densities
-    SET_VECTOR_ELT(result_r, 3, loopd_out_r);
-    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
-
-    Rf_namesgets(result_r, resultName_r);
-
-  }else{
-
-    // make return object for posterior samples and leave-one-out predictive densities
-    int nResultListObjs = 3;
-
-    result_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-    resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
-
-    // samples of beta
-    SET_VECTOR_ELT(result_r, 0, samples_beta_r);
-    SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
-
-    // samples of z
-    SET_VECTOR_ELT(result_r, 1, samples_z_r);
-    SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
-
-    // samples of xi
-    SET_VECTOR_ELT(result_r, 2, samples_xi_r);
-    SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
-
-    Rf_namesgets(result_r, resultName_r);
-
   }
 
+  // return object: a list of nEps fits, each a list of the posterior samples (and leave-one-out predictive densities)
+  int nResultListObjs = loopd ? 4 : 3;
+  SEXP fit_r;
+  result_r = PROTECT(Rf_allocVector(VECSXP, nEps)); nProtect++;
+  resultName_r = PROTECT(Rf_allocVector(VECSXP, nResultListObjs)); nProtect++;
+  SET_VECTOR_ELT(resultName_r, 0, Rf_mkChar("beta"));
+  SET_VECTOR_ELT(resultName_r, 1, Rf_mkChar("z"));
+  SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
+  if(loopd){
+    SET_VECTOR_ELT(resultName_r, 3, Rf_mkChar("loopd"));
+  }
 
+  for(e = 0; e < nEps; e++){
+    fit_r = Rf_allocVector(VECSXP, nResultListObjs);
+    SET_VECTOR_ELT(result_r, e, fit_r);                                                // protected through result_r
+    SET_VECTOR_ELT(fit_r, 0, VECTOR_ELT(samples_beta_l, e));                           // samples of beta
+    SET_VECTOR_ELT(fit_r, 1, VECTOR_ELT(samples_z_l, e));                              // samples of z
+    SET_VECTOR_ELT(fit_r, 2, VECTOR_ELT(samples_xi_l, e));                             // samples of xi
+    if(loopd){
+      SET_VECTOR_ELT(fit_r, 3, VECTOR_ELT(loopd_out_l, e));                            // leave-one-out predictive densities
+    }
+    Rf_namesgets(fit_r, resultName_r);
+  }
 
   R_chk_free(cholSchur_n);
   R_chk_free(D1invX);
@@ -823,7 +925,7 @@ extern "C" {
                      SEXP coords_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                      SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                      SEXP epsilon_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                     SEXP CV_K_r, SEXP loopd_nMC_r, SEXP verbose_r){
+                     SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r, SEXP verbose_r){
 
     const int incOne = 1;
 
@@ -873,6 +975,7 @@ extern "C" {
     std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
     int CV_K = INTEGER(CV_K_r)[0];
     int loopd_nMC = INTEGER(loopd_nMC_r)[0];
+    int cvUpdate = INTEGER(cvUpdate_r)[0];
 
     const char *exact_str = "exact";
     const char *cv_str = "cv";
@@ -933,22 +1036,25 @@ extern "C" {
     double thetasp[2] = {phi, nu};                                                               // spatial process parameters
     spCorFull2(n, 2, coords, thetasp, corfn, Vz);
 
-    return spGLMexactLOO_fit(Y, nBinom, X, n, p, family, Vz, betaV, nu_beta, nu_z, sigmaSq_xi,
-                             epsilon, nSamples, loopd, loopd_method, CV_K, loopd_nMC);
+    SEXP result_r = PROTECT(spGLMexactLOO_fit(Y, nBinom, X, n, p, family, Vz, betaV, nu_beta, nu_z, sigmaSq_xi,
+                                              &epsilon, 1, nSamples, loopd, loopd_method, CV_K, loopd_nMC, cvUpdate));
+    UNPROTECT(1);
+
+    return VECTOR_ELT(result_r, 0);
 
   }
 
 
   // Fits of the candidate models sharing (phi, nu) for a vector of boundary adjustment parameters
-  // epsilon. The correlation matrix R depends on (phi, nu) only; it is built once and passed to each
-  // fit (read-only). Returns a list with one element per epsilon, each as returned by spGLMexactLOO.
+  // epsilon. The correlation matrix R and all the pre-processing depend on (phi, nu) only; they are
+  // computed once and shared by the fits (see spGLMexactLOO_fit). Returns a list with one element per
+  // epsilon, each as returned by spGLMexactLOO.
   SEXP spGLMexactLOOgrid(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
                          SEXP coords_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                          SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                          SEXP epsilon_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
-                         SEXP CV_K_r, SEXP loopd_nMC_r){
+                         SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r){
 
-    int k;
     const int incOne = 1;
 
     double *Y = REAL(Y_r);
@@ -986,30 +1092,15 @@ extern "C" {
     std::string loopd_method = CHAR(STRING_ELT(loopd_method_r, 0));
     int CV_K = INTEGER(CV_K_r)[0];
     int loopd_nMC = INTEGER(loopd_nMC_r)[0];
+    int cvUpdate = INTEGER(cvUpdate_r)[0];
 
     // correlation matrix R, built once
     double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
     double thetasp[2] = {phi, nu};
     spCorFull2(n, 2, coords, thetasp, corfn, Vz);
 
-    SEXP result_r = PROTECT(Rf_allocVector(VECSXP, nModels));
-
-    for(k = 0; k < nModels; k++){
-
-      const void *vmax = vmaxget();                                                  // release the per-model R_alloc memory below
-
-      SET_VECTOR_ELT(result_r, k, spGLMexactLOO_fit(Y, nBinom, X, n, p, family, Vz, betaV, nu_beta, nu_z,
-                                                    sigmaSq_xi, epsilon[k], nSamples, loopd, loopd_method,
-                                                    CV_K, loopd_nMC));
-      vmaxset(vmax);
-
-      R_CheckUserInterrupt();
-
-    }
-
-    UNPROTECT(1);
-
-    return result_r;
+    return spGLMexactLOO_fit(Y, nBinom, X, n, p, family, Vz, betaV, nu_beta, nu_z, sigmaSq_xi,
+                             epsilon, nModels, nSamples, loopd, loopd_method, CV_K, loopd_nMC, cvUpdate);
 
   }
 

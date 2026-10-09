@@ -1148,8 +1148,7 @@ void lmulm_XTilde_VC(const char *trans, int n, int r, int k, double *XTilde, dou
 
 void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std::string &processtype){
 
-  int i = 0, j = 0, k = 0, l = 0;
-  int nr = n * r;
+  int i = 0, j = 0, l = 0;
 
   if(processtype == "independent.shared" || processtype == "multivariate"){
     for(l = 0; l < r; l++){
@@ -1164,16 +1163,6 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std:
       for(i = 0; i < n; i ++){
         for(j = 0; j < n; j++){
           res[n*r*j + l*n + i] = Vz[n*n*l + j*n + i] * XTilde[l*n + j];
-        }
-      }
-    }
-  }else if(processtype == "multivariate2"){
-    for(l = 0; l < r; l++){
-      for(j = 0; j < n; j++){
-        for(i = 0; i < n; i++){
-          for(k = 0; k < r; k++){
-            res[j*nr + l*n + i] += XTilde[k*n + j] * Vz[(k*n + j)*nr + l*n + i];
-          }
         }
       }
     }
@@ -1196,43 +1185,47 @@ void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r){
 }
 
 // Function for drawing a sample from a Inverse-Wishart distribution
-void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+// Bartlett factor of a Wishart W_r(nu, I) draw (Bartlett 1939; rectangular coordinates of Mahalanobis, Bose and
+// Roy 1937): A lower triangular with A[i,i] = sqrt(chi-square(nu - i)) and standard normal entries below the
+// diagonal, so that A*t(A) ~ W_r(nu, I). The random numbers consumed depend on r and nu only.
+void rWishartBartlett(int r, double nu, double *A){
 
-  int info = 0;
   int i = 0, j = 0;
   int rr = r * r;
-  char const *lower = "L";
-  char const *ntran = "N";
-  // char const *ndiag = "N";
-  char const *ytran = "T";
-  // char const *lside = "L";
-  char const *rside = "R";
-  const double one = 1.0;
-  const double zero = 0.0;
 
-  // Draw a sample from a Wishart distribution: W_r(nu, I)
-  // Using Bartlett decomposition (Bartlett 1939) and
-  // rectangular coordinates (Mahalanobis, Bose, and Roy 1937)
-
-  zeros(tmp_rr, rr);
+  zeros(A, rr);
   // Fill diagonal with chi-square distributed values
   for(i = 0; i < r; i++){
-    tmp_rr[i * r + i] = sqrt(rchisq(nu-i));   //sqrt(rgamma(0.5*(nu - i), 2.0));
+    A[i * r + i] = sqrt(rchisq(nu-i));   //sqrt(rgamma(0.5*(nu - i), 2.0));
   }
 
   // Fill lower triangle with standard normal variates
   for(i = 1; i < r; i++){
     for(j = 0; j < i; j++){
-      tmp_rr[j * r + i] = rnorm(0.0, 1.0);
+      A[j * r + i] = rnorm(0.0, 1.0);
     }
   }
 
-  // Sigma = tmp_rr * t(tmp_rr)
-  F77_NAME(dsyrk)(lower, ntran, &r, &r, &one, tmp_rr, &r, &zero, Sigma, &r FCONE FCONE);
+}
+
+// Inverse-Wishart draw from a Bartlett factor A (see rWishartBartlett):
+// Sigma = inv(L*A*t(A)*t(L)), L = cholinvIWscale (lower; its upper triangle is zeroed). Deterministic; tmp_rr is
+// r x r workspace and may be the same array as A (A is not used after its first product).
+void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+
+  int info = 0;
+  int i = 0, j = 0;
+  char const *lower = "L";
+  char const *ntran = "N";
+  char const *ytran = "T";
+  char const *rside = "R";
+  const double one = 1.0;
+  const double zero = 0.0;
+
+  // Sigma = A * t(A)
+  F77_NAME(dsyrk)(lower, ntran, &r, &r, &one, A, &r, &zero, Sigma, &r FCONE FCONE);
   // Sigma = cholinvIWscale * Sigma * t(cholinvIWscale)
   mkLT(cholinvIWscale, r);
-  // F77_NAME(dtrmm)(lside, lower, ntran, ndiag, &r, &r, &one, cholinvIWscale, &r, Sigma, &r FCONE FCONE FCONE FCONE);
-  // F77_NAME(dtrmm)(rside, lower, ytran, ndiag, &r, &r, &one, cholinvIWscale, &r, Sigma, &r FCONE FCONE FCONE FCONE);
   F77_NAME(dsymm)(rside, lower, &r, &r, &one, Sigma, &r, cholinvIWscale, &r, &zero, tmp_rr, &r FCONE FCONE);
   F77_NAME(dgemm)(ntran, ytran, &r, &r, &r, &one, tmp_rr, &r, cholinvIWscale, &r, &zero, Sigma, &r FCONE FCONE);
 
@@ -1245,5 +1238,13 @@ void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double
       Sigma[i * r + j] = Sigma[j * r + i];
     }
   }
+
+}
+
+// Draw from an inverse-Wishart distribution (Bartlett factor, then the deterministic transform)
+void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr){
+
+  rWishartBartlett(r, nu, tmp_rr);
+  invWishartFromBartlett(r, tmp_rr, cholinvIWscale, Sigma, tmp_rr);
 
 }

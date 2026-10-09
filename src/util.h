@@ -115,4 +115,8 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std:
 
 void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r);
 
+void rWishartBartlett(int r, double nu, double *A);
+
+void invWishartFromBartlett(int r, double *A, double *cholinvIWscale, double *Sigma, double *tmp_rr);
+
 void rInvWishart(int r, double nu, double *cholinvIWscale, double *Sigma, double *tmp_rr);
