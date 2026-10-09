@@ -8,9 +8,8 @@ void cholRowDelUpdate(int n, double *L, int del, double *L1, double *w);
 
 void cholBlockDelUpdate(int n, double *L, int del_start, int del_end, double *L1, double *tmpL1, double *w);
 
-void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *XtX, double *VbetaInv,
-                  double *Vz, double *cholVzPlusI, double *tmp_nn, double *tmp_np,
-                  double *DinvB_np, double *tmp_nn2, double *out_pp, double *out_nn, double *D1invB1);
+void cholSchurGLM(double *X, int n, int p, double sigmaSqxi, double *VbetaInv, double *cholVzPlusI,
+                  double *tmp_np, double *DinvB_np, double *out_pp, double *out_nn, double *D1invB1);
 
 void inversionLM(double *X, int n, int p, double deltasq, double *VbetaInv,
                  double *Vz, double *cholVy, double *v1, double *v2,
@@ -22,8 +21,7 @@ int mapIndex(int i, int j, int nRowB, int nColB, int startRowB, int startColB, i
 
 void projGLM(double *X, int n, int p, double *v_eta, double *v_xi, double *v_beta, double *v_z,
              double *cholpSchur, double *cholnSchur, double sigmaSqxi, double *Lbeta, double *Lz,
-             double *Vz, double *cholVzPlusI, double *D1invB1, double *DinvBnp, double *DinvBnn,
-             double *tmp_n, double *tmp_p);
+             double *cholVzPlusI, double *D1invB1, double *DinvBnp, double *tmp_n, double *tmp_p);
 
 
 void upperTri_lowerTri(double *M, int n);
@@ -44,3 +42,11 @@ void projGLMvc(int n, int p, int r, double *X, double *XTilde, double sigmaSqxi,
 void kronecker(int r, int n, double *A, double *B, double *C);
 
 void chol_kron(int r, int n, double *cholA, double *cholB, double *cholC);
+
+int cholRankOneDowndate(int n, double *L, double *v, double *w);
+
+int cholSchurGLMdel(int n, int p, int del_start, int del_end, double *X, double *cholVzPlusI,
+                    double *D1invX, double *DinvB_np, double *VbetaInv,
+                    double *D1invX_out, double *DinvB_np_out, double *cholSchur_p_out, double *cholSchurDel_n,
+                    double *PJ, double *QJ, double *tmp_np, double *LP, double *LQ, double *Z,
+                    double *u, double *w);

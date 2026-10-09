@@ -26,10 +26,6 @@ extern "C" {
      *****************************************/
     int i, j, s, info, nProtect = 0;
     char const *lower = "L";
-    char const *ntran = "N";
-    char const *ytran = "T";
-    const double one = 1.0;
-    const double zero = 0.0;
     const int incOne = 1;
 
     /*****************************************
@@ -116,30 +112,23 @@ extern "C" {
      *****************************************/
     double dtemp1, dtemp2, dtemp3;
 
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);                       // correlation matrix
-    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // Cholesky of Vz
+    double *cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);               // correlation matrix Vz, then its Cholesky
     double *cholVzPlusI = (double *) R_alloc(nn, sizeof(double)); zeros(cholVzPlusI, nn);     // allocate memory for n x n matrix
     double *cholSchur_n = (double *) R_alloc(nn, sizeof(double)); zeros(cholSchur_n, nn);     // allocate memory for Schur complement
     double *cholSchur_p = (double *) R_alloc(pp, sizeof(double)); zeros(cholSchur_p, pp);     // allocate memory for Schur complement
     double *D1invX = (double *) R_alloc(np, sizeof(double)); zeros(D1invX, np);               // allocate for preprocessing
-    double *DinvB_pn = (double *) R_alloc(np, sizeof(double)); zeros(DinvB_pn, np);           // allocate memory for p x n matrix
-    double *DinvB_nn = (double *) R_alloc(nn, sizeof(double)); zeros(DinvB_nn, nn);           // allocate memory for n x n matrix
+    double *DinvB_pn = (double *) R_alloc(np, sizeof(double)); zeros(DinvB_pn, np);           // allocate memory for n x p matrix DinvB_np
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);           // allocate VbetaInv
     double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
-    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
     double *thetasp = (double *) R_alloc(2, sizeof(double));                                  // spatial process parameters
 
     //construct covariance matrix (full)
     thetasp[0] = phi;
     thetasp[1] = nu;
-    spCorFull2(n, 2, coords, thetasp, corfn, Vz);
-
-    // Find Cholesky of Vz
-    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+    spCorFull2(n, 2, coords, thetasp, corfn, cholVz);                                       // cholVz = Vz
 
     // construct unit spherical perturbation of Vz; (Vz+I)
-    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVzPlusI, &incOne);
+    F77_NAME(dcopy)(&nn, cholVz, &incOne, cholVzPlusI, &incOne);
     for(i = 0; i < n; i++){
       cholVzPlusI[i*n + i] += 1.0;
     }
@@ -147,22 +136,20 @@ extern "C" {
     // find Cholesky factor of unit spherical perturbation of Vz
     F77_NAME(dpotrf)(lower, &n, cholVzPlusI, &n, &info FCONE); if(info != 0){perror("c++ error: VzPlusI dpotrf failed\n");}
 
+    // Find Cholesky of Vz
+    F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){perror("c++ error: Vz dpotrf failed\n");}
+
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: VBeta dpotrf failed\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
     F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");}       // VbetaInv = chol2inv(Vbeta)
 
-    // Find XtX
-    F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
-
     // Get the Schur complement of top left nxn submatrix of (HtH)
     double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);       // temporary allocate memory for n x p matrix
-    double *tmp_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn, nn);       // temporary allocate memory for n x n matrix
 
-    cholSchurGLM(X, n, p, sigmaSq_xi, XtX, VbetaInv, Vz, cholVzPlusI, tmp_nn, tmp_np,
-                 DinvB_pn, DinvB_nn, cholSchur_p, cholSchur_n, D1invX);
+    cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
+                 DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
 
-    R_chk_free(tmp_nn);
     R_chk_free(tmp_np);
 
     /*****************************************
@@ -193,8 +180,7 @@ extern "C" {
         for(i = 0; i < n; i++){
           dtemp1 = Y[i] + epsilon;
           dtemp2 = 1.0;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          v_eta[i] = log(dtemp3);
+          v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
         }
       }
 
@@ -204,8 +190,7 @@ extern "C" {
           dtemp2 = nBinom[i];
           dtemp2 += 2.0 * epsilon;
           dtemp2 -= dtemp1;
-          dtemp3 = rbeta(dtemp1, dtemp2);
-          v_eta[i] = logit(dtemp3);
+          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
         }
       }
 
@@ -215,8 +200,7 @@ extern "C" {
           dtemp2 = nBinom[i];
           dtemp2 += 2.0 * epsilon;
           dtemp2 -= dtemp1;
-          dtemp3 = rbeta(dtemp1, dtemp2);
-          v_eta[i] = logit(dtemp3);
+          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
         }
       }
 
@@ -241,7 +225,7 @@ extern "C" {
 
       // projection step
       projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-              cholVz, Vz, cholVzPlusI, D1invX, DinvB_pn, DinvB_nn, tmp_n, tmp_p);
+              cholVz, cholVzPlusI, D1invX, DinvB_pn, tmp_n, tmp_p);
 
       // copy samples into SEXP return object
       F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);

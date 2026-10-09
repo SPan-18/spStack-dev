@@ -35,12 +35,12 @@ void copyMatrixColDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2,
 
   int i = 0, j = 0, new_index = 0;
 
-  if(exclude_start > exclude_end || exclude_start == exclude_end){
-    perror("Exclude Start index must be at least 1 less than End index.");
+  if(exclude_start > exclude_end){
+    perror("Exclude Start index must not exceed End index.");
   }
 
-  if(include_start > exclude_start || include_start == include_end){
-    perror("Copy Start index must be at least 1 less than End index.");
+  if(include_start > include_end){
+    perror("Copy Start index must not exceed End index.");
   }
 
   if(include_start < 0 || include_end > nColM1){
@@ -65,8 +65,8 @@ void copyMatrixDelRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int e
 
   int i = 0, j = 0, new_index = 0;
 
-  if(exclude_start > exclude_end || exclude_start == exclude_end){
-    perror("Start index must be at least 1 less than End index.");
+  if(exclude_start > exclude_end){
+    perror("Start index must not exceed End index.");
   }
 
   if(exclude_start < 0 || exclude_end > nRowM1){
@@ -87,8 +87,8 @@ void copyMatrixDelRowBlock_vc(double *M1, int nRowM1, int nColM1, double *M2, in
 
   int i = 0, j = 0, new_index = 0;
 
-  if(exclude_start > exclude_end || exclude_start == exclude_end){
-    perror("Start index must be at least 1 less than End index.");
+  if(exclude_start > exclude_end){
+    perror("Start index must not exceed End index.");
   }
 
   if(exclude_start < 0 || exclude_end > nRowM1*rep){
@@ -168,12 +168,12 @@ void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
 
   int i = 0, j = 0, new_index = 0;
 
-  if(delRow_start > delRow_end || delRow_start == delRow_end){
-    perror("Row Start index must be at least 1 less than End index.");
+  if(delRow_start > delRow_end){
+    perror("Row Start index must not exceed End index.");
   }
 
-    if(delCol_start > delCol_end || delCol_start == delCol_end){
-    perror("Column Start index must be at least 1 less than End index.");
+    if(delCol_start > delCol_end){
+    perror("Column Start index must not exceed End index.");
   }
 
   if(delRow_start < 0 || delRow_end > nRowM1){
@@ -199,12 +199,12 @@ void copyMatrixDelRowColBlock_vc(double *M1, int nRowM1, int nColM1, double *M2,
 
   int i = 0, j = 0, new_index = 0;
 
-  if(delRow_start > delRow_end || delRow_start == delRow_end){
-    perror("Row Start index must be at least 1 less than End index.");
+  if(delRow_start > delRow_end){
+    perror("Row Start index must not exceed End index.");
   }
 
-  if(delCol_start > delCol_end || delCol_start == delCol_end){
-    perror("Column Start index must be at least 1 less than End index.");
+  if(delCol_start > delCol_end){
+    perror("Column Start index must not exceed End index.");
   }
 
   if(delRow_start < 0 || delRow_end > nRowM1){
@@ -229,8 +229,8 @@ void copyMatrixRowBlock(double *M1, int nRowM1, int nColM1, double *M2, int copy
 
   int i = 0, j = 0, new_index = 0;
 
-  if(copy_start > copy_end || copy_start == copy_end){
-    perror("Start index must be at least 1 less than End index.");
+  if(copy_start > copy_end){
+    perror("Start index must not exceed End index.");
   }
 
   if(copy_start < 0 || copy_end > nRowM1){
@@ -253,12 +253,12 @@ void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
 
   int i = 0, j = 0, new_index = 0;
 
-  if(copyCol_start > copyCol_end || copyCol_start == copyCol_end){
-    perror("Column Start index must be at least 1 less than End index.");
+  if(copyCol_start > copyCol_end){
+    perror("Column Start index must not exceed End index.");
   }
 
-  if(copyRow_start > copyRow_end || copyRow_start == copyRow_end){
-    perror("Row Start index must be at least 1 less than End index.");
+  if(copyRow_start > copyRow_end){
+    perror("Row Start index must not exceed End index.");
   }
 
   if(copyRow_start < 0 || copyRow_end > nRowM1){
@@ -363,8 +363,8 @@ void copyVecBlock(double *v1, double *v2, int n, int copy_start, int copy_end){
 
   int i = 0, j = 0;
 
-  if(copy_start > copy_end || copy_start == copy_end){
-    perror("Start index must be at least 1 less than End index.");
+  if(copy_start > copy_end){
+    perror("Start index must not exceed End index.");
   }
   if(copy_start < 0 || copy_end > n){
     perror("Index to delete is out of bounds.");
@@ -382,8 +382,8 @@ void copyVecExcludingBlock(double *v1, double *v2, int n, int exclude_start, int
 
   int i = 0, j = 0;
 
-  if(exclude_start > exclude_end || exclude_start == exclude_end){
-    perror("Start index must be at least 1 less than End index.");
+  if(exclude_start > exclude_end){
+    perror("Start index must not exceed End index.");
   }
   if(exclude_start < 0 || exclude_end > n){
     perror("Index to delete is out of bounds.");
@@ -462,6 +462,32 @@ double inverse_logit(double x){
 // Function to compute log(x/(1-x)) for a given x
 double logit(double x){
   return log(x) - log(1.0 - x);
+}
+
+// Draw log(G), G ~ Gamma(shape, 1), without forming G when it could underflow. For shape >= 1 this is
+// log(rgamma(shape, 1)) (G cannot underflow). For shape < 1 it uses the identity: if G1 ~ Gamma(shape + 1, 1)
+// and U ~ Uniform(0, 1) independently, then G1*U^(1/shape) ~ Gamma(shape, 1); on the log scale
+//   log(G) = log(G1) + log(U)/shape,
+// which is finite for any shape > 0 (unif_rand() lies in the open interval (0, 1)). A direct
+// rgamma(shape, 1) underflows to 0 with probability about 2^(-1074*shape)/Gamma(shape + 1), e.g. ~6e-4 at
+// shape = 0.01. Exact in distribution; uses one extra uniform draw when shape < 1.
+double rlogGamma(double shape){
+  if(shape >= 1.0){
+    return log(rgamma(shape, 1.0));
+  }
+  double lg1 = log(rgamma(shape + 1.0, 1.0));
+  return lg1 + log(unif_rand()) / shape;
+}
+
+// Draw logit(B), B ~ Beta(a, b), as log(G1) - log(G2) with G1 ~ Gamma(a, 1) and G2 ~ Gamma(b, 1)
+// independent (B = G1/(G1 + G2), so B/(1 - B) = G1/G2). Unlike logit(rbeta(a, b)), this never forms
+// 1 - B, which rounds to 0 (B rounds to 1) with probability about pbeta(2^-53, b, a), e.g. ~5e-7 at
+// (a, b) = (1.4, 0.4) and ~2e-5 at (1.3, 0.3); nor B itself, which can underflow when a is small.
+// Exact in distribution.
+double rlogitBeta(double a, double b){
+  double lg1 = rlogGamma(a);
+  double lg2 = rlogGamma(b);
+  return lg1 - lg2;
 }
 
 // Function to compute logMeanExp of a vector

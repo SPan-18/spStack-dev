@@ -357,6 +357,15 @@ spGLMstack <- function(formula, data = parent.frame(), family,
     }
   }
 
+  # boundary adjustment parameters of the candidate models
+  cand_eps <- vapply(candidate.models, function(x) as.numeric(x[["boundary"]]), numeric(1))
+  if(any(!is.finite(cand_eps) | cand_eps <= 0 | cand_eps >= 1)){
+    stop("error: each 'boundary' in candidate.models must be in the interval (0, 1).")
+  }
+  if(any(cand_eps < 0.1)){
+    message("candidate.models contains boundary < 0.1: the latent pseudo-data of observations at the edge of the support (y = 0, or y = trials) are very diffuse (standard deviation about 1/boundary on the linear predictor scale). Larger boundary values are recommended.")
+  }
+
   list_candidate <- candidate.models
 
   #### Leave-one-out setup ####

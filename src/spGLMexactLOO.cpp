@@ -57,10 +57,8 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   double *cholSchur_p = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p, pp);   // allocate memory for Schur complement
   double *D1invX = (double *) R_chk_calloc(np, sizeof(double)); zeros(D1invX, np);             // allocate for preprocessing
   double *DinvB_pn = (double *) R_chk_calloc(np, sizeof(double)); zeros(DinvB_pn, np);         // allocate memory for p x n matrix
-  double *DinvB_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(DinvB_nn, nn);         // allocate memory for n x n matrix
   double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);              // allocate VbetaInv
   double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                    // Cholesky of Vbeta
-  double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                        // Store XtX
 
   // Find Cholesky of Vz
   F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
@@ -80,17 +78,13 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                     // Lbeta = chol(Vbeta)
   F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
 
-  // Find XtX
-  F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
 
   // Get the Schur complement of top left nxn submatrix of (HtH)
   double *tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np, np);       // temporary allocate memory for n x p matrix
-  double *tmp_nn = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn, nn);       // temporary allocate memory for n x n matrix
 
-  cholSchurGLM(X, n, p, sigmaSq_xi, XtX, VbetaInv, Vz, cholVzPlusI, tmp_nn, tmp_np,
-               DinvB_pn, DinvB_nn, cholSchur_p, cholSchur_n, D1invX);
+  cholSchurGLM(X, n, p, sigmaSq_xi, VbetaInv, cholVzPlusI, tmp_np,
+               DinvB_pn, cholSchur_p, cholSchur_n, D1invX);
 
-  R_chk_free(tmp_nn);
   R_chk_free(tmp_np);
 
   /*****************************************
@@ -121,8 +115,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       for(i = 0; i < n; i++){
         dtemp1 = Y[i] + epsilon;
         dtemp2 = 1.0;
-        dtemp3 = rgamma(dtemp1, dtemp2);
-        v_eta[i] = log(dtemp3);
+        v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
       }
     }
 
@@ -132,8 +125,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         dtemp2 = nBinom[i];
         dtemp2 += 2.0 * epsilon;
         dtemp2 -= dtemp1;
-        dtemp3 = rbeta(dtemp1, dtemp2);
-        v_eta[i] = logit(dtemp3);
+        v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
       }
     }
 
@@ -143,8 +135,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         dtemp2 = nBinom[i];
         dtemp2 += 2.0 * epsilon;
         dtemp2 -= dtemp1;
-        dtemp3 = rbeta(dtemp1, dtemp2);
-        v_eta[i] = logit(dtemp3);
+        v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
       }
     }
 
@@ -169,7 +160,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
     // projection step
     projGLM(X, n, p, v_eta, v_xi, v_beta, v_z, cholSchur_p, cholSchur_n, sigmaSq_xi, Lbeta,
-            cholVz, Vz, cholVzPlusI, D1invX, DinvB_pn, DinvB_nn, tmp_n, tmp_p);
+            cholVz, cholVzPlusI, D1invX, DinvB_pn, tmp_n, tmp_p);
 
     // copy samples into SEXP return object
     F77_NAME(dcopy)(&p, &v_beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
@@ -186,11 +177,9 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   R_chk_free(v_xi);
   R_chk_free(v_beta);
   R_chk_free(v_z);
-  R_chk_free(cholSchur_n);
   R_chk_free(cholSchur_p);
-  R_chk_free(D1invX);
-  R_chk_free(DinvB_pn);
-  R_chk_free(DinvB_nn);
+  // cholSchur_n, D1invX and DinvB_pn are kept: the exact LOO and CV pre-processing is obtained from
+  // them by deletion updates (cholSchurGLMdel); they are freed at the end
 
   // make return object
   SEXP result_r, resultName_r;
@@ -213,20 +202,26 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       double *X_tilde = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_tilde, p);
 
       // Set-up storage for pre-processing
-      double *looVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looVz, n1n1);
       double *looCholVz = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVz, n1n1);
       double *looCholVzPlusI = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(looCholVzPlusI, n1n1);
-      double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);                           // Store XtX
       double *DinvB_pn1 = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(DinvB_pn1, n1p);                   // allocate memory for p x n matrix
-      double *DinvB_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(DinvB_n1n1, n1n1);               // allocate memory for n x n matrix
       double *cholSchur_n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(cholSchur_n1, n1n1);           // allocate memory for Schur complement
       double *cholSchur_p1 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p1, pp);               // allocate memory for Schur complement
       double *D1invlooX = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(D1invlooX, n1p);                   // allocate for preprocessing
       double *tmp_n11 = (double *) R_chk_calloc(n1, sizeof(double)); zeros(tmp_n11, n1);
 
-      // Get the Schur complement of top left n1xn1 submatrix of (HtH)
+      // Get the Schur complement of top left n1xn1 submatrix of (HtH); only used if the deletion update fails
       double *tmp_n1p = (double *) R_chk_calloc(n1p, sizeof(double)); zeros(tmp_n1p, n1p);                       // temporary n1 x p matrix
-      double *tmp_n1n1 = (double *) R_chk_calloc(n1n1, sizeof(double)); zeros(tmp_n1n1, n1n1);                   // temporary n1 x n1 matrix
+
+      // Workspace for the deletion update of the pre-processing (cholSchurGLMdel with a block of size 1)
+      double *del_PJ = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_PJ, n);
+      double *del_QJ = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_QJ, n);
+      double *del_tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(del_tmp_np, np);
+      double *del_LP = (double *) R_chk_calloc(1, sizeof(double)); zeros(del_LP, 1);
+      double *del_LQ = (double *) R_chk_calloc(1, sizeof(double)); zeros(del_LQ, 1);
+      double *del_Z = (double *) R_chk_calloc(p, sizeof(double)); zeros(del_Z, p);
+      double *del_u = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_u, n);
+      double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
       // Set-up storage for sampling for leave-one-out model fit
       double *loo_v_eta = (double *) R_chk_calloc(n1, sizeof(double)); zeros(loo_v_eta, n1);
@@ -253,7 +248,6 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         copyVecExcludingOne(nBinom, loo_nBinom, n, loo_index);                                                 // Leave-one-out nBinom
         copyMatrixDelRow(X, n, p, looX, loo_index);                                                            // Row-deleted X
         copyMatrixRowToVec(X, n, p, X_tilde, loo_index);                                                       // Copy left out X into Xtilde
-        copyMatrixDelRowCol(Vz, n, n, looVz, loo_index, loo_index);                                            // Row-column deleted Vz
 
         // Pre-processing for projGLM() on leave-one-out data
         cholRowDelUpdate(n, cholVz, loo_index, looCholVz, tmp_n11);                                            // Row-deletion CHOL update Vz
@@ -265,9 +259,16 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         dtemp1 = pow(F77_NAME(dnrm2)(&n1, looCz, &incOne), 2);                                                 // dtemp1 = Czt*VzInv*Cz
         z_tilde_var = Vz[loo_index*n + loo_index] - dtemp1;                                                    // z_tilde_var = Vz_tilde - Czt*VzInv*Cz
 
-        F77_NAME(dgemm)(ytran, ntran, &p, &p, &n1, &one, looX, &n1, looX, &n1, &zero, looXtX, &p FCONE FCONE); // XtX = t(X)*X
-        cholSchurGLM(looX, n1, p, sigmaSq_xi, looXtX, VbetaInv, looVz, looCholVzPlusI, tmp_n1n1, tmp_n1p,
-                     DinvB_pn1, DinvB_n1n1, cholSchur_p1, cholSchur_n1, D1invlooX);
+        // Pre-processing on the leave-one-out data by deletion updates of the full-data outputs (O(n^2));
+        // chol(I/sigmaSqxi + Q) is row-deleted first and then downdated in place by cholSchurGLMdel
+        cholRowDelUpdate(n, cholSchur_n, loo_index, cholSchur_n1, tmp_n11);
+        if(cholSchurGLMdel(n, p, loo_index, loo_index, X, cholVzPlusI, D1invX, DinvB_pn, VbetaInv,
+                           D1invlooX, DinvB_pn1, cholSchur_p1, cholSchur_n1,
+                           del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
+          // not numerically positive definite: recompute directly on the leave-one-out data (O(n^3))
+          cholSchurGLM(looX, n1, p, sigmaSq_xi, VbetaInv, looCholVzPlusI, tmp_n1p,
+                       DinvB_pn1, cholSchur_p1, cholSchur_n1, D1invlooX);
+        }
 
         for(sMC = 0; sMC < loopd_nMC; sMC++){
 
@@ -275,8 +276,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
             for(loo_i = 0; loo_i < n1; loo_i++){
               dtemp1 = looY[loo_i] + epsilon;
               dtemp2 = 1.0;
-              dtemp3 = rgamma(dtemp1, dtemp2);
-              loo_v_eta[loo_i] = log(dtemp3);
+              loo_v_eta[loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
             }
           }
 
@@ -286,8 +286,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
               dtemp2 = loo_nBinom[loo_i];
               dtemp2 += 2.0 * epsilon;
               dtemp2 -= dtemp1;
-              dtemp3 = rbeta(dtemp1, dtemp2);
-              loo_v_eta[loo_i] = logit(dtemp3);
+              loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
             }
           }
 
@@ -297,8 +296,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
               dtemp2 = loo_nBinom[loo_i];
               dtemp2 += 2.0 * epsilon;
               dtemp2 -= dtemp1;
-              dtemp3 = rbeta(dtemp1, dtemp2);
-              loo_v_eta[loo_i] = logit(dtemp3);
+              loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
             }
           }
 
@@ -323,7 +321,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
           // LOO projection step
           projGLM(looX, n1, p, loo_v_eta, loo_v_xi, loo_v_beta, loo_v_z, cholSchur_p1, cholSchur_n1, sigmaSq_xi, Lbeta,
-                  looCholVz, looVz, looCholVzPlusI, D1invlooX, DinvB_pn1, DinvB_n1n1, tmp_n11, loo_tmp_p);
+                  looCholVz, looCholVzPlusI, D1invlooX, DinvB_pn1, tmp_n11, loo_tmp_p);
 
           // predict z at the loo_index location
           F77_NAME(dtrsv)(lower, ntran, nunit, &n1, looCholVz, &n1, loo_v_z, &incOne FCONE FCONE FCONE);    // loo_v_z = LzInv * v_z
@@ -374,18 +372,22 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       R_chk_free(X_tilde);
       R_chk_free(looCz);
       R_chk_free(loopd_val_MC);
-      R_chk_free(looVz);
       R_chk_free(looCholVz);
       R_chk_free(looCholVzPlusI);
-      R_chk_free(looXtX);
       R_chk_free(DinvB_pn1);
-      R_chk_free(DinvB_n1n1);
       R_chk_free(cholSchur_n1);
       R_chk_free(cholSchur_p1);
       R_chk_free(D1invlooX);
       R_chk_free(tmp_n11);
       R_chk_free(tmp_n1p);
-      R_chk_free(tmp_n1n1);
+      R_chk_free(del_PJ);
+      R_chk_free(del_QJ);
+      R_chk_free(del_tmp_np);
+      R_chk_free(del_LP);
+      R_chk_free(del_LQ);
+      R_chk_free(del_Z);
+      R_chk_free(del_u);
+      R_chk_free(del_w);
       R_chk_free(loo_v_eta);
       R_chk_free(loo_v_xi);
       R_chk_free(loo_v_beta);
@@ -427,18 +429,26 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       double *cvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(cvX, nnkmaxp);               // Store block-deleted X
 
       // Set-up storage for pre-processing
-      double *cvVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvVz, nnknnkmax);                         // Store block-deleted Vz
       double *cvCholVz = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVz, nnknnkmax);                 // Store block-deleted Cholesky update of Vz
       double *cvCholVzPlusI = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cvCholVzPlusI, nnknnkmax);       // Store block-deleted Chlesky update of Vz+I
-      double *cvXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cvXtX, pp);                                     // Store XtX
       double *DinvB_pnnkmax = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(DinvB_pnnkmax, nnkmaxp);           // allocate memory for p x max(n-nk) matrix
-      double *DinvB_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(DinvB_nnknnkmax, nnknnkmax);   // allocate memory for max(n-nk) x max(n-nk) matrix
       double *cholSchur_p2 = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cholSchur_p2, pp);                       // allocate memory for Schur complement
       double *cholSchur_nnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(cholSchur_nnkmax, nnknnkmax); // allocate memory for Schur complement
       double *D1invcvX = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(D1invcvX, nnkmaxp);                     // allocate for preprocessing
       double *tmp_nnknnkmax = (double *) R_chk_calloc(nnknnkmax, sizeof(double)); zeros(tmp_nnknnkmax, nnknnkmax);       // allocate for max(n-nk) x max(n-nk) matrix
       double *tmp_nnkmaxp = (double *) R_chk_calloc(nnkmaxp, sizeof(double)); zeros(tmp_nnkmaxp, nnkmaxp);               // allocate for max(n-nk) x p matrix
       double *tmp_nnkmax = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(tmp_nnkmax, nnkmax);                   // allocate for max(n-nk) x 1 vector
+
+      // Workspace for the deletion update of the pre-processing (cholSchurGLMdel)
+      int nnkmax_del = n * nkmax;
+      double *del_PJ = (double *) R_chk_calloc(nnkmax_del, sizeof(double)); zeros(del_PJ, nnkmax_del);                   // n x max(nk)
+      double *del_QJ = (double *) R_chk_calloc(nnkmax_del, sizeof(double)); zeros(del_QJ, nnkmax_del);                   // n x max(nk)
+      double *del_tmp_np = (double *) R_chk_calloc(np, sizeof(double)); zeros(del_tmp_np, np);                           // n x p
+      double *del_LP = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(del_LP, nknkmax);                         // max(nk) x max(nk)
+      double *del_LQ = (double *) R_chk_calloc(nknkmax, sizeof(double)); zeros(del_LQ, nknkmax);                         // max(nk) x max(nk)
+      double *del_Z = (double *) R_chk_calloc(nkmaxp, sizeof(double)); zeros(del_Z, nkmaxp);                             // max(nk) x p
+      double *del_u = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_u, n);
+      double *del_w = (double *) R_chk_calloc(n, sizeof(double)); zeros(del_w, n);
 
       // Set-up storage for sampling for block-deleted model
       double *cv_v_eta = (double *) R_chk_calloc(nnkmax, sizeof(double)); zeros(cv_v_eta, nnkmax);
@@ -484,7 +494,6 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         copyVecExcludingBlock(Y, cvY, n, start_index, end_index);                                                 // Block-deleted Y
         copyVecExcludingBlock(nBinom, cv_nBinom, n, start_index, end_index);                                      // Block-deleted nBinom
         copyMatrixDelRowBlock(X, n, p, cvX, start_index, end_index);                                              // Block-deleted X
-        copyMatrixDelRowColBlock(Vz, n, n, cvVz, start_index, end_index, start_index, end_index);                 // Block-deleted Vz
 
         // Held-out data
         copyMatrixRowBlock(X, n, p, X_tilde, start_index, end_index);                                             // Held-out X = X_tilde
@@ -504,10 +513,16 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
         F77_NAME(dpotrf)(lower, &nk, z_tilde_cov, &nk, &info FCONE); if(info != 0){perror("c++ error: z_tilde_schur dpotrf failed\n");}
         mkLT(z_tilde_cov, nk);
 
-        // Pre-processing for projGLM() on block-deleted data
-        F77_NAME(dgemm)(ytran, ntran, &p, &p, &nnk, &one, cvX, &nnk, cvX, &nnk, &zero, cvXtX, &p FCONE FCONE);    // XtX = t(X)*X
-        cholSchurGLM(cvX, nnk, p, sigmaSq_xi, cvXtX, VbetaInv, cvVz, cvCholVzPlusI, tmp_nnknnkmax, tmp_nnkmaxp,
-                     DinvB_pnnkmax, DinvB_nnknnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
+        // Pre-processing for projGLM() on block-deleted data, by deletion updates of the full-data outputs
+        // (O(n^2 nk)); chol(I/sigmaSqxi + Q) is block-deleted first and then downdated in place (nk rank-1 downdates)
+        cholBlockDelUpdate(n, cholSchur_n, start_index, end_index, cholSchur_nnkmax, tmp_nnknnkmax, tmp_nnkmax);
+        if(cholSchurGLMdel(n, p, start_index, end_index, X, cholVzPlusI, D1invX, DinvB_pn, VbetaInv,
+                           D1invcvX, DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax,
+                           del_PJ, del_QJ, del_tmp_np, del_LP, del_LQ, del_Z, del_u, del_w) != 0){
+          // not numerically positive definite: recompute directly on the block-deleted data (O(n^3))
+          cholSchurGLM(cvX, nnk, p, sigmaSq_xi, VbetaInv, cvCholVzPlusI, tmp_nnkmaxp,
+                       DinvB_pnnkmax, cholSchur_p2, cholSchur_nnkmax, D1invcvX);
+        }
 
         // Fit on block-deleted data and obtain LOO-PD by Monte Carlo average
         for(sMC_CV = 0; sMC_CV < loopd_nMC; sMC_CV++){
@@ -516,8 +531,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
             for(cv_i = 0; cv_i < nnk; cv_i++){
               dtemp1 = cvY[cv_i] + epsilon;
               dtemp2 = 1.0;
-              dtemp3 = rgamma(dtemp1, dtemp2);
-              cv_v_eta[cv_i] = log(dtemp3);
+              cv_v_eta[cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
             }
           }
 
@@ -527,8 +541,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
               dtemp2 = cv_nBinom[cv_i];
               dtemp2 += 2.0 * epsilon;
               dtemp2 -= dtemp1;
-              dtemp3 = rbeta(dtemp1, dtemp2);
-              cv_v_eta[cv_i] = logit(dtemp3);
+              cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
             }
           }
 
@@ -538,8 +551,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
               dtemp2 = cv_nBinom[cv_i];
               dtemp2 += 2.0 * epsilon;
               dtemp2 -= dtemp1;
-              dtemp3 = rbeta(dtemp1, dtemp2);
-              cv_v_eta[cv_i] = logit(dtemp3);
+              cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
             }
           }
 
@@ -564,7 +576,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
           // LOO projection step
           projGLM(cvX, nnk, p, cv_v_eta, cv_v_xi, cv_v_beta, cv_v_z, cholSchur_p2, cholSchur_nnkmax, sigmaSq_xi, Lbeta,
-                  cvCholVz, cvVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, DinvB_nnknnkmax, tmp_nnkmax, cv_tmp_p);
+                  cvCholVz, cvCholVzPlusI, D1invcvX, DinvB_pnnkmax, tmp_nnkmax, cv_tmp_p);
 
           // Prediction of spatial process at held-out locations
           F77_NAME(dtrsv)(lower, ntran, nunit, &nnk, cvCholVz, &nnk, cv_v_z, &incOne FCONE FCONE FCONE);                // cv_v_z = LzInv * v_z
@@ -627,18 +639,23 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       R_chk_free(cvY);
       R_chk_free(cvX);
       R_chk_free(cv_nBinom);
-      R_chk_free(cvVz);
       R_chk_free(cvCholVz);
       R_chk_free(cvCholVzPlusI);
-      R_chk_free(cvXtX);
       R_chk_free(DinvB_pnnkmax);
-      R_chk_free(DinvB_nnknnkmax);
       R_chk_free(cholSchur_p2);
       R_chk_free(cholSchur_nnkmax);
       R_chk_free(D1invcvX);
       R_chk_free(tmp_nnkmax);
       R_chk_free(tmp_nnkmaxp);
       R_chk_free(tmp_nnknnkmax);
+      R_chk_free(del_PJ);
+      R_chk_free(del_QJ);
+      R_chk_free(del_tmp_np);
+      R_chk_free(del_LP);
+      R_chk_free(del_LQ);
+      R_chk_free(del_Z);
+      R_chk_free(del_u);
+      R_chk_free(del_w);
       R_chk_free(cv_v_eta);
       R_chk_free(cv_v_xi);
       R_chk_free(cv_v_beta);
@@ -790,6 +807,10 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   }
 
 
+
+  R_chk_free(cholSchur_n);
+  R_chk_free(D1invX);
+  R_chk_free(DinvB_pn);
 
   UNPROTECT(nProtect);
 

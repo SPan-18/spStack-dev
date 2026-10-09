@@ -345,8 +345,7 @@ extern "C" {
         for(i = 0; i < n; i++){
           dtemp1 = Y[i] + epsilon;
           dtemp2 = 1.0;
-          dtemp3 = rgamma(dtemp1, dtemp2);
-          v_eta[i] = log(dtemp3);
+          v_eta[i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
         }
       }
 
@@ -356,8 +355,7 @@ extern "C" {
           dtemp2 = nBinom[i];
           dtemp2 += 2.0 * epsilon;
           dtemp2 -= dtemp1;
-          dtemp3 = rbeta(dtemp1, dtemp2);
-          v_eta[i] = logit(dtemp3);
+          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
         }
       }
 
@@ -367,8 +365,7 @@ extern "C" {
           dtemp2 = nBinom[i];
           dtemp2 += 2.0 * epsilon;
           dtemp2 -= dtemp1;
-          dtemp3 = rbeta(dtemp1, dtemp2);
-          v_eta[i] = logit(dtemp3);
+          v_eta[i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
         }
       }
 
@@ -612,8 +609,7 @@ extern "C" {
               for(loo_i = 0; loo_i < n1; loo_i++){
                 dtemp1 = looY[loo_i] + epsilon;
                 dtemp2 = 1.0;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                loo_v_eta[loo_i] = log(dtemp3);
+                loo_v_eta[loo_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
               }
             }
 
@@ -623,8 +619,7 @@ extern "C" {
                 dtemp2 = loo_nBinom[loo_i];
                 dtemp2 += 2.0 * epsilon;
                 dtemp2 -= dtemp1;
-                dtemp3 = rbeta(dtemp1, dtemp2);
-                loo_v_eta[loo_i] = logit(dtemp3);
+                loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
               }
             }
 
@@ -634,8 +629,7 @@ extern "C" {
                 dtemp2 = loo_nBinom[loo_i];
                 dtemp2 += 2.0 * epsilon;
                 dtemp2 -= dtemp1;
-                dtemp3 = rbeta(dtemp1, dtemp2);
-                loo_v_eta[loo_i] = logit(dtemp3);
+                loo_v_eta[loo_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
               }
             }
 
@@ -1057,8 +1051,7 @@ extern "C" {
               for(cv_i = 0; cv_i < nnk; cv_i++){
                 dtemp1 = cvY[cv_i] + epsilon;
                 dtemp2 = 1.0;
-                dtemp3 = rgamma(dtemp1, dtemp2);
-                cv_v_eta[cv_i] = log(dtemp3);
+                cv_v_eta[cv_i] = rlogGamma(dtemp1);                              // log(Gamma(y + epsilon, 1)), underflow-safe
               }
             }
 
@@ -1068,8 +1061,7 @@ extern "C" {
                 dtemp2 = cv_nBinom[cv_i];
                 dtemp2 += 2.0 * epsilon;
                 dtemp2 -= dtemp1;
-                dtemp3 = rbeta(dtemp1, dtemp2);
-                cv_v_eta[cv_i] = logit(dtemp3);
+                cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
               }
             }
 
@@ -1079,8 +1071,7 @@ extern "C" {
                 dtemp2 = cv_nBinom[cv_i];
                 dtemp2 += 2.0 * epsilon;
                 dtemp2 -= dtemp1;
-                dtemp3 = rbeta(dtemp1, dtemp2);
-                cv_v_eta[cv_i] = logit(dtemp3);
+                cv_v_eta[cv_i] = rlogitBeta(dtemp1, dtemp2);                    // logit(Beta(y + epsilon, n - y + epsilon)), no rounding to 0 or 1
               }
             }
 

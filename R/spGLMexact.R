@@ -388,11 +388,8 @@ spGLMexact <- function(formula, data = parent.frame(), family,
       epsilon <- 0.5
     }
   }
-  if(family == "binary"){
-    if(epsilon < 0.4){
-      message("family = binomial'; boundary < 0.4. Setting boundary = 0.4.")
-      epsilon <- 0.4
-    }
+  if(epsilon < 0.1){
+    message("boundary < 0.1: the latent pseudo-data of observations at the edge of the support (y = 0, or y = trials) are very diffuse (standard deviation about 1/boundary on the linear predictor scale). A larger boundary is recommended.")
   }
 
   ## storage.mode

@@ -55,6 +55,10 @@ double inverse_logit(double x);
 
 double logit(double x);
 
+double rlogGamma(double shape);
+
+double rlogitBeta(double a, double b);
+
 double logMeanExp(double *a, int n);
 
 double logSumExp(double *a, int n);
