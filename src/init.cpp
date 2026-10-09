@@ -18,6 +18,7 @@ static const R_CallMethodDef CallEntries[] = {
   {"predict_spLM",            (DL_FUNC) &predict_spLM,            15},
   {"spGLMexact",              (DL_FUNC) &spGLMexact,              17},
   {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           21},
+  {"spGLMexactLOOgrid",       (DL_FUNC) &spGLMexactLOOgrid,       20},
   {"spLMexact",               (DL_FUNC) &spLMexact,               14},
   {"spLMexactLOO",            (DL_FUNC) &spLMexactLOO,            16},
   {"spLMexactLOOgrid",        (DL_FUNC) &spLMexactLOOgrid,        15},

@@ -238,8 +238,8 @@ spGLMstack <- function(formula, data = parent.frame(), family,
 
   check_distinct_coords(coords)
 
-  coords.D <- 0
-  coords.D <- iDist(coords)
+  ## distances are computed in C++ from the coordinates
+  storage.mode(coords) <- "double"
 
   ##### correlation function #####
   if(missing(cor.fn)){
@@ -433,8 +433,34 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   storage.mode(n.samples) <- "integer"
   storage.mode(verbose) <- "integer"
 
-  verbose_child <- FALSE
-  storage.mode(verbose_child) <- "integer"
+  # candidate models sharing (phi, nu) are fitted in one call, which builds the
+  # spatial correlation matrix once and loops over their boundary values
+  cand_phi <- vapply(list_candidate, function(x) as.numeric(x[["phi"]]), numeric(1))
+  cand_nu <- vapply(list_candidate, function(x) as.numeric(x[["nu"]]), numeric(1))
+  cand_boundary <- vapply(list_candidate, function(x) as.numeric(x[["boundary"]]),
+                          numeric(1))
+  cand_key <- sprintf("%a %a", cand_phi, cand_nu)          # exact (hexadecimal) keys
+  cand_groups <- split(seq_along(list_candidate),
+                       factor(cand_key, levels = unique(cand_key)))
+  names(cand_groups) <- NULL
+
+  # fits the candidate models in group g
+  fit_group <- function(g){
+    idx <- cand_groups[[g]]
+    .Call(C_spGLMexactLOOgrid, y, X, p, n, family, n.binom,
+          coords, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
+          cand_phi[idx[1]], cand_nu[idx[1]], cand_boundary[idx],
+          n.samples, loopd, loopd.method, CV.K, loopd.nMC)
+  }
+
+  # results of the groups, put back in the order of list_candidate
+  ungroup <- function(samps_grouped){
+    samps <- vector("list", length(list_candidate))
+    for(g in seq_along(cand_groups)){
+      samps[cand_groups[[g]]] <- samps_grouped[[g]]
+    }
+    samps
+  }
 
   #### main function call ####
   ptm <- proc.time()
@@ -471,15 +497,8 @@ spGLMstack <- function(formula, data = parent.frame(), family,
       }
     }
 
-    samps <- future_lapply(1:length(list_candidate), function(x){
-                    .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom,
-                          coords.D, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
-                          as.numeric(list_candidate[[x]]["phi"]),
-                          as.numeric(list_candidate[[x]]["nu"]),
-                          as.numeric(list_candidate[[x]]["boundary"]),
-                          n.samples, loopd, loopd.method, CV.K, loopd.nMC,
-                          verbose_child)
-                          }, future.seed = TRUE)
+    samps <- ungroup(future_lapply(seq_along(cand_groups), fit_group,
+                                   future.seed = TRUE))
 
   }else{
 
@@ -490,15 +509,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
       is set to FALSE. Ignoring parallelization plan.")
     }
 
-    samps <- lapply(1:length(list_candidate), function(x){
-                    .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom,
-                          coords.D, cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi,
-                          as.numeric(list_candidate[[x]]["phi"]),
-                          as.numeric(list_candidate[[x]]["nu"]),
-                          as.numeric(list_candidate[[x]]["boundary"]),
-                          n.samples, loopd, loopd.method, CV.K, loopd.nMC,
-                          verbose_child)
-                        })
+    samps <- ungroup(lapply(seq_along(cand_groups), fit_group))
 
   }
 

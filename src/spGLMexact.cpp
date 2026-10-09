@@ -17,7 +17,7 @@
 extern "C" {
 
   SEXP spGLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP family_r, SEXP nBinom_r,
-                  SEXP coordsD_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
+                  SEXP coords_r, SEXP corfn_r, SEXP betaV_r, SEXP nu_beta_r,
                   SEXP nu_z_r, SEXP sigmaSq_xi_r, SEXP phi_r, SEXP nu_r,
                   SEXP epsilon_r, SEXP nSamples_r, SEXP verbose_r){
 
@@ -46,7 +46,7 @@ extern "C" {
 
     std::string family = CHAR(STRING_ELT(family_r, 0));
 
-    double *coordsD = REAL(coordsD_r);
+    double *coords = REAL(coords_r);
 
     std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
 
@@ -132,7 +132,7 @@ extern "C" {
     //construct covariance matrix (full)
     thetasp[0] = phi;
     thetasp[1] = nu;
-    spCorFull(coordsD, n, thetasp, corfn, Vz);
+    spCorFull2(n, 2, coords, thetasp, corfn, Vz);
 
     // Find Cholesky of Vz
     F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);

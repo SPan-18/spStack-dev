@@ -254,8 +254,8 @@ spGLMexact <- function(formula, data = parent.frame(), family,
 
   check_distinct_coords(coords)
 
-  coords.D <- 0
-  coords.D <- iDist(coords)
+  ## distances are computed in C++ from the coordinates
+  storage.mode(coords) <- "double"
 
   ##### correlation function #####
   if(missing(cor.fn)){
@@ -454,11 +454,11 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   ptm <- proc.time()
 
   if(loopd){
-    samps <- .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom, coords.D,
+    samps <- .Call(C_spGLMexactLOO, y, X, p, n, family, n.binom, coords,
                    cor.fn, V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
                    n.samples, loopd, loopd.method, CV.K, loopd.nMC, verbose)
   }else{
-    samps <- .Call(C_spGLMexact, y, X, p, n, family, n.binom, coords.D, cor.fn,
+    samps <- .Call(C_spGLMexact, y, X, p, n, family, n.binom, coords, cor.fn,
                    V.beta, nu.beta, nu.z, sigmaSq.xi, phi, nu, epsilon,
                    n.samples, verbose)
   }

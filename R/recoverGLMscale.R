@@ -170,9 +170,7 @@ recoverGLMscale <- function(mod_out){
     # Read spatial coordinates
     sp_coords <- mod_out$coords
     cor.fn <- mod_out$cor.fn
-    coords.D <- 0
-    coords.D <- iDist(sp_coords)
-    storage.mode(coords.D) <- "double"
+    storage.mode(sp_coords) <- "double"            # distances are computed in C++
 
     # Initialize hyperparameters
     nu.beta <- 0
@@ -211,7 +209,7 @@ recoverGLMscale <- function(mod_out){
     z_samps <- mod_out$samples[['z']]
 
     scale_samps <- .Call(C_recoverScale_spGLM, n, p,
-                         coords.D, cor.fn,
+                         sp_coords, cor.fn,
                          mu.beta, V.beta, nu.beta, nu.z,
                          phi, nu, n.samples,
                          beta_samps, z_samps)
@@ -231,9 +229,7 @@ recoverGLMscale <- function(mod_out){
     # Read spatial coordinates
     sp_coords <- mod_out$coords
     cor.fn <- mod_out$cor.fn
-    coords.D <- 0
-    coords.D <- iDist(sp_coords)
-    storage.mode(coords.D) <- "double"
+    storage.mode(sp_coords) <- "double"            # distances are computed in C++
 
     # Initialize hyperparameters
     nu.beta <- 0
@@ -275,7 +271,7 @@ recoverGLMscale <- function(mod_out){
       z_samps <- mod_out$samples[[i]][['z']]
 
       scale_samps <- .Call(C_recoverScale_spGLM, n, p,
-                           coords.D, cor.fn,
+                           sp_coords, cor.fn,
                            mu.beta, V.beta, nu.beta, nu.z,
                            phi, nu, n.samples,
                            beta_samps, z_samps)

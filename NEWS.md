@@ -1,6 +1,7 @@
 # spStack (development version)
 
 * `spLMexact()`, `spLMstack()`, `posteriorPredict()`: faster, leaner Gaussian backend. Exact leave-one-out predictive densities are computed in closed form, the fit holds a single n x n matrix, distances are computed from `coords` in C++, Matern correlations use closed forms for nu = 0.5, 1.5, 2.5, and `spLMstack()` builds each correlation matrix once per (phi, nu). Results are unchanged up to floating-point rounding.
+* `spGLMexact()`, `spGLMstack()`, `recoverGLMscale()`: distances are computed from `coords` in C++, and `spGLMstack()` builds each correlation matrix once per (phi, nu).
 * `spLMexact()`, `spLMstack()`: the posterior scale of the variance is computed in residual form, avoiding loss of precision when the signal is large relative to the noise; Cholesky failures now stop with an informative error.
 * `cholUpdateDel()`, `cholUpdateDelBlock()`: indices are now checked to be single integers between 1 and `n`; an index of 0 previously returned a zero matrix or crashed R.
 * All model-fitting functions now stop with an informative error if coordinates are duplicated; for `stvcGLMexact()` and `stvcGLMstack()`, a duplicate must coincide in both space and time.
