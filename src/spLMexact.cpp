@@ -15,7 +15,7 @@
 
 extern "C" {
 
-  SEXP spLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coordsD_r,
+  SEXP spLMexact(SEXP Y_r, SEXP X_r, SEXP p_r, SEXP n_r, SEXP coords_r,
                  SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
                  SEXP phi_r, SEXP nu_r, SEXP deltasq_r, SEXP corfn_r,
                  SEXP nSamples_r, SEXP verbose_r){
@@ -45,7 +45,7 @@ extern "C" {
     int nn = n * n;
     int np = n * p;
 
-    double *coordsD = REAL(coordsD_r);
+    double *coords = REAL(coords_r);                                                 // n x 2 coordinates
 
     std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
 
@@ -143,8 +143,7 @@ extern "C" {
     // const double deltasqInv = 1.0 / deltasq;
     const double delta = sqrt(deltasq);
 
-    double *Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);              // correlation matrix
-    double *cholVy = (double *) R_alloc(nn, sizeof(double)); zeros(cholVy, nn);      // allocate memory for n x n matrix
+    double *cholVy = (double *) R_alloc(nn, sizeof(double)); zeros(cholVy, nn);      // the only n x n matrix: Vy -> chol(Vy) -> inv(Vy) -> chol(inv(Vy)*R)
     double *thetasp = (double *) R_alloc(2, sizeof(double));                         // spatial process parameters
 
     double *tmp_n = (double *) R_alloc(n, sizeof(double)); zeros(tmp_n, n);          // allocate memory for n x 1 vector
@@ -154,21 +153,20 @@ extern "C" {
 
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);  // allocate VbetaInv
     double *tmp_pp = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp, pp);      // allocate memory for p x p matrix
-    double *tmp_pp2 = (double *) R_alloc(pp, sizeof(double)); zeros(tmp_pp2, pp);    // allocate memory for p x p matrix
 
-    //construct covariance matrix (full)
+    // construct correlation matrix R (full) directly in cholVy
     thetasp[0] = phi;
     thetasp[1] = nu;
-    spCorFull(coordsD, n, thetasp, corfn, Vz);
+    spCorFull2(n, 2, coords, thetasp, corfn, cholVy);
 
-    // construct marginal covariance matrix (Vz+deltasq*I)
-    F77_NAME(dcopy)(&nn, Vz, &incOne, cholVy, &incOne);
+    // construct marginal covariance matrix Vy = R + deltasq*I in place
     for(i = 0; i < n; i++){
       cholVy[i*n + i] += deltasq;
     }
 
     // chol(Vy)
-    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE); if(info != 0){perror("c++ error: Vy dpotrf failed\n");}
+    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE);
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of Vy = R + deltasq*I failed (info = %i).\n", info);}
 
     // find cholinv(Vy)*Y
     F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                         // tmp_n = Y
@@ -177,8 +175,10 @@ extern "C" {
     if(betaPrior == "normal"){
       // find VbetaInvmuBeta
       F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                     // VbetaInv = Vbeta
-      F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");} // VbetaInv = chol(Vbeta)
-      F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){perror("c++ error: dpotri failed\n");} // VbetaInv = chol2inv(Vbeta)
+      F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE);                                                     // VbetaInv = chol(Vbeta)
+      if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");}
+      F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE);                                                     // VbetaInv = chol2inv(Vbeta)
+      if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");}
       F77_NAME(dsymv)(lower, &p, &one, VbetaInv, &p, betaMu, &incOne, &zero, tmp_p2, &incOne FCONE);               // tmp_p2 = VbetaInv*muBeta
     }else{
       // flat prior on beta: VbetaInv = 0 and VbetaInv*muBeta = 0 (already
@@ -199,7 +199,11 @@ extern "C" {
     F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, tmp_np, &n, tmp_np, &n, &zero, tmp_pp, &p FCONE FCONE);     // tmp_pp = t(X)*VyInv*X
 
     F77_NAME(daxpy)(&pp, &one, VbetaInv, &incOne, tmp_pp, &incOne);                                             // tmp_pp = t(X)*VyInv*X + VbetaInv
-    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_pp = chol(XtVyInvX + VbetaInv)
+    F77_NAME(dpotrf)(lower, &p, tmp_pp, &p, &info FCONE);                                                       // tmp_pp = chol(XtVyInvX + VbetaInv)
+    if(info != 0){
+      R_chk_free(tmp_np);
+      Rf_error("c++ error: Cholesky factorization of t(X)*inv(Vy)*X + inv(Vbeta) failed; check X for collinear columns.\n");
+    }
     F77_NAME(dtrsv)(lower, ntran, nUnit, &p, tmp_pp, &p, tmp_p1, &incOne FCONE FCONE FCONE);                    // tmp_p1 = cholinv(XtVyInvX + VbetaInv)*tmp_p1
 
     // find sse = t(Y-X*betahat)*VyInv*(Y-X*betahat) + t(betahat-muBeta)*VbetaInv*(betahat-muBeta);
@@ -228,12 +232,18 @@ extern "C" {
     }
 
     // set-up for sampling spatial random effects
-    double *tmp_nn2 = (double *) R_chk_calloc(nn, sizeof(double)); zeros(tmp_nn2, nn);                           // calloc n x n matrix
-    F77_NAME(dcopy)(&nn, Vz, &incOne, tmp_nn2, &incOne);                                                         // tmp_nn2 = Vz
-    F77_NAME(dtrsm)(lside, lower, ntran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = cholinv(Vy)*Vz
-    F77_NAME(dtrsm)(lside, lower, ytran, nUnit, &n, &n, &one, cholVy, &n, tmp_nn2, &n FCONE FCONE FCONE FCONE);  // tmp_nn2 = inv(Vy)*Vz
-    F77_NAME(dpotrf)(lower, &n, tmp_nn2, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}  // tmp_nn2 = chol(inv(Vy)*Vz)
-    mkLT(tmp_nn2, n);                                                                                            // make cholDinv lower-triangular
+    // the posterior covariance of z is sigmaSq*deltasq*inv(Vy)*R; since Vy = R + deltasq*I,
+    // inv(Vy)*R = I - deltasq*inv(Vy), formed from chol(Vy) in place (lower triangle only)
+    const double negDeltasq = -1.0 * deltasq;
+    F77_NAME(dpotri)(lower, &n, cholVy, &n, &info FCONE);                                                       // cholVy = inv(Vy)
+    if(info != 0){Rf_error("c++ error: inversion of Vy failed (info = %i).\n", info);}
+    for(j = 0; j < n; j++){
+      i = n - j;
+      F77_NAME(dscal)(&i, &negDeltasq, &cholVy[j*n + j], &incOne);                                            // cholVy[j:n, j] = -deltasq*inv(Vy)[j:n, j]
+      cholVy[j*n + j] += 1.0;                                                                                   // cholVy = I - deltasq*inv(Vy) = inv(Vy)*R
+    }
+    F77_NAME(dpotrf)(lower, &n, cholVy, &n, &info FCONE);                                                       // cholVy = chol(inv(Vy)*R)
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the posterior covariance of z failed (info = %i); the spatial correlation matrix is numerically singular.\n", info);}
 
     // posterior parameters of sigmaSq
     sigmaSqIGaPost += sigmaSqIGa;
@@ -248,10 +258,15 @@ extern "C" {
     SEXP samples_beta_r = PROTECT(Rf_allocMatrix(REALSXP, p, nSamples)); nProtect++;
     SEXP samples_z_r = PROTECT(Rf_allocMatrix(REALSXP, n, nSamples)); nProtect++;
 
-    // sample storage at s-th iteration temporary allocation
+    // Composition sampling: for each s, draw sigmaSqz_s, then beta_s, then
+    //   z_s = L*(xi_s + t(L)*(Y - X*beta_s)),  xi_s ~ N(0, deltasq*sigmaSqz_s*I),  L = chol(inv(Vy)*R),
+    // so that z_s ~ N(inv(Vy)*R*(Y - X*beta_s), sigmaSqz_s*deltasq*inv(Vy)*R). The random variates are
+    // drawn in the loop (xi_s stored in column s of samples_z); the linear algebra is then done for all
+    // draws at once: Z = L*(Xi + t(L)*Y*1' - t(L)*X*B), with level-3 BLAS and no extra n x nSamples storage.
     double sigmaSqz = 0;
-    double *beta = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta, p);
-    double *z = (double *) R_chk_calloc(n, sizeof(double)); zeros(z, n);
+    double *pointer_beta = REAL(samples_beta_r);
+    double *pointer_z = REAL(samples_z_r);
+    double *beta_s = NULL, *z_s = NULL;
 
     GetRNGstate();
 
@@ -264,34 +279,36 @@ extern "C" {
       REAL(samples_sigmaSq_r)[s] = deltasq * sigmaSqz;                                       // sigmaSq = deltasq*sigmaSqz
 
       // sample fixed effects by composition sampling
+      beta_s = &pointer_beta[(R_xlen_t) s * p];
       dtemp = sqrt(sigmaSqz);
       for(j = 0; j < p; j++){
-        beta[j] = rnorm(tmp_p1[j], dtemp);                                                   // beta ~ N(tmp_p1, sigmaSq*I)
+        beta_s[j] = rnorm(tmp_p1[j], dtemp);                                                 // beta ~ N(tmp_p1, sigmaSq*I)
       }
-      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta, &incOne FCONE FCONE FCONE); // beta = t(cholinv(tmp_pp))*beta
+      F77_NAME(dtrsv)(lower, ytran, nUnit, &p, tmp_pp, &p, beta_s, &incOne FCONE FCONE FCONE); // beta = t(cholinv(tmp_pp))*beta
 
-      dtemp = dtemp * delta;                                                                 // dtemp = sqrt(sigmaSq*deltasq)
-      // sample spatial effects by composition sampling
+      // random part of the spatial effects
+      z_s = &pointer_z[(R_xlen_t) s * n];
+      dtemp = dtemp * delta;                                                                 // dtemp = sqrt(deltasq*sigmaSqz)
       for(i = 0; i < n; i++){
-        tmp_n[i] = rnorm(0.0, dtemp);                                                               // tmp_n ~ N(0, sigmaSq*I)
+        z_s[i] = rnorm(0.0, dtemp);                                                          // xi_s ~ N(0, deltasq*sigmaSqz*I)
       }
-      F77_NAME(dcopy)(&n, Y, &incOne, z, &incOne);                                                  // z = Y
-      F77_NAME(dgemv)(ntran, &n, &p, &negOne, X, &n, beta, &incOne, &one, z, &incOne FCONE);        // z = Y-X*beta
-      F77_NAME(dgemv)(ytran, &n, &n, &one, tmp_nn2, &n, z, &incOne, &one, tmp_n, &incOne FCONE);    // tmp_n = tmp_n + t(chol(tmp_nn2))*(Y-X*beta)/deltasq
-      F77_NAME(dgemv)(ntran, &n, &n, &one, tmp_nn2, &n, tmp_n, &incOne, &zero, z, &incOne FCONE);   // z = chol(tmp_nn2)*tmp_n
-
-      // copy samples into SEXP return object
-      F77_NAME(dcopy)(&p, &beta[0], &incOne, &REAL(samples_beta_r)[s*p], &incOne);
-      F77_NAME(dcopy)(&n, &z[0], &incOne, &REAL(samples_z_r)[s*n], &incOne);
 
     }
 
     PutRNGstate();
 
-    // Free stuff
-    R_chk_free(tmp_nn2);
-    R_chk_free(beta);
-    R_chk_free(z);
+    // spatial effects for all draws: Z = L*(Xi + t(L)*Y*1' - t(L)*X*B), L = chol(inv(Vy)*R) (lower triangle)
+    double *tmp_np2 = (double *) R_chk_calloc(np, sizeof(double)); zeros(tmp_np2, np);                         // allocate temporary memory for n x p matrix
+    F77_NAME(dcopy)(&n, Y, &incOne, tmp_n, &incOne);                                                           // tmp_n = Y
+    F77_NAME(dtrmv)(lower, ytran, nUnit, &n, cholVy, &n, tmp_n, &incOne FCONE FCONE FCONE);                    // tmp_n = t(L)*Y
+    F77_NAME(dcopy)(&np, X, &incOne, tmp_np2, &incOne);                                                        // tmp_np2 = X
+    F77_NAME(dtrmm)(lside, lower, ytran, nUnit, &n, &p, &one, cholVy, &n, tmp_np2, &n FCONE FCONE FCONE FCONE); // tmp_np2 = t(L)*X
+    for(s = 0; s < nSamples; s++){
+      F77_NAME(daxpy)(&n, &one, tmp_n, &incOne, &pointer_z[(R_xlen_t) s * n], &incOne);                       // Z[, s] = xi_s + t(L)*Y
+    }
+    F77_NAME(dgemm)(ntran, ntran, &n, &nSamples, &p, &negOne, tmp_np2, &n, pointer_beta, &p, &one, pointer_z, &n FCONE FCONE); // Z = Xi + t(L)*Y*1' - t(L)*X*B
+    F77_NAME(dtrmm)(lside, lower, ntran, nUnit, &n, &nSamples, &one, cholVy, &n, pointer_z, &n FCONE FCONE FCONE FCONE);    // Z = L*Z
+    R_chk_free(tmp_np2);
 
     // make return object for posterior samples of sigma-sq and beta
     SEXP result_r, resultName_r;

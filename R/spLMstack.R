@@ -199,8 +199,8 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   check_distinct_coords(coords)
 
-  coords.D <- 0
-  coords.D <- iDist(coords)
+  ## distances are computed in C++ from the coordinates
+  storage.mode(coords) <- "double"
 
   ##### correlation function #####
   if (missing(cor.fn)) {
@@ -349,18 +349,33 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   storage.mode(n.samples) <- "integer"
   storage.mode(verbose) <- "integer"
 
-  verbose_child <- FALSE
-  storage.mode(verbose_child) <- "integer"
+  # candidate models sharing (phi, nu) are fitted in one call, which builds the
+  # spatial correlation matrix once and loops over their noise_sp_ratio values
+  cand_phi <- vapply(list_candidate, function(x) as.numeric(x[["phi"]]), numeric(1))
+  cand_nu <- vapply(list_candidate, function(x) as.numeric(x[["nu"]]), numeric(1))
+  cand_deltasq <- vapply(list_candidate, function(x) as.numeric(x[["noise_sp_ratio"]]),
+                         numeric(1))
+  cand_key <- sprintf("%a %a", cand_phi, cand_nu)          # exact (hexadecimal) keys
+  cand_groups <- split(seq_along(list_candidate),
+                       factor(cand_key, levels = unique(cand_key)))
+  names(cand_groups) <- NULL
 
-  # fits candidate model x
-  fit_candidate <- function(x){
-    .Call(C_spLMexactLOO, y, X, p, n, coords.D,
+  # fits the candidate models in group g
+  fit_group <- function(g){
+    idx <- cand_groups[[g]]
+    .Call(C_spLMexactLOOgrid, y, X, p, n, coords,
           beta.prior, beta.Norm, sigma.sq.IG,
-          as.numeric(list_candidate[[x]]["phi"]),
-          as.numeric(list_candidate[[x]]["nu"]),
-          as.numeric(list_candidate[[x]]["noise_sp_ratio"]),
-          cor.fn, n.samples, loopd, loopd.method,
-          verbose_child)
+          cand_phi[idx[1]], cand_nu[idx[1]], cand_deltasq[idx],
+          cor.fn, n.samples, loopd, loopd.method)
+  }
+
+  # results of the groups, put back in the order of list_candidate
+  ungroup <- function(samps_grouped){
+    samps <- vector("list", length(list_candidate))
+    for(g in seq_along(cand_groups)){
+      samps[cand_groups[[g]]] <- samps_grouped[[g]]
+    }
+    samps
   }
 
   #### main function call ####
@@ -398,8 +413,8 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       }
     }
 
-    samps <- future_lapply(1:length(list_candidate), fit_candidate,
-                           future.seed = TRUE)
+    samps <- ungroup(future_lapply(seq_along(cand_groups), fit_group,
+                                   future.seed = TRUE))
 
   }else{
 
@@ -410,7 +425,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
       is set to FALSE. Ignoring parallelization plan.")
     }
 
-    samps <- lapply(1:length(list_candidate), fit_candidate)
+    samps <- ungroup(lapply(seq_along(cand_groups), fit_group))
 
   }
 

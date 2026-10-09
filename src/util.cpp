@@ -657,69 +657,105 @@ void printVec(int *m, int n){
   Rprintf("\n");
 }
 
-// Create full spatial correlation matrix
-void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
-  int i,j;
+// Spatial correlation kernels. The kernel type and its constants are resolved once per
+// matrix, not once per pair:
+//   exponential: exp(-phi*d)
+//   matern:      (phi*d)^nu / (2^(nu-1)*Gamma(nu)) * K_nu(phi*d), with the exact closed forms
+//                nu = 0.5: exp(-x); nu = 1.5: (1 + x)*exp(-x); nu = 2.5: (1 + x + x^2/3)*exp(-x),
+//                x = phi*d; otherwise K_nu is evaluated by bessel_k_ex with a preallocated work array.
+// kernel codes
+#define SPCOR_EXPONENTIAL 0
+#define SPCOR_MATERN_05 1
+#define SPCOR_MATERN_15 2
+#define SPCOR_MATERN_25 3
+#define SPCOR_MATERN 4
 
+static int spCorCode(std::string &corfn, double nu){
   if(corfn == "exponential"){
-
-    for(i = 0; i < n; i++){
-      for(j = i; j < n; j++){
-        C[i*n + j] = exp(-1.0 * theta[0] * D[i*n + j]);
-        C[j*n + i] = C[i*n + j];
-      }
-    }
-
+    return SPCOR_EXPONENTIAL;
   }else if(corfn == "matern"){
-
-    for(i = 0; i < n; i++){
-      for(j = i; j < n; j++){
-        if(D[i*n + j] * theta[0] > 0.0){
-          C[i*n + j] = pow(D[i*n + j] * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(D[i*n + j] * theta[0], theta[1], 1.0);
-          C[j*n + i] = C[i*n + j];
-        }else{
-          C[i*n + j] = 1.0;
-          C[j*n + i] = 1.0;
-        }
-      }
-    }
-
+    if(nu == 0.5) return SPCOR_MATERN_05;
+    if(nu == 1.5) return SPCOR_MATERN_15;
+    if(nu == 2.5) return SPCOR_MATERN_25;
+    return SPCOR_MATERN;
   }else{
-    perror("c++ error: corfn is not correctly specified");
+    Rf_error("c++ error: corfn is not correctly specified");
+  }
+  return -1;
+}
+
+// correlation at distance d; cnst = 1/(2^(nu-1)*Gamma(nu)), bk = work array of length floor(nu)+1
+static inline double spCorEval(double d, int code, double phi, double nu, double cnst, double *bk){
+  double x = phi * d;
+  switch(code){
+  case SPCOR_EXPONENTIAL:
+  case SPCOR_MATERN_05:
+    return exp(-x);
+  case SPCOR_MATERN_15:
+    return (1.0 + x) * exp(-x);
+  case SPCOR_MATERN_25:
+    return (1.0 + x + x * x / 3.0) * exp(-x);
+  default:
+    if(x > 0.0){
+      return cnst * pow(x, nu) * bessel_k_ex(x, nu, 1.0, bk);
+    }else{
+      return 1.0;
+    }
   }
 }
 
-// Create nxn full spatial correlation matrix
-void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &corfn, double *C){
-  int i, j, k;
-  double sp_dist;
+// constants and work array of the general Matern kernel (no-op for the other kernels)
+static double *spCorSetup(int code, double nu, double *cnst){
+  double *bk = NULL;
+  *cnst = 0.0;
+  if(code == SPCOR_MATERN){
+    *cnst = 1.0 / (pow(2.0, nu - 1.0) * gammafn(nu));
+    bk = (double *) R_alloc((size_t) floor(nu) + 1, sizeof(double));
+  }
+  return bk;
+}
+
+// Euclidean distance between row i of the n x p matrix A and row j of the m x p matrix B
+static inline double spDist(double *A, int n, int i, double *B, int m, int j, int p){
+  int k;
+  double dist = 0.0, dtemp = 0.0;
+  for(k = 0; k < p; k++){
+    dtemp = A[k * n + i] - B[k * m + j];
+    dist += dtemp * dtemp;
+  }
+  return sqrt(dist);
+}
+
+// Create full spatial correlation matrix from an n x n distance matrix
+void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
+  int i, j;
+  double nu = (corfn == "matern") ? theta[1] : 0.0;
+  int code = spCorCode(corfn, nu);
+  double cnst = 0.0;
+  double *bk = spCorSetup(code, nu, &cnst);
 
   for(i = 0; i < n; i++){
-    for(j = i; j < n; j++){
-      sp_dist = 0.0;
+    C[i*n + i] = 1.0;
+    for(j = i + 1; j < n; j++){
+      C[i*n + j] = spCorEval(D[i*n + j], code, theta[0], nu, cnst, bk);
+      C[j*n + i] = C[i*n + j];
+    }
+  }
+}
 
-      // find spatial distance
-      for(k = 0; k < p; k++){
-        sp_dist += pow(coords_sp[k * n + i] - coords_sp[k * n + j], 2);
-      }
-      sp_dist = sqrt(sp_dist);
+// Create nxn full spatial correlation matrix from n x p coordinates
+void spCorFull2(int n, int p, double *coords_sp, double *theta, std::string &corfn, double *C){
+  int i, j;
+  double nu = (corfn == "matern") ? theta[1] : 0.0;
+  int code = spCorCode(corfn, nu);
+  double cnst = 0.0;
+  double *bk = spCorSetup(code, nu, &cnst);
 
-      // evaluate correlation kernel
-      if(corfn == "exponential"){
-        C[i * n + j] = exp(-1.0 * theta[0] * sp_dist);
-        C[j * n + i] = C[i * n + j];
-      }else if(corfn == "matern"){
-        if(sp_dist * theta[0] > 0.0){
-          C[i * n + j] = pow(sp_dist * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(sp_dist * theta[0], theta[1], 1.0);
-          C[j * n + i] = C[i * n + j];
-        }else{
-          C[i * n + j] = 1.0;
-          C[j * n + i] = 1.0;
-        }
-      }else{
-        perror("c++ error: corfn is not correctly specified");
-      }
-
+  for(i = 0; i < n; i++){
+    C[i*n + i] = 1.0;
+    for(j = i + 1; j < n; j++){
+      C[i*n + j] = spCorEval(spDist(coords_sp, n, i, coords_sp, n, j, p), code, theta[0], nu, cnst, bk);
+      C[j*n + i] = C[i*n + j];
     }
   }
 }
@@ -758,32 +794,15 @@ void sptCorFull(int n, int p, double *coords_sp, double *coords_tm, double *thet
 
 // Create nxn' spatial cross-correlation matrix
 void spCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_sp_prime, double *theta, std::string &corfn, double *C){
-  int i, j, k;
-  double sp_dist;
+  int i, j;
+  double nu = (corfn == "matern") ? theta[1] : 0.0;
+  int code = spCorCode(corfn, nu);
+  double cnst = 0.0;
+  double *bk = spCorSetup(code, nu, &cnst);
 
-  for(i = 0; i < n; i++){
-    for(j = 0; j < n_prime; j++){
-      sp_dist = 0.0;
-
-      // find spatial distance
-      for(k = 0; k < p; k++){
-        sp_dist += pow(coords_sp[k * n + i] - coords_sp_prime[k * n_prime + j], 2);
-      }
-      sp_dist = sqrt(sp_dist);
-
-      // evaluate correlation kernel
-      if(corfn == "exponential"){
-        C[j * n + i] = exp(-1.0 * theta[0] * sp_dist);
-      }else if(corfn == "matern"){
-        if(sp_dist * theta[0] > 0.0){
-          C[j * n + i] = pow(sp_dist * theta[0], theta[1]) / (pow(2, theta[1] - 1) * gammafn(theta[1])) * bessel_k(sp_dist * theta[0], theta[1], 1.0);
-        }else{
-          C[j * n + i] = 1.0;
-        }
-      }else{
-        perror("c++ error: corfn is not correctly specified");
-      }
-
+  for(j = 0; j < n_prime; j++){
+    for(i = 0; i < n; i++){
+      C[j * n + i] = spCorEval(spDist(coords_sp, n, i, coords_sp_prime, n_prime, j, p), code, theta[0], nu, cnst, bk);
     }
   }
 }
