@@ -53,7 +53,6 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
   const char *exact_str = "exact";
   const char *cv_str = "cv";
-  const char *psis_str = "psis";
 
   /*****************************************
    Set-up preprocessing matrices etc.
@@ -69,6 +68,12 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
   F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
   F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
   if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or a very small phi.\n", info);}
+
+  // diagnostics: correlations of the farthest-apart and the closest locations, and the smallest relative Cholesky
+  // pivot of chol(Vz) (no extra factorization); shared by the nEps fits
+  double diagMinCor = 0.0, diagMaxCor = 0.0, diagPivot = 0.0;
+  corOffDiagRange(Vz, n, &diagMinCor, &diagMaxCor);
+  diagPivot = minRelPivot(cholVz, n, NULL, 1.0);
 
   // construct unit spherical perturbation of Vz; (Vz+I)
   F77_NAME(dcopy)(&nn, Vz, &incOne, cholVzPlusI, &incOne);
@@ -105,7 +110,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
   // failure in the leave-one-out / cross-validation loops: the loops are left, the heap memory is freed, and the
   // error is raised at the end (failCode: 1, 2 as returned by cholSchurGLM; 3 = block-deleted correlation matrix;
-  // 4 = conditional covariance of the held-out block)
+  // 4 = conditional covariance of the held-out block; 6 = user interrupt)
   int failCode = 0;
 
   /*****************************************
@@ -291,6 +296,8 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       GetRNGstate();
 
       for(loo_index = 0; loo_index < n; loo_index++){
+
+        if(pendingInterrupt()){ failCode = 6; break; }                      // user interrupt: free memory, then stop
 
         // Prepare leave-one-out data
         copyVecExcludingOne(Y, looY, n, loo_index);                                                            // Leave-one-out Y
@@ -567,6 +574,8 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
       for(cv_index = 0; cv_index < CV_K; cv_index++){
 
+        if(pendingInterrupt()){ failCode = 6; break; }                      // user interrupt: free memory, then stop
+
         nk = sizesCV[cv_index];
         nknk = nk * nk;
         nnk = n - nk;
@@ -808,95 +817,6 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
 
     }
 
-    // Pareto-smoothed Importance Sampling for LOO-PD calculation
-    if(loopd_method == psis_str){
-
-      int loo_index = 0, s = 0;
-      double theta_i = 0.0, z_s = 0.0;
-      double dtemp_psis;
-
-      double *X_i = (double *) R_chk_calloc(p, sizeof(double)); zeros(X_i, p);
-      double *beta_s = (double *) R_chk_calloc(p, sizeof(double)); zeros(beta_s, p);
-
-      double *dens_i = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(dens_i, nSamples);
-      double *rawIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(rawIR, nSamples);
-      double *sortedIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(sortedIR, nSamples);
-      double *stableIR = (double *) R_chk_calloc(nSamples, sizeof(double)); zeros(stableIR, nSamples);
-      int *orderIR = (int *) R_chk_calloc(nSamples, sizeof(int)); zeros(orderIR, nSamples);
-
-      // find M = floor(min(0.2*S, 3*sqrt(S)))
-      double val1 = 0.0, val2 = 0.0, min_val = 0.0;
-      int M = 0;
-      val1 = 0.2 * nSamples;
-      val2 = 3 * sqrt(nSamples);
-      min_val = fmin2(val1, val2);
-      M = (int)floor(min_val);
-
-      double *tmp_M1 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M1, M);
-      double *tmp_M2 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M2, M);
-      double *tmp_M3 = (double *) R_chk_calloc(M, sizeof(double)); zeros(tmp_M3, M);
-      double *ksigma = (double *) R_chk_calloc(2, sizeof(double)); zeros(ksigma, 2);
-
-      double *pointer_beta = NULL;
-      double *pointer_z = NULL;
-
-      for(e = 0; e < nEps; e++){
-
-      pointer_beta = REAL(VECTOR_ELT(samples_beta_l, e));
-      pointer_z = REAL(VECTOR_ELT(samples_z_l, e));
-
-      for(loo_index = 0; loo_index < n; loo_index++){
-
-        copyMatrixRowToVec(X, n, p, X_i, loo_index);                          // X_i = X[i,1:p]
-
-        for(s = 0; s < nSamples; s++){
-
-          copyMatrixColToVec(pointer_beta, p, nSamples, beta_s, s);           // beta_s = beta[s], s-th sample
-          z_s = pointer_z[n*s + loo_index];                                   // z_s = z_i[s], s-th sample of i-th spatial effect
-          theta_i = F77_CALL(ddot)(&p, X_i, &incOne, beta_s, &incOne);        // theta_i = X_i * beta_s
-          theta_i += z_s;                                                     // theta_i = X_i*beta_s + zi_s
-
-          if(family == family_poisson){
-            dtemp_psis = exp(theta_i);
-            dens_i[s] = dpois(Y[loo_index], dtemp_psis, 1);
-            rawIR[s] = - dens_i[s];
-          }
-
-          if(family == family_binomial){
-            dtemp_psis = inverse_logit(theta_i);
-            dens_i[s] = dbinom(Y[loo_index], nBinom[loo_index], dtemp_psis, 1);
-            rawIR[s] = - dens_i[s];
-          }
-
-          if(family == family_binary){
-            dtemp_psis = inverse_logit(theta_i);
-            dens_i[s] = dbinom(Y[loo_index], 1.0, dtemp_psis, 1);
-            rawIR[s] = - dens_i[s];
-          }
-
-        }
-
-        ParetoSmoothedIR(rawIR, M, nSamples, sortedIR, orderIR, stableIR, ksigma, tmp_M1, tmp_M2, tmp_M3);
-
-        REAL(VECTOR_ELT(loopd_out_l, e))[loo_index] = logWeightedSumExp(dens_i, rawIR, nSamples);
-
-      }
-
-      }
-
-      R_chk_free(X_i);
-      R_chk_free(beta_s);
-      R_chk_free(dens_i);
-      R_chk_free(rawIR);
-      R_chk_free(sortedIR);
-      R_chk_free(stableIR);
-      R_chk_free(orderIR);
-      R_chk_free(tmp_M1);
-      R_chk_free(tmp_M2);
-      R_chk_free(tmp_M3);
-      R_chk_free(ksigma);
-
-    }
 
   }
 
@@ -922,6 +842,7 @@ static SEXP spGLMexactLOO_fit(double *Y, double *nBinom, double *X, int n, int p
       SET_VECTOR_ELT(fit_r, 3, VECTOR_ELT(loopd_out_l, e));                            // leave-one-out predictive densities
     }
     Rf_namesgets(fit_r, resultName_r);
+    SET_VECTOR_ELT(result_r, e, appendDiagnostics(fit_r, diagPivot, diagMinCor, diagMaxCor));
   }
 
   R_chk_free(cholSchur_n);
@@ -998,8 +919,7 @@ extern "C" {
 
     const char *exact_str = "exact";
     const char *cv_str = "cv";
-    const char *psis_str = "psis";
-
+  
     // print set-up if verbose TRUE
     if(verbose){
       Rprintf("----------------------------------------\n");
@@ -1039,9 +959,6 @@ extern "C" {
         }
         if(loopd_method == cv_str){
           Rprintf("LOO-PD calculation method = %i-fold %s\nNumber of Monte Carlo samples = %i.\n", CV_K, loopd_method.c_str(), loopd_nMC);
-        }
-        if(loopd_method == psis_str){
-          Rprintf("LOO-PD calculation method = %s\n", loopd_method.c_str());
         }
       }
       Rprintf("----------------------------------------\n");

@@ -143,8 +143,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
     const char *exact_str = "exact";
     const char *cv_str = "cv";
-    const char *psis_str = "psis";
-
+  
     // print set-up if verbose TRUE
     if(verbose){
       Rprintf("----------------------------------------\n");
@@ -208,9 +207,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         if(loopd_method == cv_str){
           Rprintf("LOO-PD calculation method = %i-fold %s\nNumber of Monte Carlo samples = %i.\n", CV_K, loopd_method.c_str(), loopd_nMC);
         }
-        if(loopd_method == psis_str){
-          Rprintf("LOO-PD calculation method = %s\n", loopd_method.c_str());
-        }
       }
       Rprintf("----------------------------------------\n");
 
@@ -255,23 +251,27 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
     }
 
-    // Allocations for XtX, XTildetX, and VbetaInv
+    // diagnostics: for each distinct correlation matrix (r of them for 'independent'), the correlations of the
+    // farthest-apart and the closest space-time locations and the smallest relative Cholesky pivot of its factor
+    // (no extra factorization)
+    int nDiag = (processType == "independent") ? r : 1;
+    double *diagPivot = (double *) R_alloc(nDiag, sizeof(double));
+    double *diagMinCor = (double *) R_alloc(nDiag, sizeof(double));
+    double *diagMaxCor = (double *) R_alloc(nDiag, sizeof(double));
+    for(k = 0; k < nDiag; k++){
+      corOffDiagRange(&Vz[nn * k], n, &diagMinCor[k], &diagMaxCor[k]);
+      diagPivot[k] = minRelPivot(&cholVz[nn * k], n, NULL, 1.0);
+    }
+
+    // Allocations for VbetaInv
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);           // allocate VbetaInv
     double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
-    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
-    double *XTildetX = (double *) R_alloc(nrp, sizeof(double)); zeros(XTildetX, nrp);         // Store XTildetX
 
     // Find VbetaInv
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
     F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");}       // VbetaInv = chol2inv(Vbeta)
-
-    // Find XtX
-    F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
-
-    // Find t(X_tilde)*X
-    lmulm_XTilde_VC(ytran, n, r, p, X_tilde, X, XTildetX);
 
     // Allocations for I + Xtilde*Vz*t(Xtilde)
     double *XTildeVzXTildet = (double *) R_alloc(nn, sizeof(double)); zeros(XTildeVzXTildet, nn);
@@ -303,7 +303,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
     double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
-    info = primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
+    info = primingGLMvc(n, p, r, X, X_tilde, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
                         sigmaSq_xi, tmp_nnr, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
     R_chk_free(tmp_nnr);
@@ -536,8 +536,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         }
 
-        double *looXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(looXtX, pp);
-        double *looXTildetX = (double *) R_chk_calloc(n1rp, sizeof(double)); zeros(looXTildetX, n1rp);
 
         // set-up pre-processing memory allocations for priming on leave-one-out data
         double *looD1Inv = (double *) R_chk_calloc(n1rn1r, sizeof(double)); zeros(looD1Inv, n1rn1r);
@@ -601,6 +599,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         for(loo_index = 0; loo_index < n; loo_index++){
 
+          if(pendingInterrupt()){ failCode = 6; goto loo_done; }            // user interrupt: free memory, then stop
+
           // Prepare leave-one-out data
           copyVecExcludingOne(Y, looY, n, loo_index);                           // Leave-one-out Y
           copyVecExcludingOne(nBinom, loo_nBinom, n, loo_index);                // Leave-one-out nBinom
@@ -608,14 +608,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
           copyMatrixDelRow(X_tilde, n, r, looX_tilde, loo_index);               // Row-deleted X_tilde
           copyMatrixRowToVec(X, n, p, X_pred, loo_index);                       // Copy left out X into X_pred
           copyMatrixRowToVec(X_tilde, n, r, X_tilde_pred, loo_index);           // Copy left out X into X_pred
-
-          // Leave-one-out XtX, substract Xi*t(Xi) from XtX, instead of multiplying again
-          F77_NAME(dgemm)(ntran, ytran, &p, &p, &incOne, &one, X_pred, &p, X_pred, &p, &zero, looXtX, &p FCONE FCONE);
-          F77_NAME(dscal)(&pp, &negOne, looXtX, &incOne);
-          F77_NAME(daxpy)(&pp, &one, XtX, &incOne, looXtX, &incOne);
-
-          // Leave-one-out XTildetX, delete i-th row from every n-th block of original XTildetX, instead of multiplying again
-          copyMatrixDelRow_vc(XTildetX, nr, p, looXTildetX, loo_index, n);
 
           // Constructing leave-one-out Vz for each spatial-temporal process model, and also Schur complement for prediction
           if(processType == "independent.shared" || processType == "multivariate"){
@@ -670,7 +662,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
             }
             cholRowDelUpdate(n, cholIplusXTildeVzXTildet, loo_index, looCholIplusXTildeVzXTildet, tmp_n11);
 
-            failCode = primingGLMvc(n1, p, r, looX, looX_tilde, looXtX, looXTildetX, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
+            failCode = primingGLMvc(n1, p, r, looX, looX_tilde, VbetaInv, looVz, processType, looCholIplusXTildeVzXTildet,
                                     sigmaSq_xi, tmp_n1n1r, looD1Inv, looD1InvB1, looCholschurA1, looDInvB_pn, looDInvB_nrn, looCholschurA);
 
             R_chk_free(looVz);
@@ -898,8 +890,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         R_chk_free(X_tilde_pred);
         R_chk_free(looCholVz);
         R_chk_free(looCz);
-        R_chk_free(looXtX);
-        R_chk_free(looXTildetX);
         R_chk_free(looD1Inv);
         R_chk_free(looD1InvB1);
         R_chk_free(looCholschurA1);
@@ -1012,8 +1002,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         }
 
-        double *cvXtX = (double *) R_chk_calloc(pp, sizeof(double)); zeros(cvXtX, pp);
-        double *cvXTildetX = (double *) R_chk_calloc(nnkmaxrp, sizeof(double)); zeros(cvXTildetX, nnkmaxrp);
 
         // set-up pre-processing memory allocations for priming on leave-one-out data
         double *cvD1Inv = (double *) R_chk_calloc(nnkmaxrnnkmaxr, sizeof(double)); zeros(cvD1Inv, nnkmaxrnnkmaxr);
@@ -1080,6 +1068,8 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
 
         for(cv_index = 0; cv_index < CV_K; cv_index++){
 
+          if(pendingInterrupt()){ failCode = 6; goto cv_done; }             // user interrupt: free memory, then stop
+
           // set-up partition sizes and indices
           nk = sizesCV[cv_index];
           nknk = nk * nk;
@@ -1103,14 +1093,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
           copyMatrixRowBlock(X_tilde, n, r, X_tilde_pred, start_index, end_index);                                  // Held-out X_tilde = X_tilde_pred
           copyVecBlock(Y, Y_pred, n, start_index, end_index);                                                       // Held-out Y = Y_pred
           copyVecBlock(nBinom, nBinom_pred, n, start_index, end_index);                                             // Held-out nBinom = nBinom_pred
-
-          // Cross-validated XtX, substract X[i]*t(X[i]) from XtX, instead of multiplying again
-          F77_NAME(dgemm)(ytran, ntran, &p, &p, &nk, &one, X_pred, &nk, X_pred, &nk, &zero, cvXtX, &p FCONE FCONE);
-          F77_NAME(dscal)(&pp, &negOne, cvXtX, &incOne);
-          F77_NAME(daxpy)(&pp, &one, XtX, &incOne, cvXtX, &incOne);
-
-          // Cross-validated XTildetX, delete i-th row block from every n-th block of original XTildetX, instead of multiplying again
-          copyMatrixDelRowBlock_vc(XTildetX, nr, p, cvXTildetX, start_index, end_index, n);
 
           // Constructing cross-validated Vz for each spatial-temporal process model, and also Schur complement for prediction
           if(processType == "independent.shared" || processType == "multivariate"){
@@ -1206,7 +1188,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
             }
 
             if(failCode == 0){
-              failCode = primingGLMvc(nnk, p, r, cvX, cvX_tilde, cvXtX, cvXTildetX, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
+              failCode = primingGLMvc(nnk, p, r, cvX, cvX_tilde, VbetaInv, cvVz, processType, cvCholIplusXTildeVzXTildet,
                                       sigmaSq_xi, tmp_n1n1r, cvD1Inv, cvD1InvB1, cvCholschurA1, cvDInvB_pn, cvDInvB_nrn, cvCholschurA);
             }
 
@@ -1476,8 +1458,6 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         R_chk_free(z_tilde_mu);
         R_chk_free(z_tilde);
         R_chk_free(PCM_dist);
-        R_chk_free(cvXtX);
-        R_chk_free(cvXTildetX);
         R_chk_free(cvD1Inv);
         R_chk_free(cvD1InvB1);
         R_chk_free(cvCholschurA1);
@@ -1549,6 +1529,7 @@ static SEXP stvcGLMexactLOO_fit(SEXP Y_r, SEXP X_r, SEXP X_tilde_r, SEXP n_r, SE
         SET_VECTOR_ELT(fit_r, 3, VECTOR_ELT(loopd_out_l, e));                            // leave-one-out predictive densities
       }
       Rf_namesgets(fit_r, resultName_r);
+      SET_VECTOR_ELT(result_r, e, appendDiagnosticsRows(fit_r, diagPivot, diagMinCor, diagMaxCor, nDiag));
     }
 
     R_chk_free(D1Inv);

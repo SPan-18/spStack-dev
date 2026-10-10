@@ -12,11 +12,24 @@
 #' @return A list with elements:
 #' \describe{
 #'   \item{\code{weights}}{optimal stacking weights as a numeric vector of
-#'   length \eqn{M}{M}}
+#'   length \eqn{M}{M} (\code{NA} if no solver succeeded, see Details).}
 #'   \item{\code{status}}{solver status, returns \code{"optimal"} if solver
-#'   succeeded.}
-#'   \item{\code{solver}}{name of the solver used.}
+#'   succeeded, and \code{"failed"} if no solver succeeded.}
+#'   \item{\code{solver}}{name of the solver used (\code{"none"} if no
+#'   solver succeeded).}
+#'   \item{\code{details}}{a list with the installed CVXR solvers
+#'   (\code{installed}), the requested solver(s) (\code{requested}) and those
+#'   of them not installed (\code{missing.requested}), the order in which the
+#'   solvers were tried (\code{search.order}), a data frame of the attempts
+#'   with the status or error of each solver (\code{attempts}), and whether
+#'   the fallback \code{loo::stacking_weights()} was used (\code{fallback}).}
 #' }
+#' @details The weights maximize the log score of the stacked leave-one-out
+#'  predictive densities (Yao *et al.* 2018) over the simplex, using the CVXR
+#'  solvers in the order given above. If none of them reaches an optimal
+#'  solution, \code{loo::stacking_weights()} is used as a fallback when the
+#'  package \pkg{loo} is installed; otherwise the weights are returned as
+#'  \code{NA} with status \code{"failed"}.
 #' @examples
 #' set.seed(1234)
 #' data(simGaussian)
@@ -39,7 +52,6 @@
 #' print(w_hat$solver)
 #' print(w_hat$status)
 #' @import CVXR
-#' @importFrom loo stacking_weights
 #' @references Yao Y, Vehtari A, Simpson D, Gelman A (2018). "Using Stacking to
 #' Average Bayesian Predictive Distributions (with Discussion)." *Bayesian
 #' Analysis*, **13**(3), 917-1007. \doi{10.1214/17-BA1091}.
@@ -93,6 +105,8 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
   }
 
   ## Determine solver order
+  missing <- character(0)
+  requested_input <- if (is.null(solver)) "DEFAULT (CLARABEL -> ECOS -> SCS)" else solver
   if (!is.null(solver)) {
 
     missing <- setdiff(solver, installed)
@@ -138,19 +152,23 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
   out <- NULL
   last_error <- NULL
+  attempts <- data.frame(solver = character(0), status = character(0),
+                         stringsAsFactors = FALSE)
 
   for (s in solvers) {
 
     result <- tryCatch(
       CVXR::psolve(prob, solver = s, verbose = verbose),
       error = function(e) {
-        last_error <- conditionMessage(e)
+        last_error <<- conditionMessage(e)
         NULL
       }
     )
 
-    if (is.null(result))
+    if (is.null(result)){
+      attempts[nrow(attempts) + 1, ] <- c(s, paste0("error: ", last_error))
       next
+    }
 
     ## Solution extraction
     w_hat <- tryCatch(
@@ -162,8 +180,10 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
     w_hat <- pmax(0, w_hat)
 
     w_hat_sum <- sum(w_hat)
-    if (!is.finite(w_hat_sum) || w_hat_sum <= 0)
+    if (!is.finite(w_hat_sum) || w_hat_sum <= 0){
+      attempts[nrow(attempts) + 1, ] <- c(s, "no valid solution")
       next
+    }
 
     w_hat <- w_hat / w_hat_sum
 
@@ -172,6 +192,7 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
 
     if (is.na(solver_status))
       solver_status <- "unknown"
+    attempts[nrow(attempts) + 1, ] <- c(s, solver_status)
 
     if (solver_status %in% OPTIMAL_STATUSES) {
 
@@ -189,6 +210,21 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
   ## Fallback solver
   ## -----------------------------
 
+  # loo (in Suggests) is used only here; without it the weights are NA
+  if (is.null(out) && !requireNamespace("loo", quietly = TRUE)) {
+
+    if(verbose){
+      message("CVXR solvers failed or did not reach optimality, and the",
+              " fallback loo::stacking_weights() needs the 'loo' package.")
+    }
+
+    out <- list(
+      weights = rep(NA_real_, M),
+      status = "failed",
+      solver = "none"
+    )
+  }
+
   if (is.null(out)) {
 
     if(verbose){
@@ -196,12 +232,13 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
       message("Switching to loo::stacking_weights().")
     }
 
+    # loo::stacking_weights() takes the pointwise log predictive densities
     w_hat <- tryCatch(
-      loo::stacking_weights(loopd),
+      loo::stacking_weights(log_loopd),
       error = function(e) {
         stop(
           "Both CVXR and loo stacking failed. Last CVXR error: ",
-          last_error
+          last_error, "; loo error: ", conditionMessage(e)
         )
       }
     )
@@ -218,6 +255,10 @@ get_stacking_weights <- function(log_loopd, solver = NULL, verbose = TRUE){
       solver = "loo"
     )
   }
+
+  out$details <- list(installed = installed, requested = requested_input,
+                      missing.requested = missing, search.order = solvers,
+                      attempts = attempts, fallback = identical(out$solver, "loo"))
 
   out
 }

@@ -80,33 +80,41 @@ with each entry corresponding to a list of length 4, containing posterior
 samples of fixed effects (\code{beta}), measurement error variance
 (\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
 (\code{z}) for that model.}
-\item{\code{loopd.pareto_k}}{if \code{loopd.method='PSIS'}, a list of length
-equal to total number of candidate models with each entry containing the
-Pareto \eqn{k} diagnostic values of the leave-one-out predictive densities
-under that particular model.}
 \item{\code{loopd}}{a list of length equal to total number of candidate models with
 each entry containing leave-one-out predictive densities under that
 particular model.}
 \item{\code{n.models}}{number of candidate models that are fit.}
-\item{\code{candidate.models}}{a matrix with \code{n_model} rows with each row
-containing details of the model parameters and its optimal weight.}
+\item{\code{model.params}}{a list with one element per candidate model, each a
+named list of its parameters: \code{phi}, \code{nu} (\code{NA} for the
+exponential correlation function) and \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
+\item{\code{stacking.summary}}{a matrix with one row per candidate model,
+containing its parameters and its optimal stacking weight, for display.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
-\item{\code{solver.status}}{solver status as returned by the optimization
-routine.}
-\item{\code{diagnostics}}{a data frame with one row per candidate model and
-columns \code{min.pivot} (the smallest relative Cholesky pivot of the
-\eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a nearly
-singular covariance matrix), \code{min.cor} and \code{max.cor} (the
-correlations of the two farthest-apart and of the two closest locations;
-values of \code{min.cor} above 0.95 suggest an effective range far
-exceeding the extent of the data, values of \code{max.cor} below 0.05 nearly
-uncorrelated locations). They are obtained from quantities the fits compute
-anyway. If \code{verbose = TRUE}, a "Diagnostics" section is printed for
-flagged candidate models with stacking weight above 0.05; extreme candidates
-with negligible weight are expected in a stacking grid and are only
-counted.}
+\item{\code{diagnostics}}{a list of diagnostics. Element \code{numerical} is a
+ data frame with one row per candidate model and columns \code{min.pivot}
+ (the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+ factorizations; values below 1e-8 indicate a nearly singular covariance
+ matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
+ farthest-apart and of the two closest locations; values of \code{min.cor}
+ above 0.95 suggest an effective range far exceeding the extent of the data,
+ values of \code{max.cor} below 0.05 nearly uncorrelated locations),
+ obtained from quantities the fits compute anyway. If
+ \code{loopd.method = 'PSIS'}, element \code{pareto} is a list with the
+ Pareto \eqn{k} diagnostic values of each candidate model (\code{k}), the
+ threshold above which they are unreliable (\code{threshold}) and the
+ number of values above it for each model (\code{n.high}). Element
+ \code{solver} describes the optimization for the stacking weights: the
+ solver used (\code{used}) and its status (\code{status}), the installed
+ and requested solvers, the search order, the attempts with their status,
+ and whether the fallback \code{loo::stacking_weights()} was used. If
+ \code{verbose = TRUE}, a "Diagnostics" section is printed if there is an
+ issue: numerical flags of candidate models with stacking weight above 0.05
+ (extreme candidates with negligible weight are expected in a stacking grid
+ and are only counted), Pareto \eqn{k} values above the threshold for any
+ model, and solver problems (a requested solver not installed, an
+ inaccurate solution, or the fallback).}
 }
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.

@@ -77,13 +77,33 @@
 #' cross-validation, its tag `cv.update` records the pre-processing method
 #' (`'update'` or `'direct'`) that was used.}
 #' \item{`n.models`}{number of candidate models that are fit.}
-#' \item{`candidate.models`}{a matrix with \code{n_model} rows with each row
-#'  containing details of the model parameters and its optimal weight.}
+#' \item{`model.params`}{a list with one element per candidate model, each a
+#'  named list of its parameters: \code{phi}, \code{nu} (\code{NA} for the
+#'  exponential correlation function) and \code{boundary} (boundary adjustment parameter).}
+#' \item{`stacking.summary`}{a matrix with one row per candidate model,
+#'  containing its parameters and its optimal stacking weight, for display.}
 #' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #'  candidate models storing the optimal stacking weights.}
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
-#' \item{`solver.status`}{solver status as returned by the optimization
-#' routine.}
+#' \item{`diagnostics`}{a list of diagnostics. Element \code{numerical} is a
+#' data frame with one row per candidate model and columns \code{min.pivot}
+#' (the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+#' correlation matrix; values below 1e-8 indicate a nearly singular
+#' correlation matrix), \code{min.cor} and \code{max.cor} (the correlations
+#' of the two farthest-apart and of the two closest locations; values of
+#' \code{min.cor} above 0.95 suggest an effective range far exceeding the
+#' extent of the data, values of \code{max.cor} below 0.05 nearly
+#' uncorrelated locations), obtained from quantities the fit computes
+#' anyway. Element \code{solver} describes the optimization for the stacking
+#' weights: the solver used (\code{used}) and its status (\code{status}),
+#' the installed and requested solvers, the search order, the attempts with
+#' their status, and whether the fallback \code{loo::stacking_weights()} was
+#' used. If \code{verbose = TRUE}, a "Diagnostics" section is printed if
+#' there is an issue: numerical flags of candidate models with stacking
+#' weight above 0.05 (extreme candidates with negligible weight are expected
+#' in a stacking grid and are only counted), and solver problems (a
+#' requested solver not installed, an inaccurate solution, or the
+#' fallback).}
 #' }
 #' The return object might include additional data that is useful for subsequent
 #' prediction, model fit evaluation and other utilities.
@@ -132,7 +152,7 @@
 #'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
 #'                    parallel = TRUE, verbose = TRUE)
 #'
-#' # print(mod1$solver.status)
+#' # print(mod1$diagnostics$solver$status)
 #' # print(mod1$run.time)
 #'
 #' post_samps <- stackedSampler(mod1)
@@ -168,12 +188,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
                        parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-    if (!i %in% formal.args)
-      warning("'", i, "' is not an argument")
-  }
+  check_dots(...)
 
   ##### family #####
   if(missing(family)){
@@ -252,6 +267,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
          different than data used in the model formula")
   }
 
+  check_no_missing(y = y, X = X, n.binom = n.binom, coords = coords)
   check_distinct_coords(coords)
 
   ## distances are computed in C++ from the coordinates
@@ -288,6 +304,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
         stop(paste("priors[['V.beta']] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(V.beta, p, "priors[[\'V.beta\']]")
     }
     if(!'nu.beta' %in% names(priors)){
       missing.flag <- missing.flag + 1
@@ -366,7 +383,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
              scalar numeric entries 'phi' and 'boundary'.")
       }
       candidate.models <- lapply(candidate.models, function(x){
-        x[["nu"]] <- 0.0
+        x[["nu"]] <- NA_real_                                  # not used by the exponential
         x
       })
       class(candidate.models) <- "candidateModels"
@@ -560,19 +577,28 @@ spGLMstack <- function(formula, data = parent.frame(), family,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
-  out <- get_stacking_weights(
+  # the solver details are kept in the 'diagnostics' element (and reported there
+  # if there is an issue) instead of being printed
+  out <- suppressMessages(get_stacking_weights(
     loopd_mat,
     solver = solver,
-    verbose = verbose
-  )
+    verbose = FALSE
+  ))
 
   w_hat <- out$weights
+  if(identical(out$solver, "none")){
+    message(loo_fallback_message())
+  }
   solver_status <- out$status
   solver_used <- out$solver
+  out_solver_details <- out$details
 
   run.time <- proc.time() - ptm
 
-  stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
+  # columns in a fixed order (exponential candidates carry nu = 0, appended last)
+  stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, function(x){
+    unlist(x[c("phi", "nu", "boundary")])
+  })))
   stack_out <- cbind(stack_out, round(w_hat, 3))
   colnames(stack_out) = c("phi", "nu", "boundary", "weight")
   rownames(stack_out) = paste("Model", 1:nrow(stack_out))
@@ -587,6 +613,12 @@ spGLMstack <- function(formula, data = parent.frame(), family,
 
   loopd_list <- lapply(samps, function(x) x[["loopd"]])
   names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
+
+  diagnostics <- list(numerical = collect_diagnostics(samps, paste("Model", seq_along(list_candidate))))
+  diagnostics$solver <- c(list(used = solver_used, status = solver_status), out_solver_details)
+  if(verbose){
+    print_diagnostics(diagnostics, weights = w_hat)
+  }
 
   samps <- lapply(samps, function(x) x[c("beta", "z", "xi")])
   names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
@@ -605,11 +637,17 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   out$loopd <- loopd_list
   out$loopd.method <- loopd.controls
   out$n.models <- length(list_candidate)
-  out$candidate.models <- stack_out
+  # model parameters of each candidate, read by name (e.g. by posteriorPredict())
+  out$model.params <- lapply(list_candidate, function(x){
+    list(phi = as.numeric(x[["phi"]]), nu = as.numeric(x[["nu"]]),
+         boundary = as.numeric(x[["boundary"]]))
+  })
+  names(out$model.params) <- paste("Model", seq_along(list_candidate))
+  # table of the candidate models and their stacking weights (for display)
+  out$stacking.summary <- stack_out
   out$stacking.weights <- w_hat
   out$run.time <- run.time
-  out$solver <- solver_used
-  out$solver.status <- solver_status
+  out$diagnostics <- diagnostics
 
   class(out) <- "spGLMstack"
 

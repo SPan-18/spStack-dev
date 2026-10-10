@@ -4,12 +4,17 @@
 #' of the latent spatial or spatial-temporal process.
 #' @param mod_out an object returned by any model fit under fixed
 #' hyperparameters or using predictive stacking, i.e., [spLMexact()],
-#' [spLMstack()], [spGLMexact()], [spGLMstack()], [stvcGLMexact()], or
-#' [stvcGLMstack()].
-#' @param coords_new a list of new spatial or spatial-temporal coordinates at
-#' which the latent process, the mean, and the response is to be predicted.
-#' @param covars_new a list of new covariates at the new spatial or
-#' spatial-temporal coordinates. See examples for the structure of this list.
+#' [spLMstack()], [spGLMexact()], [spGLMstack()], [stvcGLMexact()],
+#' [stvcGLMstack()], [stvcLMexact()] or [stvcLMstack()].
+#' @param coords_new new spatial coordinates (an \eqn{n_{new} \times 2}{n_new x 2}
+#' matrix) or, for the spatial-temporal models, a list with tags `sp` (an
+#' \eqn{n_{new} \times 2}{n_new x 2} matrix) and `time` (a vector or one-column
+#' matrix) at which the latent process, the mean, and the response is to be
+#' predicted.
+#' @param covars_new new covariates at the new coordinates: a matrix or, for
+#' the spatial-temporal models, a list with tags `fixed` (covariates with fixed
+#' effects) and `vc` (covariates with spatially-temporally varying
+#' coefficients). See examples for the structure of this list.
 #' @param joint a logical value indicating whether to return the joint posterior
 #' predictive samples of the latent process at the new locations or times.
 #' Defaults to `FALSE`.
@@ -27,7 +32,7 @@
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @seealso [spLMexact()], [spLMstack()], [spGLMexact()], [spGLMstack()],
-#' [stvcGLMexact()], [stvcGLMstack()]
+#' [stvcGLMexact()], [stvcGLMstack()], [stvcLMexact()], [stvcLMstack()]
 #' @examples
 #' set.seed(1234)
 #' # training and test data sizes
@@ -100,7 +105,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         if(!is.list(covars_new)){
             stop("covars_new must be a list.")
         }
-        if(length(covars_new) != 2 && c("fixed", "vc") %in% names(covars_new)){
+        if(!all(c("fixed", "vc") %in% names(covars_new))){
             stop("covars_new must be a list with tags 'fixed' and 'vc'.")
         }
 
@@ -152,7 +157,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         if(!is.list(coords_new)){
             stop("coords_new must be a list.")
         }
-        if(length(coords_new) != 2 && c("sp", "time") %in% names(coords_new)){
+        if(!all(c("sp", "time") %in% names(coords_new))){
             stop("coords_new must be a list with tags 'sp' and 'time'.")
         }
         sp_coords_new <- coords_new[['sp']]
@@ -251,7 +256,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         if(!is.list(covars_new)){
             stop("covars_new must be a list.")
         }
-        if(length(covars_new) != 2 && c("fixed", "vc") %in% names(covars_new)){
+        if(!all(c("fixed", "vc") %in% names(covars_new))){
             stop("covars_new must be a list with tags 'fixed' and 'vc'.")
         }
 
@@ -303,7 +308,7 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         if(!is.list(coords_new)){
             stop("coords_new must be a list.")
         }
-        if(length(coords_new) != 2 && c("sp", "time") %in% names(coords_new)){
+        if(!all(c("sp", "time") %in% names(coords_new))){
             stop("coords_new must be a list with tags 'sp' and 'time'.")
         }
         sp_coords_new <- coords_new[['sp']]
@@ -345,15 +350,14 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
         cor.fn <- mod_out$cor.fn
         process.type <- mod_out$process.type
 
-        nModels <- length(mod_out$candidate.models)
+        nModels <- mod_out$n.models
 
         for(i in 1:nModels){
 
             # read hyperparameters
-            if(cor.fn == "gneiting-decay"){
-                phi_s <- mod_out$candidate.models[[i]][["phi_s"]]
-                phi_t <- mod_out$candidate.models[[i]][["phi_t"]]
-            }
+            pars <- model_params(mod_out, i)
+            phi_s <- as.numeric(pars[["phi_s"]])
+            phi_t <- as.numeric(pars[["phi_t"]])
 
             # read samples
             beta_samps <- mod_out$samples[[i]][['beta']]
@@ -389,6 +393,44 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
                                    covars_new = covars_new,
                                    joint.pred = as.logical(joint))
         class(mod_out) <- "pp.stvcGLMstack"
+        return(mod_out)
+
+    }else if(inherits(mod_out, c('stvcLMexact', 'stvcLMstack'))){
+
+        pin <- stvc_pred_inputs(mod_out, coords_new, covars_new)
+        is_stack <- inherits(mod_out, 'stvcLMstack')
+        nModels <- if(is_stack) mod_out$n.models else 1L
+        n.samples <- mod_out$n.samples
+        storage.mode(n.samples) <- "integer"
+        storage.mode(joint) <- "integer"
+
+        for(i in seq_len(nModels)){
+
+            # process parameters, by name; process variances sigmaSq.z = sigmaSq/noise_sp_ratio
+            pars <- model_params(mod_out, i)
+            s <- if(is_stack) mod_out$samples[[i]] else mod_out$samples
+            samps <- .Call(C_predict_stvcLM, pin$n, pin$n_pred, pin$p, pin$r,
+                           pin$X_new, pin$X.tilde_new,
+                           pin$sp_coords, pin$time_coords, pin$sp_coords_new, pin$time_coords_new,
+                           mod_out$process.type, mod_out$cor.fn,
+                           as.double(pars[["phi_s"]]), as.double(pars[["phi_t"]]), n.samples,
+                           s[["beta"]], s[["z"]], s[["sigmaSq.z"]], s[["sigmaSq"]], joint)
+            if(is_stack){
+                mod_out$samples[[i]][['z.pred']] <- samps[['z.pred']]
+                mod_out$samples[[i]][['mu.pred']] <- samps[['mu.pred']]
+                mod_out$samples[[i]][['y.pred']] <- samps[['y.pred']]
+            }else{
+                mod_out$samples[['z.pred']] <- samps[['z.pred']]
+                mod_out$samples[['mu.pred']] <- samps[['mu.pred']]
+                mod_out$samples[['y.pred']] <- samps[['y.pred']]
+            }
+
+        }
+
+        mod_out$prediction <- list(coords_new = coords_new,
+                                   covars_new = covars_new,
+                                   joint.pred = as.logical(joint))
+        class(mod_out) <- if(is_stack) "pp.stvcLMstack" else "pp.stvcLMexact"
         return(mod_out)
 
     }else if(inherits(mod_out, 'spGLMexact')){
@@ -465,15 +507,10 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
 
         cor.fn <- mod_out$cor.fn
 
-        spParams <- mod_out$model.params
-        phi <- 0.0
-        nu <- 0.0
-        if(cor.fn == "matern"){
-            phi <- spParams[['phi']]
-            nu <- spParams[['nu']]
-        }else if(cor.fn == "exponential"){
-            phi <- spParams[['phi']]
-        }
+        # model parameters, by name (nu is NA and unused for exponential)
+        pars <- model_params(mod_out)
+        phi <- as.numeric(pars[["phi"]])
+        nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
         storage.mode(phi) <- "double"
         storage.mode(nu) <- "double"
 
@@ -590,14 +627,10 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
 
         for(i in 1:nModels){
 
-            phi <- 0.0
-            nu <- 0.0
-            if(cor.fn == "matern"){
-                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-                nu <- as.numeric(mod_out$candidate.models[i, 'nu'])
-            }else if(cor.fn == "exponential"){
-                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-            }
+            # model parameters, by name (nu is NA and unused for exponential)
+            pars <- model_params(mod_out, i)
+            phi <- as.numeric(pars[["phi"]])
+            nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
             storage.mode(phi) <- "double"
             storage.mode(nu) <- "double"
 
@@ -693,18 +726,11 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
 
         cor.fn <- mod_out$cor.fn
 
-        # Read hyperparameters
-        phi <- 0.0
-        nu <- 0.0
-        deltasq <- 0.0
-        if(cor.fn == "matern"){
-            phi <- mod_out$model.params[['phi']]
-            nu <- mod_out$model.params[['nu']]
-            deltasq <- mod_out$model.params[['noise_sp_ratio']]
-        }else if(cor.fn == "exponential"){
-            phi <- mod_out$model.params[['phi']]
-            deltasq <- mod_out$model.params[['noise_sp_ratio']]
-        }
+        # Read hyperparameters, by name (nu is NA and unused for exponential)
+        pars <- model_params(mod_out)
+        phi <- as.numeric(pars[["phi"]])
+        nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
+        deltasq <- as.numeric(pars[["noise_sp_ratio"]])
 
         # Read samples
         beta_samps <- mod_out$samples[['beta']]
@@ -800,17 +826,11 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
 
         for(i in 1:nModels){
 
-            phi <- 0.0
-            nu <- 0.0
-            deltasq <- 0.0
-            if(cor.fn == "matern"){
-                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-                nu <- as.numeric(mod_out$candidate.models[i, 'nu'])
-                deltasq <- as.numeric(mod_out$candidate.models[i, 'noise_sp_ratio'])
-            }else if(cor.fn == "exponential"){
-                phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-                deltasq <- as.numeric(mod_out$candidate.models[i, 'noise_sp_ratio'])
-            }
+            # model parameters, by name (nu is NA and unused for exponential)
+            pars <- model_params(mod_out, i)
+            phi <- as.numeric(pars[["phi"]])
+            nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
+            deltasq <- as.numeric(pars[["noise_sp_ratio"]])
             storage.mode(phi) <- "double"
             storage.mode(nu) <- "double"
             storage.mode(deltasq) <- "double"
@@ -848,7 +868,90 @@ posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
     }
     else{
         stop("Input model object must be of class:
-        'spLMexact', 'spLMstack', 'spGLMexact', 'spGLMstack', 'stvcGLMexact', 'stvcGLMstack'.")
+        'spLMexact', 'spLMstack', 'spGLMexact', 'spGLMstack', 'stvcGLMexact', 'stvcGLMstack',
+        'stvcLMexact', 'stvcLMstack'.")
     }
+
+}
+
+# internal function: checks the new coordinates and covariates of a prediction
+# with a spatially-temporally varying coefficients model and returns them, with
+# the dimensions and the observed coordinates, in the storage modes of the C++
+# routines
+stvc_pred_inputs <- function(mod_out, coords_new, covars_new){
+
+    n <- dim(mod_out$X)[1L]
+    p <- length(mod_out$X.names)
+    r <- length(mod_out$X.stvc.names)
+
+    if(missing(covars_new)){
+        stop("Covariates at new locations or times are missing.")
+    }
+    if(!is.list(covars_new) || !all(c("fixed", "vc") %in% names(covars_new))){
+        stop("covars_new must be a list with tags 'fixed' and 'vc'.")
+    }
+    X_new <- covars_new[['fixed']]
+    X.tilde_new <- covars_new[['vc']]
+    if(!is.matrix(X_new) || !is.matrix(X.tilde_new)){
+        stop("Both covars_new$fixed and covars_new$vc must be matrices.")
+    }
+    if(nrow(X_new) != nrow(X.tilde_new)){
+        stop("covars_new$fixed and covars_new$vc must have the same number of rows.")
+    }
+    if(ncol(X_new) != p){
+        stop("Number of columns in covars_new$fixed must match the number of fixed effects in the model (", p, ").")
+    }
+    if(ncol(X.tilde_new) != r){
+        stop("Number of columns in covars_new$vc must match the number of varying coefficients in the model (", r, ").")
+    }
+    n_pred <- nrow(X_new)
+    check_no_missing(covars_new.fixed = X_new, covars_new.vc = X.tilde_new)
+
+    if(missing(coords_new)){
+        stop("Spatial-temporal coordinates at new locations or times are missing.")
+    }
+    if(!is.list(coords_new) || !all(c("sp", "time") %in% names(coords_new))){
+        stop("coords_new must be a list with tags 'sp' and 'time'.")
+    }
+    sp_coords_new <- coords_new[['sp']]
+    time_coords_new <- as.matrix(coords_new[['time']])
+    if(!is.matrix(sp_coords_new) || ncol(sp_coords_new) != 2){
+        stop("coords_new$sp must be a matrix with two columns.")
+    }
+    if(ncol(time_coords_new) != 1){
+        stop("coords_new$time must be a vector or a matrix with one column.")
+    }
+    if(nrow(sp_coords_new) != n_pred || nrow(time_coords_new) != n_pred){
+        stop("coords_new$sp, coords_new$time and the covariates must have the same number of rows.")
+    }
+    check_no_missing(coords_new.sp = sp_coords_new, coords_new.time = time_coords_new)
+
+    sp_coords <- mod_out$sp_coords
+    time_coords <- mod_out$time_coords
+
+    dup_rows <- find_approx_matches(cbind(sp_coords_new, time_coords_new),
+                                    cbind(sp_coords, time_coords))
+    if(dup_rows$any_match){
+        matched_preview <- dup_rows$matched_rows
+        n_show <- min(6, nrow(matched_preview))
+        matched_preview <- matched_preview[seq_len(n_show), , drop = FALSE]
+        matched_str <- apply(matched_preview, 1, function(r) paste(format(r, digits = 6), collapse = ", "))
+        matched_str <- paste0("  [", seq_len(n_show), "] ", matched_str, collapse = "\n")
+        stop(sprintf(
+            "New spatio-temporal coordinates match %d existing coordinate(s).\nFirst %d matched row(s):\n%s\nPlease provide new coordinates that do not match existing ones.",
+            dup_rows$num_matches, n_show, matched_str))
+    }
+
+    storage.mode(X_new) <- "double"
+    storage.mode(X.tilde_new) <- "double"
+    storage.mode(sp_coords) <- "double"
+    storage.mode(time_coords) <- "double"
+    storage.mode(sp_coords_new) <- "double"
+    storage.mode(time_coords_new) <- "double"
+
+    list(n = as.integer(n), p = as.integer(p), r = as.integer(r), n_pred = as.integer(n_pred),
+         X_new = X_new, X.tilde_new = X.tilde_new,
+         sp_coords = sp_coords, time_coords = time_coords,
+         sp_coords_new = sp_coords_new, time_coords_new = time_coords_new)
 
 }

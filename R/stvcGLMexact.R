@@ -132,6 +132,18 @@
 #' densities.}
 #' \item{model.params}{Values of the fixed parameters that includes \code{phi_s}
 #' (spatial decay), \code{phi_t} (temporal smoothness).}
+#' \item{diagnostics}{a list of diagnostics. Element \code{numerical} is a
+#' data frame with one row (one row per process, with columns \code{model}
+#' and \code{process}, if \code{process.type = 'independent'}) and columns
+#' \code{min.pivot} (the smallest relative Cholesky pivot of the \eqn{n
+#' \times n}{n x n} spatial-temporal correlation matrix; values below 1e-8
+#' indicate a nearly singular correlation matrix), \code{min.cor} and
+#' \code{max.cor} (the correlations of the two farthest-apart and of the two
+#' closest space-time locations; values of \code{min.cor} above 0.95 suggest
+#' an effective range far exceeding the extent of the data, values of
+#' \code{max.cor} below 0.05 nearly uncorrelated space-time locations),
+#' obtained from quantities the fit computes anyway. If \code{verbose =
+#' TRUE}, a "Diagnostics" section is printed when any threshold is crossed.}
 #' }
 #' The return object might include additional data that can be used for
 #' subsequent prediction and/or model fit evaluation.
@@ -173,12 +185,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
                          loopd.nMC = 500, verbose = TRUE, ...){
 
   ##### check for unused args #####
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-    if (!i %in% formal.args)
-      warning("'", i, "' is not an argument")
-  }
+  check_dots(...)
 
   ##### family #####
   if(missing(family)){
@@ -287,6 +294,8 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   storage.mode(sp_coords) <- "double"
   storage.mode(time_coords) <- "double"
 
+  check_no_missing(y = y, X = X, X_tilde = X_tilde, n.binom = n.binom,
+                   sp_coords = sp_coords, time_coords = time_coords)
   check_distinct_coords(cbind(sp_coords, time_coords),
                         what = "spatial-temporal coordinates",
                         hint = "Average the observations that share both location and time.")
@@ -324,6 +333,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
         stop(paste("priors[['V.beta']] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(V.beta, p, "priors[[\'V.beta\']]")
     }
     if(!'nu.beta' %in% names(priors)){
       missing.flag <- missing.flag + 1
@@ -380,6 +390,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
           stop(paste("priors[['IW.scale']] must be a ", r, "x", r,
                      " covariance matrix.", sep = ""))
         }
+        check_cov_matrix(IW.scale, r, "priors[['IW.scale']]")
       }
     }
     if(missing.flag > 0){
@@ -474,11 +485,7 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   ##### Leave-one-out setup #####
 
   if(loopd){
-    if(missing(loopd.method)){
-      stop("loopd.method must be specified")
-    }else{
-      loopd.method <- tolower(loopd.method)
-    }
+    loopd.method <- tolower(loopd.method)
     if(!loopd.method %in% c("exact", "cv")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
     }
@@ -568,7 +575,13 @@ stvcGLMexact <- function(formula, data = parent.frame(), family,
   if(cor.fn == 'gneiting-decay'){
     out$model.params <- list(phi_s = phi_s, phi_t = phi_t)
   }
+  out$diagnostics <- list(numerical = collect_diagnostics(list(samps)))
   out$run.time <- run.time
+
+  if(verbose){
+    print_diagnostics(out$diagnostics,
+                      pivot.hint = "nearly coincident space-time locations, or very small decay parameters phi_s, phi_t")
+  }
 
   class(out) <- "stvcGLMexact"
 

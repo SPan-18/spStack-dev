@@ -37,6 +37,7 @@ In this article, we discuss the following functions -
 - `spLMstack()`
 - `spGLMexact()`
 - `spGLMstack()`
+- `stvcLMexact()` and `stvcLMstack()` (spatially varying coefficients)
 
 These functions can be used to fit Gaussian and non-Gaussian spatial point-referenced data.
 
@@ -142,10 +143,10 @@ mod3 <- spLMstack(y ~ x1, data = dat,
                   parallel = FALSE, verbose = TRUE)
 ```
 
-The user can check the solver status and runtime by issuing the following.
+The user can check the solver used for the stacking weights, its status, and the runtime by issuing the following. The `diagnostics` element also holds numerical diagnostics of each candidate model.
 ```{r}
-print(mod3$solver)
-print(mod3$solver.status)
+print(mod3$diagnostics$solver$used)
+print(mod3$diagnostics$solver$status)
 print(mod3$run.time)
 ```
 
@@ -210,6 +211,87 @@ dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                        var1_name = "z_true", var2_name = "z_hat")
 patchwork::wrap_plots(plot_z) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
+```
+
+### Spatially varying coefficients
+The effect of a covariate may itself vary over space. The functions `stvcLMexact()` and `stvcLMstack()` fit the Gaussian linear model with spatially-temporally varying coefficients
+$$y(\ell) = x(\ell)^\T \beta + \tilde{x}(\ell)^\T z(\ell) + \epsilon(\ell), \quad \epsilon(\ell) \sim \N(0, \sigma^2),$$
+where each of the $r$ varying coefficients $z_j$ is an independent Gaussian process with variance $\sigma^2_{z_j} = \sigma^2/\delta^2_j$ and a Gneiting space-time correlation function with decay parameters $\phi_s$ and $\phi_t$. The joint posterior is available in closed form and is sampled exactly. If all observations share one time point, the Gneiting correlation reduces to the exponential correlation $\exp(-\phi_s \lVert s - s' \rVert)$ ($\phi_t$ then has no effect), and these functions fit a spatially varying coefficients model.
+
+We simulate data from the model $$y(s) = \beta_0 + z_0(s) + \{\beta_1 + z_1(s)\} x_1(s) + \epsilon(s)\;,$$ with $\beta = (1, 2)^\T$, independent processes $z_0$ and $z_1$ with exponential correlation ($\phi = 3$) and unit variance, and $\sigma^2 = 0.2$, so that $\delta^2 = 0.2$.
+```{r}
+n <- 250
+s1 <- runif(n); s2 <- runif(n)
+x1 <- rnorm(n)
+R <- exp(-3 * as.matrix(dist(cbind(s1, s2))))
+L <- t(chol(R))
+z0 <- drop(L %*% rnorm(n))          # varying intercept
+z1 <- drop(L %*% rnorm(n))          # varying slope of x1
+y <- 1 + z0 + (2 + z1) * x1 + rnorm(n, sd = sqrt(0.2))
+dat_svc <- data.frame(s1, s2, x1, y, slope_true = 2 + z1)
+```
+
+In the `formula`, the variables in parentheses receive varying coefficients: `y ~ x1 + (1 + x1)` has fixed effects for the intercept and `x1`, and varying coefficients for both (the intercept is included in both parts by default, so `y ~ x1 + (x1)` is the same model). With `process.type = "independent.shared"`, the processes share the decay parameters and the noise-to-spatial variance ratio; with `process.type = "independent"`, each process has its own, supplied as vectors of length $r$. We supply a constant time coordinate.
+```{r stvcLMexact_svc}
+mod4 <- stvcLMexact(y ~ x1 + (1 + x1), data = dat_svc,
+                    sp_coords = as.matrix(dat_svc[, c("s1", "s2")]),
+                    time_coords = matrix(0, n, 1),
+                    cor.fn = "gneiting-decay",
+                    process.type = "independent.shared",
+                    sptParams = list(phi_s = 3, phi_t = 1),
+                    noise_sp_ratio = 0.2,
+                    n.samples = 1000, loopd = TRUE, verbose = TRUE)
+```
+
+The posterior samples of the fixed effects, the noise variance $\sigma^2$, and the process variances $\sigma^2_z = \sigma^2/\delta^2$ are summarized below.
+```{r}
+summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod4$X.names
+print(summary_beta)
+print(quantile(mod4$samples$sigmaSq, c(0.025, 0.5, 0.975)))
+print(quantile(mod4$samples$sigmaSq.z, c(0.025, 0.5, 0.975)))
+```
+
+Next, we use predictive stacking over candidate values of $\phi_s$ and $\delta^2$. For `process.type = "independent"`, each candidate value is a vector of length $r$, supplied as `list()` entries in `candidateModels()`.
+```{r stvcLMstack_svc}
+cand.svc <- candidateModels(list(phi_s = c(1.5, 3, 6), phi_t = 1,
+                                 noise_sp_ratio = c(0.2, 1)), "cartesian")
+
+mod5 <- stvcLMstack(y ~ x1 + (1 + x1), data = dat_svc,
+                    sp_coords = as.matrix(dat_svc[, c("s1", "s2")]),
+                    time_coords = matrix(0, n, 1),
+                    cor.fn = "gneiting-decay",
+                    process.type = "independent.shared",
+                    candidate.models = cand.svc,
+                    n.samples = 1000, verbose = TRUE)
+post_svc <- stackedSampler(mod5)
+```
+
+The samples of $z$ are stacked by process: rows $1, \ldots, n$ hold $z_0$ and rows $n+1, \ldots, 2n$ hold $z_1$. The varying slope of `x1` at each location is $\beta_1 + z_1(s)$, which we compare with its true value.
+```{r fig.align='center', fig.alt="Stacked posterior of the spatially varying slope against its true value"}
+slope <- sweep(post_svc$z[n + seq_len(n), ], 2, post_svc$beta[2, ], "+")
+slope_summ <- t(apply(slope, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+slope_df <- data.frame(truth = dat_svc$slope_true, sL = slope_summ[, 1],
+                       sM = slope_summ[, 2], sU = slope_summ[, 3])
+
+ggplot(data = slope_df, aes(x = truth)) +
+  geom_point(aes(y = sM), size = 0.75, color = "darkblue", alpha = 0.5) +
+  geom_errorbar(aes(ymin = sL, ymax = sU), width = 0.05, alpha = 0.15,
+                color = "skyblue") +
+  geom_abline(slope = 1, intercept = 0, color = "red") +
+  xlab("True slope") + ylab("Stacked posterior of slope") + theme_bw() +
+  theme(panel.background = element_blank(),
+        panel.grid = element_blank(), aspect.ratio = 1)
+```
+
+Finally, we compare the interpolated surfaces of the true slope and its posterior median.
+```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Interpolated surfaces of the true spatially varying slope and its posterior median."}
+dat_svc$slope_hat <- slope_summ[, 2]
+plot_slope <- surfaceplot2(dat_svc, coords_name = c("s1", "s2"),
+                           var1_name = "slope_true", var2_name = "slope_hat")
+patchwork::wrap_plots(plot_slope) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
 ```
@@ -288,10 +370,10 @@ mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    parallel = FALSE, verbose = TRUE)
 ```
 
-We can extract information on solver status and runtime by the following.
+We can extract information on the solver used for the stacking weights, its status, and the runtime by the following.
 ```{r}
-print(mod2$solver)
-print(mod2$solver.status)
+print(mod2$diagnostics$solver$used)
+print(mod2$diagnostics$solver$status)
 print(mod2$run.time)
 ```
 

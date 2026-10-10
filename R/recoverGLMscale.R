@@ -141,10 +141,9 @@ recoverGLMscale <- function(mod_out){
     process.type <- mod_out$process.type
 
     for(i in 1:nModels){
-        if(cor.fn == "gneiting-decay"){
-            phi_s <- mod_out$candidate.models[[i]][["phi_s"]]
-            phi_t <- mod_out$candidate.models[[i]][["phi_t"]]
-        }
+        pars <- model_params(mod_out, i)
+        phi_s <- as.numeric(pars[["phi_s"]])
+        phi_t <- as.numeric(pars[["phi_t"]])
         beta_samps <- mod_out$samples[[i]][['beta']]
         z_samps <- mod_out$samples[[i]][['z']]
 
@@ -190,15 +189,10 @@ recoverGLMscale <- function(mod_out){
     storage.mode(nu.z) <- "double"
     storage.mode(V.beta) <- "double"
 
-    spParams <- mod_out$model.params
-    phi <- 0.0
-    nu <- 0.0
-    if(cor.fn == "matern"){
-      phi <- spParams[['phi']]
-      nu <- spParams[['nu']]
-    }else if(cor.fn == "exponential"){
-      phi <- spParams[['phi']]
-    }
+    # model parameters, by name (nu is NA and unused for exponential)
+    pars <- model_params(mod_out)
+    phi <- as.numeric(pars[["phi"]])
+    nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
     storage.mode(phi) <- "double"
     storage.mode(nu) <- "double"
 
@@ -256,14 +250,10 @@ recoverGLMscale <- function(mod_out){
 
     for(i in 1:nModels){
 
-      phi <- 0.0
-      nu <- 0.0
-      if(cor.fn == "matern"){
-        phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-        nu <- as.numeric(mod_out$candidate.models[i, 'nu'])
-      }else if(cor.fn == "exponential"){
-        phi <- as.numeric(mod_out$candidate.models[i, 'phi'])
-      }
+      # model parameters, by name (nu is NA and unused for exponential)
+      pars <- model_params(mod_out, i)
+      phi <- as.numeric(pars[["phi"]])
+      nu <- if(is.na(pars[["nu"]])) 0.0 else as.numeric(pars[["nu"]])
       storage.mode(phi) <- "double"
       storage.mode(nu) <- "double"
 

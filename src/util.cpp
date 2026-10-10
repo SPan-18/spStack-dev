@@ -124,43 +124,6 @@ void copyMatrixDelRowCol(double *M1, int nRowM1, int nColM1, double *M2, int del
   }
 }
 
-// Copy a matrix deleting ith row and jth column for every n-th block
-void copyMatrixDelRowCol_vc(double *M1, int nRowM1, int nColM1, double *M2, int del_indexRow, int del_indexCol, int n){
-
-  int i = 0, j = 0, new_index = 0;
-
-  if(del_indexRow < 0 || del_indexRow > nRowM1){
-    perror("Row index to delete is out of bounds.");
-  }else if(del_indexCol < 0 || del_indexCol > nColM1){
-    perror("Column index to delete is out of bounds.");
-  }else{
-    for(j = 0; j < nColM1; j++){
-      if(j % n == del_indexCol) continue;
-      for(i = 0; i < nRowM1; i++){
-        if(i % n == del_indexRow) continue;
-        M2[new_index++] = M1[j*nRowM1 + i];
-      }
-    }
-  }
-}
-
-// Copy a matrix excluding the i-th row for every n-th block
-void copyMatrixDelRow_vc(double *M1, int nRowM1, int nColM1, double *M2, int exclude_index, int n){
-
-  int i = 0, j = 0, new_index = 0;
-
-  if(exclude_index < 0 || exclude_index > nRowM1){
-    perror("Row index to exclude is out of bounds.");
-  }else{
-    for(j = 0; j < nColM1; j++){
-      for(i = 0; i < nRowM1; i++){
-        if(i % n == exclude_index) continue;
-        M2[new_index++] = M1[j*nRowM1 + i];
-      }
-    }
-  }
-}
-
 
 // Copy a matrix deleting a row and column block
 void copyMatrixDelRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
@@ -279,21 +242,6 @@ void copyMatrixRowColBlock(double *M1, int nRowM1, int nColM1, double *M2,
 
 }
 
-// Copy a column of a matrix to a vector
-void copyMatrixColToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
-
-  int i = 0;
-
-  if(copy_index < 0 || copy_index > nColM){
-    perror("Column index to copy is out of bounds.");
-  }else{
-    for(i = 0; i < nRowM; i++){
-      vec[i] = M[nRowM*copy_index + i];
-    }
-  }
-
-}
-
 // Copy a row of a matrix to a vector
 void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_index){
 
@@ -307,30 +255,6 @@ void copyMatrixRowToVec(double *M, int nRowM, int nColM, double *vec, int copy_i
 
   for(j = 0; j < nColM; j++){
     vec[j] = M[nRowM*j + copy_index];
-  }
-
-}
-
-// Copy matrix from C to SEXP
-void copyMatrixSEXP(double *matrixC, int dim1, int dim2, double *pointerSEXP){
-
-  int i, j;
-
-  for(i = 0; i < dim2; i++){
-    for(j = 0; j < dim1; j++){
-      pointerSEXP[i*dim1 + j] = matrixC[i*dim1 + j];
-    }
-  }
-
-}
-
-// Copy vector from C to SEXP
-void copyVectorSEXP(double *vectorC, int dim, double *pointerSEXP){
-
-  int i;
-
-  for(i = 0; i < dim; i++){
-    pointerSEXP[i] = vectorC[i];
   }
 
 }
@@ -546,38 +470,6 @@ double logSumExp(double *a, int n){
 
 }
 
-// Function to compute log-Weighted-Sum-Exp of a vector, weights in log-scale
-double logWeightedSumExp(double *a, double *log_w, int n){
-
-  int i;
-  double log_num = 0, log_den = 0;
-
-  if(n == 0){
-    perror("Vector of log values have 0 length.");
-  }
-
-  // Find maximum value in input vector
-  double a_max = a[0];
-  for(i = 1; i < n; i++){
-    if(a[i] > a_max){
-      a_max = a[i];
-    }
-  }
-
-  // Find sum of adjusted exponentials; sum(exp(a_i - a_max))
-  double sum_adj = 0.0;
-  for(i = 0; i < n; i++){
-    sum_adj += exp(log_w[i] + (a[i] - a_max));
-  }
-
-  log_num = a_max + log(sum_adj);
-  log_den = logSumExp(log_w, n);
-
-  // Find log-sum-exp; log(sum(exp(a_i)))
-  return log_num - log_den;
-
-}
-
 // make partition for K-fold cross-validation, return partition start and end indices
 void mkCVpartition(int n, int K, int *start_vec, int *end_vec, int *size_vec){
 
@@ -615,38 +507,6 @@ void mkLT(double *A, int n){
       A[i * n + j] = 0.0;
     }
   }
-}
-
-// Solve linear system with upper-triangular Cholesky
-void mysolveUT(double *A, double *b, int n){
-
-  int info = 0;
-  char const *upper = "U";
-  char const *trans = "T";
-  char const *ntrans = "N";
-  char const *nunit = "N";
-  int incx = 1;     // Increment for x
-
-  F77_NAME(dpotrf)(upper, &n, A, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}
-  F77_NAME(dtrsv)(upper, trans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
-  F77_NAME(dtrsv)(upper, ntrans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
-
-}
-
-// Solve linear system with lower-triangular Cholesky
-void mysolveLT(double *A, double *b, int n){
-
-  int info = 0;
-  char const *lower = "L";
-  char const *trans = "T";
-  char const *ntrans = "N";
-  char const *nunit = "N";
-  int incx = 1;     // Increment for x
-
-  F77_NAME(dpotrf)(lower, &n, A, &n, &info FCONE); if(info != 0){perror("c++ error: dpotrf failed\n");}
-  F77_NAME(dtrsv)(lower, ntrans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
-  F77_NAME(dtrsv)(lower, trans, nunit, &n, A, &n, b, &incx FCONE FCONE FCONE);
-
 }
 
 // Print a matrix with entry type double
@@ -750,23 +610,6 @@ static inline double spDist(double *A, int n, int i, double *B, int m, int j, in
     dist += dtemp * dtemp;
   }
   return sqrt(dist);
-}
-
-// Create full spatial correlation matrix from an n x n distance matrix
-void spCorFull(double *D, int n, double *theta, std::string &corfn, double *C){
-  int i, j;
-  double nu = (corfn == "matern") ? theta[1] : 0.0;
-  int code = spCorCode(corfn, nu);
-  double cnst = 0.0;
-  double *bk = spCorSetup(code, nu, &cnst);
-
-  for(i = 0; i < n; i++){
-    C[i*n + i] = 1.0;
-    for(j = i + 1; j < n; j++){
-      C[i*n + j] = spCorEval(D[i*n + j], code, theta[0], nu, cnst, bk);
-      C[j*n + i] = C[i*n + j];
-    }
-  }
 }
 
 // Create nxn full spatial correlation matrix from n x p coordinates
@@ -889,214 +732,6 @@ void zeros(int *x, int length){
     x[i] = 0;
 }
 
-// Structure to hold both value and original index
-typedef struct{
-  double value;
-  int index;
-} IndexedValue;
-
-// // Comparator function for qsort
-// int compare(const void *a, const void *b){
-//   double diff = ((IndexedValue *)a)->value - ((IndexedValue *)b)->value;
-//   if(diff < 0) return -1;
-//   if(diff > 0) return 1;
-//   return 0;
-// }
-
-// Comparator function for qsort
-int compare(const void *a, const void *b) {
-    // Cast the pointers to IndexedValue and compare the values
-    IndexedValue *ia = (IndexedValue *)a;
-    IndexedValue *ib = (IndexedValue *)b;
-
-    if (ia->value < ib->value) return -1;   // Return -1 if first value is smaller
-    if (ia->value > ib->value) return 1;    // Return 1 if first value is larger
-    return 0;                               // Return 0 if both are equal
-}
-
-// Pure C function to sort a vector and return the order (indices)
-void sort_with_order(double *vec, int n, double *sorted_vec, int *order) {
-
-  // Create an array of IndexedValue to hold both values and their original indices
-  IndexedValue *arr = (IndexedValue *)malloc(n * sizeof(IndexedValue));
-  if(arr == NULL){
-    perror("Memory allocation failed");
-  }
-
-  // Populate the arr with the values and their original indices
-  for(int i = 0; i < n; i++){
-    arr[i].value = vec[i];
-    arr[i].index = i;  // Store original index
-  }
-
-  // Sort the arr based on the value
-  qsort(arr, n, sizeof(IndexedValue), compare);
-
-  // After sorting, store the indices (order) in the output array
-  for(int i = 0; i < n; i++){
-    sorted_vec[i] = arr[i].value;
-    order[i] = arr[i].index;  // Store the original indices
-  }
-
-  // Free the allocated memory
-  free(arr);
-
-}
-
-
-// Fit generalized Pareto on raw importance ratios and return stabilized weights
-void ParetoSmoothedIR(double *raw_IR, int M, int n_samples, double *sorted_IR, int *order_ind, double *stable_IR,
-                      double *results, double *tailIR, double *exp_tail, double *stable_tail){
-
-  int i = 0, ind = 0;
-  double cutoff = 0.0, exp_cutoff = 0.0, tmp = 0.0;
-  double max_raw_IR = 0.0;
-  double k_hat = 0.0, sigma_hat = 0.0, p_tail = 0.0;
-
-  max_raw_IR = findMax(raw_IR, n_samples);
-  // Shift raw importance ratios for safe exponentiation
-  for(i = 0; i < n_samples; i++){
-    raw_IR[i] = raw_IR[i] - max_raw_IR;
-  }
-
-  // Sort raw importance ratios and store original indices
-  zeros(order_ind, n_samples);
-  sort_with_order(raw_IR, n_samples, sorted_IR, order_ind);
-
-  for(i = 0; i < M; i++){
-    tailIR[i] = sorted_IR[n_samples - M + i];
-  }
-
-  cutoff = sorted_IR[n_samples - M - 1];
-  exp_cutoff = exp(cutoff);
-
-  for(i = 0; i < M; i++){
-    exp_tail[i] = exp(tailIR[i]) - exp_cutoff;
-  }
-
-  if(M > 5){
-
-    fitGeneralParetoDist(exp_tail, M, 1, 30, results);
-    k_hat = results[0];
-    sigma_hat = results[1];
-
-    for(i = 0; i < M; i++){
-      p_tail = (i + 1 - 0.5) / M;
-      tmp = qGPD(p_tail, k_hat, sigma_hat);
-      exp_tail[i] = tmp + exp_cutoff;
-      tmp = log(exp_tail[i]);
-      stable_tail[i] = tmp;
-    }
-
-  }
-
-  for(i = 0; i < M; i++){
-    sorted_IR[n_samples - M + i] = tailIR[i];
-  }
-
-  for(i = 0; i < n_samples; i++){
-    ind = order_ind[i];
-    stable_IR[ind] = sorted_IR[i];
-  }
-
-  // truncate at max of raw wts (i.e., 0 since max has been subtracted)
-  for(i = 0; i < n_samples; i++){
-    if(stable_IR[i] > 0){
-      stable_IR = 0;
-    }
-  }
-
-  // shift back log-weights
-  for(i = 0; i < n_samples; i++){
-    stable_IR[i] += max_raw_IR;
-  }
-
-}
-
-// Fit generalized Pareto distribution on a sorted sample
-// Algorithm is based on Zhang, J., and Stephens, M. A. (2009). A new and efficient
-// estimation method for the generalized Pareto distribution. Technometrics 51, 316-325.
-// Closely follows gpdfit function of the R package "loo".
-void fitGeneralParetoDist(double *x, int n, int wip, int min_grid_pts, double *result){
-
-  int i = 0;
-  int sqrt_n = 0, first_quart = 0;
-  int m = 0;
-  double xstar = 0.0, theta_hat = 0.0;
-  double n_d = 0.0, m_d = 0.0;
-  double prior = 3;
-  const int incOne = 1;
-  double k_hat = 0.0, sigma_hat = 0.0;
-
-  n_d = n;
-  sqrt_n = sqrt(n);
-  m = min_grid_pts + sqrt_n;
-  m_d = m;
-
-  first_quart = 0.5 + (n_d / 4);
-  xstar = x[first_quart - 1];
-
-  double *theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(theta, m);
-  double *l_theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(l_theta, m);
-  double *w_theta = (double *) R_chk_calloc(m, sizeof(double)); zeros(w_theta, m);
-
-  for(i = 0; i < m; i++){
-    theta[i] = (1.0 / x[n-1]) + ((1 - sqrt(m_d / (i + 1 - 0.5))) / (prior * xstar));
-    l_theta[i] = n * lx(theta[i], x, n);
-  }
-
-  for(i = 0; i < m; i++){
-    w_theta[i] = exp(l_theta[i] - logSumExp(l_theta, m));
-  }
-
-  theta_hat = F77_CALL(ddot)(&m, theta, &incOne, w_theta, &incOne);
-
-  for(i = 0; i < n; i++){
-    k_hat += log1p(- theta_hat * x[i]);
-  }
-  k_hat = k_hat / n;
-  sigma_hat = - k_hat / theta_hat;
-
-  if(wip){
-    k_hat = (k_hat * n) / (n + 10) + (0.5 * 10) / (n + 10);
-  }
-
-  result[0] = k_hat;
-  // Rprintf("%.7f\n", k_hat);
-  result[1] = sigma_hat;
-
-  R_chk_free(theta);
-  R_chk_free(l_theta);
-  R_chk_free(w_theta);
-
-}
-
-// Function to evaluate profile log-likelihood of generalized Pareto
-double lx(double b, double *x, int n){
-
-  int i = 0;
-  double sum = 0.0, k = 0.0;
-
-  for(i = 0; i < n; i++){
-    sum += log1p(- b * x[i]);
-  }
-  k = - sum / n;
-
-  return log(b / k) + k - 1;
-
-}
-
-// Function to find quantiles of generalized pareto
-double qGPD(double p, double k, double sigma){
-
-  double out = 0.0;
-
-  out = sigma * expm1(- k * log1p(- p)) / k;
-
-  return out;
-
-}
-
 // WARNING: the following function has the transpose case erroneous
 // Function for sparse matrix-vector multiplication for varying coefficients models
 void lmulv_XTilde_VC(const char *trans, int n, int r, double *XTilde, double *v, double *res){
@@ -1165,20 +800,6 @@ void rmul_Vz_XTildeT(int n, int r, double *XTilde, double *Vz, double *res, std:
           res[n*r*j + l*n + i] = Vz[n*n*l + j*n + i] * XTilde[l*n + j];
         }
       }
-    }
-  }
-
-}
-
-// Function for sparse-addition of t(XTilde) to a nr x n matrix
-void addXTildeTransposeToMatrixByRow(double *XTilde, double *B, int n, int r){
-
-  int i = 0, j = 0;
-  int nr = n * r;
-
-  for(i = 0; i < n; i++){
-    for(j = 0; j < r; j++){
-      B[i*nr + j*n + i] += XTilde[j*n + i];
     }
   }
 
@@ -1322,4 +943,55 @@ SEXP appendDiagnostics(SEXP list_r, double minPivot, double minCor, double maxCo
 
   return out_r;
 
+}
+
+// As appendDiagnostics, for m correlation matrices (m processes): with m > 1, "diagnostics" is an m x 3 matrix with
+// one row per process and columns min.pivot, min.cor, max.cor.
+SEXP appendDiagnosticsRows(SEXP list_r, double *minPivot, double *minCor, double *maxCor, int m){
+
+  if(m == 1){
+    return appendDiagnostics(list_r, minPivot[0], minCor[0], maxCor[0]);
+  }
+
+  int k, len = Rf_length(list_r);
+  SEXP names_r = Rf_getAttrib(list_r, R_NamesSymbol);
+  SEXP out_r = PROTECT(Rf_allocVector(VECSXP, len + 1));
+  SEXP outNames_r = PROTECT(Rf_allocVector(STRSXP, len + 1));
+  SEXP diag_r = PROTECT(Rf_allocMatrix(REALSXP, m, 3));
+  SEXP dimnames_r = PROTECT(Rf_allocVector(VECSXP, 2));
+  SEXP colNames_r = PROTECT(Rf_allocVector(STRSXP, 3));
+
+  for(k = 0; k < len; k++){
+    SET_VECTOR_ELT(out_r, k, VECTOR_ELT(list_r, k));
+    SET_STRING_ELT(outNames_r, k, STRING_ELT(names_r, k));
+  }
+  for(k = 0; k < m; k++){
+    REAL(diag_r)[k] = minPivot[k];
+    REAL(diag_r)[m + k] = minCor[k];
+    REAL(diag_r)[2*m + k] = maxCor[k];
+  }
+  SET_STRING_ELT(colNames_r, 0, Rf_mkChar("min.pivot"));
+  SET_STRING_ELT(colNames_r, 1, Rf_mkChar("min.cor"));
+  SET_STRING_ELT(colNames_r, 2, Rf_mkChar("max.cor"));
+  SET_VECTOR_ELT(dimnames_r, 1, colNames_r);
+  Rf_setAttrib(diag_r, R_DimNamesSymbol, dimnames_r);
+  SET_VECTOR_ELT(out_r, len, diag_r);
+  SET_STRING_ELT(outNames_r, len, Rf_mkChar("diagnostics"));
+  Rf_setAttrib(out_r, R_NamesSymbol, outNames_r);
+
+  UNPROTECT(5);
+
+  return out_r;
+
+}
+
+// User interrupt check that does not jump: R_CheckUserInterrupt() longjmps out of the C code, which would leak the
+// R_chk_calloc buffers of the long leave-one-out / cross-validation loops. Run it inside R_ToplevelExec instead;
+// returns 1 if the user asked to interrupt (the caller frees its memory and then stops with an error).
+static void checkInterruptFn(void *dummy){
+  R_CheckUserInterrupt();
+}
+
+int pendingInterrupt(){
+  return !(R_ToplevelExec(checkInterruptFn, NULL));
 }

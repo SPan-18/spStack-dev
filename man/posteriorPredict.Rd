@@ -9,14 +9,19 @@ posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
 \arguments{
 \item{mod_out}{an object returned by any model fit under fixed
 hyperparameters or using predictive stacking, i.e., \code{\link[=spLMexact]{spLMexact()}},
-\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, or
-\code{\link[=stvcGLMstack]{stvcGLMstack()}}.}
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}},
+\code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMexact]{stvcLMexact()}} or \code{\link[=stvcLMstack]{stvcLMstack()}}.}
 
-\item{coords_new}{a list of new spatial or spatial-temporal coordinates at
-which the latent process, the mean, and the response is to be predicted.}
+\item{coords_new}{new spatial coordinates (an \eqn{n_{new} \times 2}{n_new x 2}
+matrix) or, for the spatial-temporal models, a list with tags \code{sp} (an
+\eqn{n_{new} \times 2}{n_new x 2} matrix) and \code{time} (a vector or one-column
+matrix) at which the latent process, the mean, and the response is to be
+predicted.}
 
-\item{covars_new}{a list of new covariates at the new spatial or
-spatial-temporal coordinates. See examples for the structure of this list.}
+\item{covars_new}{new covariates at the new coordinates: a matrix or, for
+the spatial-temporal models, a list with tags \code{fixed} (covariates with fixed
+effects) and \code{vc} (covariates with spatially-temporally varying
+coefficients). See examples for the structure of this list.}
 
 \item{joint}{a logical value indicating whether to return the joint posterior
 predictive samples of the latent process at the new locations or times.
@@ -55,14 +60,14 @@ dat_pred <- dat[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
 cand.mod <- candidateModels(list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
-                                 noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
+                                noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
 
 mod1 <- spLMstack(y ~ x1, data = dat_train,
-                  coords = as.matrix(dat_train[, c("s1", "s2")]),
-                  cor.fn = "matern",
-                  candidate.models = cand.mod,
-                  n.samples = 1000, loopd.method = "psis",
-                  parallel = FALSE, verbose = TRUE)
+                 coords = as.matrix(dat_train[, c("s1", "s2")]),
+                 cor.fn = "matern",
+                 candidate.models = cand.mod,
+                 n.samples = 1000, loopd.method = "psis",
+                 parallel = FALSE, verbose = TRUE)
 
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
@@ -70,7 +75,7 @@ X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
 
 # carry out posterior prediction
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new,
-                             joint = TRUE)
+                            joint = TRUE)
 
 # sample from the stacked posterior and posterior predictive distribution
 post_samps <- stackedSampler(mod.pred)
@@ -79,18 +84,18 @@ post_samps <- stackedSampler(mod.pred)
 postpred_z <- post_samps$z.pred
 post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
-                      zM = post_z_summ[, 2], zU = post_z_summ[, 3])
+                     zM = post_z_summ[, 2], zU = post_z_summ[, 3])
 library(ggplot2)
 ggplot(data = z_combn, aes(x = z)) +
-  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, color = "skyblue") +
-  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
-  xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
-  theme(panel.background = element_blank(), aspect.ratio = 1)
+ geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, color = "skyblue") +
+ geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
+ geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+ xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
+ theme(panel.background = element_blank(), aspect.ratio = 1)
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}, \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}},
-\code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}
+\code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMexact]{stvcLMexact()}}, \code{\link[=stvcLMstack]{stvcLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

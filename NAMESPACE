@@ -16,6 +16,8 @@ export(spLMstack)
 export(stackedSampler)
 export(stvcGLMexact)
 export(stvcGLMstack)
+export(stvcLMexact)
+export(stvcLMstack)
 export(surfaceplot)
 export(surfaceplot2)
 import(CVXR)
@@ -38,7 +40,6 @@ importFrom(ggplot2,
   theme,
   theme_bw
 )
-importFrom(loo,stacking_weights)
 importFrom(parallel,detectCores)
 importFrom(rstudioapi,isAvailable)
 importFrom(stats,
@@ -49,6 +50,7 @@ importFrom(stats,
   model.matrix,
   model.response,
   na.omit,
+  na.pass,
   rbinom,
   rnorm,
   rpois,

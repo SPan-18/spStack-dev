@@ -107,13 +107,32 @@ calculation of leave-one-out predictive densities. For K-fold
 cross-validation, its tag \code{cv.update} records the pre-processing method
 (\code{'update'} or \code{'direct'}) that was used.}
 \item{\code{n.models}}{number of candidate models that are fit.}
-\item{\code{candidate.models}}{a matrix with \code{n_model} rows with each row
-containing details of the model parameters and its optimal weight.}
+\item{\code{model.params}}{a list with one element per candidate model, each a
+named list of its parameters: \code{phi}, \code{nu} (\code{NA} for the
+exponential correlation function) and \code{boundary} (boundary adjustment parameter).}
+\item{\code{stacking.summary}}{a matrix with one row per candidate model,
+containing its parameters and its optimal stacking weight, for display.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
-\item{\code{solver.status}}{solver status as returned by the optimization
-routine.}
+\item{\code{diagnostics}}{a list of diagnostics. Element \code{numerical} is
+a data frame with one row per candidate model and columns \code{min.pivot}
+(the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+correlation matrix; values below 1e-8 indicate a nearly singular correlation
+matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
+farthest-apart and of the two closest locations; values of \code{min.cor}
+above 0.95 suggest an effective range far exceeding the extent of the data,
+values of \code{max.cor} below 0.05 nearly uncorrelated locations), obtained
+from quantities the fit computes anyway. Element \code{solver} describes the
+optimization for the stacking weights: the solver used (\code{used}) and its
+status (\code{status}), the installed and requested solvers, the search
+order, the attempts with their status, and whether the fallback
+\code{loo::stacking_weights()} was used. If \code{verbose = TRUE}, a
+"Diagnostics" section is printed if there is an issue: numerical flags of
+candidate models with stacking weight above 0.05 (extreme candidates with
+negligible weight are expected in a stacking grid and are only counted), and
+solver problems (a requested solver not installed, an inaccurate solution,
+or the fallback).}
 }
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.
@@ -159,7 +178,7 @@ mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
                    parallel = TRUE, verbose = TRUE)
 
-# print(mod1$solver.status)
+# print(mod1$diagnostics$solver$status)
 # print(mod1$run.time)
 
 post_samps <- stackedSampler(mod1)

@@ -91,7 +91,18 @@ variation term (\code{xi}).}
 \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 densities.}
 \item{model.params}{Values of the fixed parameters that includes
-\code{phi} (spatial decay), \code{nu} (spatial smoothness).}
+\code{phi} (spatial decay), \code{nu} (spatial smoothness; \code{NA} for
+the exponential correlation function).}
+\item{diagnostics}{a list of diagnostics. Element \code{numerical} is a data
+frame with one row and columns \code{min.pivot} (the smallest relative
+Cholesky pivot of the \eqn{n \times n}{n x n} correlation matrix; values
+below 1e-8 indicate a nearly singular correlation matrix), \code{min.cor}
+and \code{max.cor} (the correlations of the two farthest-apart and of the
+two closest locations; values of \code{min.cor} above 0.95 suggest an
+effective range far exceeding the extent of the data, values of
+\code{max.cor} below 0.05 nearly uncorrelated locations), obtained from
+quantities the fit computes anyway. If \code{verbose = TRUE}, a
+"Diagnostics" section is printed when any threshold is crossed.}
 }
 The return object might include additional data that can be used for
 subsequent prediction and/or model fit evaluation.

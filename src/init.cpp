@@ -15,6 +15,7 @@ static const R_CallMethodDef CallEntries[] = {
   {"R_psis",                  (DL_FUNC) &R_psis,                  2},
   {"predict_spGLM",           (DL_FUNC) &predict_spGLM,           16},
   {"predict_stvcGLM",         (DL_FUNC) &predict_stvcGLM,         21},
+  {"predict_stvcLM",          (DL_FUNC) &predict_stvcLM,          20},
   {"predict_spLM",            (DL_FUNC) &predict_spLM,            15},
   {"spGLMexact",              (DL_FUNC) &spGLMexact,              17},
   {"spGLMexactLOO",           (DL_FUNC) &spGLMexactLOO,           22},
@@ -25,6 +26,8 @@ static const R_CallMethodDef CallEntries[] = {
   {"stvcGLMexact",            (DL_FUNC) &stvcGLMexact,            22},
   {"stvcGLMexactLOO",         (DL_FUNC) &stvcGLMexactLOO,         27},
   {"stvcGLMexactLOOgrid",     (DL_FUNC) &stvcGLMexactLOOgrid,     27},
+  {"stvcLMexact",             (DL_FUNC) &stvcLMexact,             20},
+  {"stvcLMexactGrid",         (DL_FUNC) &stvcLMexactGrid,         19},
   {NULL, NULL, 0}
 };
 

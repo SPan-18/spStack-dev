@@ -120,13 +120,34 @@ fine scale variation \code{xi} for that model.}
 each entry containing leave-one-out predictive densities under that
 particular model.}
 \item{\code{n.models}}{number of candidate models that are fit.}
-\item{\code{candidate.models}}{a list of length \code{n_model} rows with each
-entry containing details of the model parameters.}
+\item{\code{model.params}}{a list with one element per candidate model, each a
+named list of its parameters: \code{phi_s}, \code{phi_t} (vectors of
+length \eqn{r} if \code{process.type = 'independent'}) and \code{boundary}.}
+\item{\code{stacking.summary}}{a matrix with one row per candidate model,
+containing its parameters and its optimal stacking weight, for display.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
-\item{\code{solver.status}}{solver status as returned by the optimization
-routine.}
+\item{\code{diagnostics}}{a list of diagnostics. Element \code{numerical} is
+a data frame with one row per candidate model (per candidate model and
+process, with columns \code{model} and \code{process}, if \code{process.type
+= 'independent'}) and columns \code{min.pivot} (the smallest relative
+Cholesky pivot of the \eqn{n \times n}{n x n} spatial-temporal correlation
+matrix; values below 1e-8 indicate a nearly singular correlation matrix),
+\code{min.cor} and \code{max.cor} (the correlations of the two
+farthest-apart and of the two closest space-time locations; values of
+\code{min.cor} above 0.95 suggest an effective range far exceeding the
+extent of the data, values of \code{max.cor} below 0.05 nearly uncorrelated
+space-time locations), obtained from quantities the fit computes anyway.
+Element \code{solver} describes the optimization for the stacking weights:
+the solver used (\code{used}) and its status (\code{status}), the installed
+and requested solvers, the search order, the attempts with their status, and
+whether the fallback \code{loo::stacking_weights()} was used. If
+\code{verbose = TRUE}, a "Diagnostics" section is printed if there is an
+issue: numerical flags of candidate models with stacking weight above 0.05
+(extreme candidates with negligible weight are expected in a stacking grid
+and are only counted), and solver problems (a requested solver not
+installed, an inaccurate solution, or the fallback).}
 }
 This object can be further used to recover posterior samples of the scale
 parameters in the model, and subsequrently, to make predictions at new

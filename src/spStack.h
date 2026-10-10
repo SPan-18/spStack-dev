@@ -31,6 +31,12 @@ extern "C" {
                        SEXP processType_r, SEXP corfn_r, SEXP phi_s_r, SEXP phi_t_r, SEXP nSamples_r,
                        SEXP beta_samps_r, SEXP z_samps_r, SEXP z_scale_samps_r, SEXP joint_r);
 
+  SEXP predict_stvcLM(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP r_r, SEXP X_new_r, SEXP XTilde_new_r,
+                      SEXP sp_coords_r, SEXP time_coords_r, SEXP sp_coords_new_r, SEXP time_coords_new_r,
+                      SEXP processType_r, SEXP corfn_r, SEXP phi_s_r, SEXP phi_t_r, SEXP nSamples_r,
+                      SEXP beta_samps_r, SEXP z_samps_r, SEXP z_scale_samps_r, SEXP sigmaSq_samps_r,
+                      SEXP joint_r);
+
   SEXP predict_spLM(SEXP n_r, SEXP n_pred_r, SEXP p_r,
                     SEXP X_new_r, SEXP sp_coords_r, SEXP sp_coords_new_r,
                     SEXP corfn_r, SEXP phi_r, SEXP nu_r, SEXP deltasq_r,
@@ -89,4 +95,14 @@ extern "C" {
                        SEXP processType_r, SEXP phi_s_r, SEXP phi_t_r, SEXP epsilon_r,
                        SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r,
                        SEXP CV_K_r, SEXP loopd_nMC_r, SEXP cvUpdate_r,  SEXP verbose_r);
+  SEXP stvcLMexact(SEXP Y_r, SEXP X_r, SEXP XTilde_r, SEXP n_r, SEXP p_r, SEXP r_r,
+                   SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r, SEXP processType_r,
+                   SEXP phi_s_r, SEXP phi_t_r, SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
+                   SEXP deltasq_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r, SEXP verbose_r);
+
+  SEXP stvcLMexactGrid(SEXP Y_r, SEXP X_r, SEXP XTilde_r, SEXP n_r, SEXP p_r, SEXP r_r,
+                       SEXP sp_coords_r, SEXP time_coords_r, SEXP corfn_r, SEXP processType_r,
+                       SEXP phi_s_r, SEXP phi_t_r, SEXP betaPrior_r, SEXP betaNorm_r, SEXP sigmaSqIG_r,
+                       SEXP deltasq_r, SEXP nSamples_r, SEXP loopd_r, SEXP loopd_method_r);
+
 }

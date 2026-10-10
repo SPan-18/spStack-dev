@@ -1,4 +1,5 @@
 #define USE_FC_LEN_T
+#include <cstring>
 #include <string>
 #include "util.h"
 #include "MatrixAlgos.h"
@@ -33,6 +34,9 @@ extern "C" {
     if(lower){
       cholRankOneUpdate(n, L, alpha, beta, v, L1_pointer, tmp_n);
     }else{
+      // work on a copy: the input (an R object) is never modified
+      L = (double *) R_alloc((size_t) n * n, sizeof(double));
+      memcpy(L, REAL(L_r), (size_t) n * n * sizeof(double));
       upperTri_lowerTri(L, n);
       mkLT(L, n);
       cholRankOneUpdate(n, L, alpha, beta, v, L1_pointer, tmp_n);
@@ -63,6 +67,9 @@ extern "C" {
     if(lower){
       cholRowDelUpdate(n, L, row_del, L1_pointer, tmp_n);
     }else{
+      // work on a copy: the input (an R object) is never modified
+      L = (double *) R_alloc((size_t) n * n, sizeof(double));
+      memcpy(L, REAL(L_r), (size_t) n * n * sizeof(double));
       upperTri_lowerTri(L, n);
       mkLT(L, n);
       cholRowDelUpdate(n, L, row_del, L1_pointer, tmp_n);
@@ -96,6 +103,9 @@ extern "C" {
     if(lower){
       cholBlockDelUpdate(n, L, del_start, del_end, L1_pointer, tmp_nknk, tmp_nk);
     }else{
+      // work on a copy: the input (an R object) is never modified
+      L = (double *) R_alloc((size_t) n * n, sizeof(double));
+      memcpy(L, REAL(L_r), (size_t) n * n * sizeof(double));
       upperTri_lowerTri(L, n);
       mkLT(L, n);
       cholBlockDelUpdate(n, L, del_start, del_end, L1_pointer, tmp_nknk, tmp_nk);

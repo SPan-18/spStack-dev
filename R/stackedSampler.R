@@ -3,10 +3,11 @@
 #' @description A helper function to sample from the stacked posterior
 #' distribution to obtain final posterior samples that can be used for
 #' subsequent analysis. This function applies on outputs of functions
-#' [spLMstack()] and [spGLMstack()].
+#' [spLMstack()], [spGLMstack()], [stvcGLMstack()] and [stvcLMstack()].
 #' @param mod_out an object that is an output of a model fit or a prediction
-#' task, i.e., the class should be either `spLMstack`, 'pp.spLMstack',
-#' `spGLMstack`, `pp.spGLMstack`, `stvcGLMexact`, or `pp.stvcGLMexact`.
+#' task, i.e., the class should be either `spLMstack`, `pp.spLMstack`,
+#' `spGLMstack`, `pp.spGLMstack`, `stvcGLMstack`, `pp.stvcGLMstack`,
+#' `stvcLMstack`, or `pp.stvcLMstack`.
 #' @param n.samples (optional) If missing, inherits the number
 #' of posterior samples from the original output. Otherwise, it specifies
 #' number of posterior samples to draw from the stacked posterior. If it exceeds
@@ -31,7 +32,7 @@
 #' models.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @seealso [spLMstack()], [spGLMstack()]
+#' @seealso [spLMstack()], [spGLMstack()], [stvcGLMstack()], [stvcLMstack()]
 #' @examples
 #' set.seed(1234)
 #' data(simGaussian)
@@ -46,8 +47,8 @@
 #'                   candidate.models = cand.mod,
 #'                   n.samples = 1000, loopd.method = "exact",
 #'                   parallel = FALSE, verbose = TRUE)
-#' print(mod1$solver)
-#' print(mod1$solver.status)
+#' print(mod1$diagnostics$solver$used)
+#' print(mod1$diagnostics$solver$status)
 #' print(mod1$run.time)
 #'
 #' post_samps <- stackedSampler(mod1)
@@ -75,7 +76,8 @@ stackedSampler <- function(mod_out, n.samples){
 
   if(inherits(mod_out, c('spLMstack', 'pp.spLMstack',
                          'spGLMstack', 'pp.spGLMstack',
-                         'stvcGLMstack', 'pp.stvcGLMstack'))){
+                         'stvcGLMstack', 'pp.stvcGLMstack',
+                         'stvcLMstack', 'pp.stvcLMstack'))){
 
     nModels <- mod_out$n.models
     model_id <- sample(seq_len(nModels), n.samples, replace = TRUE, prob = mod_out$stacking.weights)
@@ -117,7 +119,8 @@ stackedSampler <- function(mod_out, n.samples){
 
   }else{
     stop("Invalid model output class. Input must be an output from either of the
-         following functions: spLMstack(), spGLMstack(), stvcGLMstack().")
+         following functions: spLMstack(), spGLMstack(), stvcGLMstack(), stvcLMstack(),
+         or of posteriorPredict() applied to one of them.")
   }
 
   class(result) <- "stacked_posterior"

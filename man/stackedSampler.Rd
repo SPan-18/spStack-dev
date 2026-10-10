@@ -8,8 +8,9 @@ stackedSampler(mod_out, n.samples)
 }
 \arguments{
 \item{mod_out}{an object that is an output of a model fit or a prediction
-task, i.e., the class should be either \code{spLMstack}, 'pp.spLMstack',
-\code{spGLMstack}, \code{pp.spGLMstack}, \code{stvcGLMexact}, or \code{pp.stvcGLMexact}.}
+task, i.e., the class should be either \code{spLMstack}, \code{pp.spLMstack},
+\code{spGLMstack}, \code{pp.spGLMstack}, \code{stvcGLMstack}, \code{pp.stvcGLMstack},
+\code{stvcLMstack}, or \code{pp.stvcLMstack}.}
 
 \item{n.samples}{(optional) If missing, inherits the number
 of posterior samples from the original output. Otherwise, it specifies
@@ -32,7 +33,7 @@ The list may also include other scale parameters corresponding to the model.
 A helper function to sample from the stacked posterior
 distribution to obtain final posterior samples that can be used for
 subsequent analysis. This function applies on outputs of functions
-\code{\link[=spLMstack]{spLMstack()}} and \code{\link[=spGLMstack]{spGLMstack()}}.
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}} and \code{\link[=stvcLMstack]{stvcLMstack()}}.
 }
 \details{
 After obtaining the optimal stacking weights
@@ -49,17 +50,17 @@ set.seed(1234)
 data(simGaussian)
 dat <- simGaussian[1:100, ]
 cand.mod <- candidateModels(list(phi = c(1.5, 3),
-                                 nu = c(0.5, 1),
-                                 noise_sp_ratio = c(1)), "cartesian")
+                                nu = c(0.5, 1),
+                                noise_sp_ratio = c(1)), "cartesian")
 
 mod1 <- spLMstack(y ~ x1, data = dat,
-                  coords = as.matrix(dat[, c("s1", "s2")]),
-                  cor.fn = "matern",
-                  candidate.models = cand.mod,
-                  n.samples = 1000, loopd.method = "exact",
-                  parallel = FALSE, verbose = TRUE)
-print(mod1$solver)
-print(mod1$solver.status)
+                 coords = as.matrix(dat[, c("s1", "s2")]),
+                 cor.fn = "matern",
+                 candidate.models = cand.mod,
+                 n.samples = 1000, loopd.method = "exact",
+                 parallel = FALSE, verbose = TRUE)
+print(mod1$diagnostics$solver$used)
+print(mod1$diagnostics$solver$status)
 print(mod1$run.time)
 
 post_samps <- stackedSampler(mod1)
@@ -67,7 +68,7 @@ post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 }
 \seealso{
-\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMstack]{stvcLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

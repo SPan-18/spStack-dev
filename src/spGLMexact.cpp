@@ -127,6 +127,11 @@ extern "C" {
     thetasp[1] = nu;
     spCorFull2(n, 2, coords, thetasp, corfn, cholVz);                                       // cholVz = Vz
 
+    // diagnostics: correlations of the farthest-apart and the closest locations, and below the smallest relative
+    // Cholesky pivot of chol(Vz) (no extra factorization)
+    double diagMinCor = 0.0, diagMaxCor = 0.0, diagPivot = 0.0;
+    corOffDiagRange(cholVz, n, &diagMinCor, &diagMaxCor);
+
     // construct unit spherical perturbation of Vz; (Vz+I)
     F77_NAME(dcopy)(&nn, cholVz, &incOne, cholVzPlusI, &incOne);
     for(i = 0; i < n; i++){
@@ -140,6 +145,7 @@ extern "C" {
     // Find Cholesky of Vz
     F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE);
     if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or a very small phi.\n", info);}
+    diagPivot = minRelPivot(cholVz, n, NULL, 1.0);
 
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
@@ -274,6 +280,8 @@ extern "C" {
     SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
 
     Rf_namesgets(result_r, resultName_r);
+
+    result_r = PROTECT(appendDiagnostics(result_r, diagPivot, diagMinCor, diagMaxCor)); nProtect++;
 
     UNPROTECT(nProtect);
 

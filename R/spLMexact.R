@@ -72,21 +72,24 @@
 #'  spatial variance (\code{sigmaSq.z}), and spatial effects (\code{z}).}
 #' \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 #'  densities.}
-#' \item{loopd.pareto_k}{If \code{loopd.method='PSIS'}, contains the Pareto
-#'  \eqn{k} diagnostic values of the leave-one-out predictive densities
-#'  (Vehtari *et al.* 2024).}
 #' \item{model.params}{Values of the fixed parameters that includes
-#'  \code{phi} (spatial decay), \code{nu} (spatial smoothness) and
-#'  \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
-#' \item{diagnostics}{a data frame with one row and columns \code{min.pivot}
-#'  (the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
-#'  factorizations; values below 1e-8 indicate a nearly singular covariance
-#'  matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
-#'  farthest-apart and of the two closest locations; values of \code{min.cor}
-#'  above 0.95 suggest an effective range far exceeding the extent of the data,
-#'  values of \code{max.cor} below 0.05 nearly uncorrelated locations). They are
-#'  obtained from quantities the fit computes anyway. If \code{verbose = TRUE},
-#'  a "Diagnostics" section is printed when any of these thresholds is crossed.}
+#'  \code{phi} (spatial decay), \code{nu} (spatial smoothness; \code{NA} for
+#'  the exponential correlation function) and \code{noise_sp_ratio}
+#'  (noise-to-spatial variance ratio).}
+#' \item{diagnostics}{a list of fit diagnostics, obtained from quantities the
+#'  fit computes anyway. Element \code{numerical} is a data frame with one row
+#'  and columns \code{min.pivot} (the smallest relative Cholesky pivot of the
+#'  \eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a
+#'  nearly singular covariance matrix), \code{min.cor} and \code{max.cor} (the
+#'  correlations of the two farthest-apart and of the two closest locations;
+#'  values of \code{min.cor} above 0.95 suggest an effective range far
+#'  exceeding the extent of the data, values of \code{max.cor} below 0.05
+#'  nearly uncorrelated locations). If \code{loopd.method = 'PSIS'}, element
+#'  \code{pareto} is a list with the Pareto \eqn{k} diagnostic values of the
+#'  leave-one-out predictive densities (\code{k}), the threshold above which
+#'  they are unreliable (\code{threshold}, Vehtari *et al.* 2024) and the
+#'  number of values above it (\code{n.high}). If \code{verbose = TRUE}, a
+#'  "Diagnostics" section is printed when any threshold is crossed.}
 #' }
 #' The return object might include additional data used for subsequent
 #' prediction and/or model fit evaluation.
@@ -143,12 +146,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
                       verbose = TRUE, ...){
 
   ##### check for unused args #####
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-    if (!i %in% formal.args)
-      warning("'", i, "' is not an argument")
-  }
+  check_dots(...)
 
   ##### formula #####
   if(missing(formula)){
@@ -182,6 +180,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
     number of rows is different than data used in the model formula")
   }
 
+  check_no_missing(y = y, X = X, coords = coords)
   check_distinct_coords(coords)
 
   ## distances are computed in C++ from the coordinates
@@ -240,6 +239,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(beta.Norm[[2]], p, "the prior covariance of beta (beta.norm[[2]])")
       storage.mode(beta.Norm[[1]]) <- "double"
       storage.mode(beta.Norm[[2]]) <- "double"
       beta.prior <- "normal"
@@ -338,11 +338,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
   ##### Leave-one-out setup #####
 
   if(loopd){
-    if(missing(loopd.method)){
-      stop("loopd.method must be specified")
-    }else{
-      loopd.method <- tolower(loopd.method)
-    }
+    loopd.method <- tolower(loopd.method)
     if(!loopd.method %in% c("exact", "psis")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose
            from c('exact', 'PSIS').")
@@ -400,24 +396,16 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
   if(loopd){
     out$loopd.method <- loopd.method
     out$loopd <- samps[["loopd"]]
-    if(loopd.method == "psis"){
-      out$loopd.pareto_k <- samps[["loopd.pareto_k"]]
-      k_threshold <- psis_khat_threshold(n.samples)
-      n_high_k <- sum(out$loopd.pareto_k > k_threshold)
-      if(n_high_k > 0){
-        warning(n_high_k, " Pareto k diagnostic value(s) exceed ",
-                round(k_threshold, 2), "; PSIS estimates of the corresponding",
-                " leave-one-out predictive densities may be unreliable. Consider",
-                " loopd.method = 'exact'.", call. = FALSE)
-      }
-    }
   }
   if(cor.fn == 'matern'){
     out$model.params <- list(phi = phi, nu = nu, noise_sp_ratio = deltasq)
   }else{
-    out$model.params <- list(phi = phi, noise_sp_ratio = deltasq)
+    out$model.params <- list(phi = phi, nu = NA_real_, noise_sp_ratio = deltasq)
   }
-  out$diagnostics <- collect_diagnostics(list(samps))
+  out$diagnostics <- list(numerical = collect_diagnostics(list(samps)))
+  if(loopd && loopd.method == "psis"){
+    out$diagnostics$pareto <- pareto_diagnostics(samps[["loopd.pareto_k"]], n.samples)
+  }
   out$run.time <- run.time
 
   if(verbose){

@@ -21,15 +21,30 @@ Default is \code{"CLARABEL"}. Internally calls
 A list with elements:
 \describe{
 \item{\code{weights}}{optimal stacking weights as a numeric vector of
-length \eqn{M}{M}}
+length \eqn{M}{M} (\code{NA} if no solver succeeded, see Details).}
 \item{\code{status}}{solver status, returns \code{"optimal"} if solver
-succeeded.}
-\item{\code{solver}}{name of the solver used.}
+succeeded, and \code{"failed"} if no solver succeeded.}
+\item{\code{solver}}{name of the solver used (\code{"none"} if no
+solver succeeded).}
+\item{\code{details}}{a list with the installed CVXR solvers
+(\code{installed}), the requested solver(s) (\code{requested}) and those
+of them not installed (\code{missing.requested}), the order in which the
+solvers were tried (\code{search.order}), a data frame of the attempts
+with the status or error of each solver (\code{attempts}), and whether
+the fallback \code{loo::stacking_weights()} was used (\code{fallback}).}
 }
 }
 \description{
 Obtains optimal stacking weights given leave-one-out predictive densities for
 each candidate model.
+}
+\details{
+The weights maximize the log score of the stacked leave-one-out
+predictive densities (Yao \emph{et al.} 2018) over the simplex, using the CVXR
+solvers in the order given above. If none of them reaches an optimal
+solution, \code{loo::stacking_weights()} is used as a fallback when the
+package \pkg{loo} is installed; otherwise the weights are returned as
+\code{NA} with status \code{"failed"}.
 }
 \examples{
 set.seed(1234)

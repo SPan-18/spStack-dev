@@ -1,4 +1,4 @@
-#' @importFrom stats is.empty.model model.matrix model.response terms
+#' @importFrom stats is.empty.model model.matrix model.response terms na.pass
 parseFormula <- function(formula, data, intercept = TRUE, justX = FALSE) {
 
     # extract Y, X, and variable names for model formula and frame
@@ -8,6 +8,7 @@ parseFormula <- function(formula, data, intercept = TRUE, justX = FALSE) {
     mf <- match.call(expand.dots = FALSE)
     mf$intercept <- mf$justX <- NULL
     mf$drop.unused.levels <- TRUE
+    mf$na.action <- na.pass                      # keep all rows; missing values are checked explicitly
     mf[[1L]] <- as.name("model.frame")
     mf <- eval(mf, sys.frame(sys.parent()))
     if (!intercept) {
@@ -40,6 +41,7 @@ parseFormula2 <- function(formula, data, intercept = TRUE, justX = FALSE) {
   mf <- match.call(expand.dots = FALSE)
   mf$intercept <- mf$justX <- NULL
   mf$drop.unused.levels <- TRUE
+  mf$na.action <- na.pass                        # keep all rows; missing values are checked explicitly
   mf[[1L]] <- as.name("model.frame")
   mf <- eval(mf, sys.frame(sys.parent()))
   if (!intercept) {
@@ -115,8 +117,9 @@ pretty_print_matrix <- function(mat, heading = NULL){
 
   # Function to determine the maximum length and format the column
   format_column <- function(col){
-    # Convert column to character
+    # Convert column to character (missing values printed as "NA")
     col_char <- as.character(col)
+    col_char[is.na(col_char)] <- "NA"
 
     # Find the maximum length of entries including the decimal point
     max_length <- max(nchar(col_char))
@@ -124,6 +127,9 @@ pretty_print_matrix <- function(mat, heading = NULL){
     # Function to format each number to match the maximum length
     format_to_max_length <- function(x){
       x_char <- as.character(x)
+      if(x_char == "NA"){
+        return(x_char)
+      }
       # Split into integer and decimal parts
       if(grepl("\\.", x_char)){
         integer_part_length <- nchar(sub("\\..*", "", x_char))
@@ -291,17 +297,31 @@ find_approx_matches <- function(pred, obs, tol = 1e-6) {
     stop("Prediction and observed matrices must have the same number of columns.")
   }
 
-  match_idx <- integer(0)
+  # rows of pred within tol of some row of obs in every coordinate (L-infinity
+  # distance <= tol). The coordinates are binned on a grid of width tol: a match
+  # can only lie in the same or an adjacent bin, so each row of pred is compared
+  # with the obs rows in its 3^d neighbouring bins (hashed keys) instead of with
+  # all of obs. O((n_pred + n_obs) 3^d) instead of O(n_pred n_obs).
+  d <- ncol(pred)
+  bin_obs <- floor(obs / tol)
+  bin_pred <- floor(pred / tol)
+  key <- function(b) do.call("paste", c(lapply(seq_len(d), function(j) sprintf("%.0f", b[, j])), sep = ":"))
+  obs_keys <- key(bin_obs)
+  obs_rows <- split(seq_len(nrow(obs)), obs_keys)
+  offsets <- as.matrix(expand.grid(rep(list(-1:1), d)))
 
-  for (i in seq_len(nrow(pred))) {
-    row_pred <- pred[i, ]
-    diffs <- abs(sweep(obs, 2, row_pred))      # matrix of |obs - row_pred|
-    rowwise_max_diff <- apply(diffs, 1, max)   # L∞ norm (max elementwise difference)
-
-    if (any(rowwise_max_diff <= tol)) {
-      match_idx <- c(match_idx, i)
+  is_match <- logical(nrow(pred))
+  for (o in seq_len(nrow(offsets))) {
+    cand <- obs_rows[key(sweep(bin_pred, 2, offsets[o, ], "+"))]
+    todo <- which(!is_match & lengths(cand) > 0)
+    for (i in todo) {
+      dif <- abs(sweep(obs[cand[[i]], , drop = FALSE], 2, pred[i, ]))
+      if (any(apply(dif, 1, max) <= tol)) {
+        is_match[i] <- TRUE
+      }
     }
   }
+  match_idx <- which(is_match)
 
   matched <- pred[match_idx, , drop = FALSE]
 
@@ -389,23 +409,55 @@ resolve_CV_update <- function(CV.update = "auto"){
 # relative Cholesky pivot of the n x n factorizations (its inverse bounds the
 # condition number below), and the smallest and largest off-diagonal entry of the
 # correlation matrix (the correlations of the farthest-apart and of the closest
-# locations). Computed from quantities the fit already forms.
+# locations). Computed from quantities the fit already forms. The 'diagnostics'
+# element of a fit is a list with
+#   numerical: data frame of these values, one row per model;
+#   pareto:    (PSIS only) list(k, threshold, n.high) of Pareto k diagnostics;
+#   solver:    (stacking only) details of the optimization for the weights.
 diagnostics_thresholds <- list(min.pivot = 1e-8, min.cor = 0.95, max.cor = 0.05)
 
-# data frame of the diagnostics of a list of fits, one row per fit
+# data frame of the numerical diagnostics of a list of fits, one row per fit, or,
+# for fits with several correlation matrices (stvc 'independent'), one row per
+# fit and process, with columns 'model' and 'process'
 collect_diagnostics <- function(fits, model.names = NULL){
 
-  d <- do.call("rbind", lapply(fits, function(x) x[["diagnostics"]]))
-  d <- as.data.frame(d)
-  if(!is.null(model.names)){
-    rownames(d) <- model.names
+  parts <- lapply(seq_along(fits), function(m){
+    x <- fits[[m]][["diagnostics"]]
+    if(!is.matrix(x)){
+      x <- matrix(x, nrow = 1, dimnames = list(NULL, names(x)))
+    }
+    data.frame(model = m, process = seq_len(nrow(x)), x, check.names = FALSE)
+  })
+  d <- do.call("rbind", parts)
+  multi <- any(d$process > 1)
+  labels <- if(is.null(model.names)) rep("", nrow(d)) else model.names[d$model]
+  if(multi){
+    labels <- paste0(labels, ifelse(nchar(labels) > 0, ", ", ""), "process ", d$process)
+  }else{
+    d$model <- NULL
+    d$process <- NULL
+  }
+  if(any(nchar(labels) > 0)){
+    rownames(d) <- labels
+  }else{
+    rownames(d) <- NULL
   }
   d
 
 }
 
-# issues flagged by the diagnostics: a list with one character vector per row.
-# pivot.hint: likely causes of a small pivot, model specific
+# Pareto k diagnostics: k is a vector (one model) or a list of vectors (one per
+# model); returns list(k, threshold, n.high)
+pareto_diagnostics <- function(k, n.samples){
+
+  threshold <- psis_khat_threshold(n.samples)
+  n.high <- if(is.list(k)) vapply(k, function(x) sum(x > threshold), integer(1)) else sum(k > threshold)
+  list(k = k, threshold = threshold, n.high = n.high)
+
+}
+
+# issues flagged by the numerical diagnostics: a list with one character vector
+# per row. pivot.hint: likely causes of a small pivot, model specific
 diagnostics_issues <- function(d, pivot.hint = "nearly coincident locations, or a very small decay parameter"){
 
   th <- diagnostics_thresholds
@@ -435,47 +487,329 @@ diagnostics_issues <- function(d, pivot.hint = "nearly coincident locations, or 
 
 }
 
-# prints a "Diagnostics" section if any fit has an issue. With stacking weights,
-# only models with weight above weight.min are reported in detail; flagged models
-# with negligible weight are counted.
-print_diagnostics <- function(d, weights = NULL, weight.min = 0.05, ...){
+# issue flagged by the Pareto k diagnostics of model i (character(0) if none)
+pareto_issue <- function(pareto, i = 1){
 
-  issues <- diagnostics_issues(d, ...)
-  flagged <- which(lengths(issues) > 0)
-  if(length(flagged) == 0){
-    return(invisible(NULL))
+  n.high <- pareto$n.high[i]
+  if(n.high == 0){
+    return(character(0))
   }
-  shown <- flagged
+  n.obs <- length(if(is.list(pareto$k)) pareto$k[[i]] else pareto$k)
+  paste0(n.high, " of ", n.obs, " Pareto k diagnostic values exceed ",
+         format(round(pareto$threshold, 2)), ": the PSIS estimates of the",
+         " corresponding leave-one-out predictive densities may be unreliable;",
+         " consider loopd.method = 'exact'.")
+
+}
+
+# issues of the optimization for the stacking weights (character(0) if none)
+solver_issues <- function(solver){
+
+  out <- character(0)
+  if(length(solver$missing.requested) > 0){
+    out <- c(out, paste0("requested solver(s) not installed: ",
+                         paste(solver$missing.requested, collapse = ", "),
+                         "; the default order was used."))
+  }
+  if(identical(solver$used, "none")){
+    out <- c(out, paste0("no solver reached an optimal solution and the",
+                         " fallback needs the 'loo' package, which is not",
+                         " installed; the stacking weights are NA (see the",
+                         " message above for how to compute them)."))
+  }else if(isTRUE(solver$fallback)){
+    tried <- solver$attempts
+    tried_txt <- if(nrow(tried) > 0) paste0(" (", paste(tried$solver, tried$status, sep = ": ", collapse = "; "), ")") else ""
+    out <- c(out, paste0("the CVXR solvers failed or did not reach optimality",
+                         tried_txt, "; the weights are from loo::stacking_weights()."))
+  }else if(identical(solver$status, "optimal_inaccurate")){
+    out <- c(out, paste0("solver ", solver$used, " returned status",
+                         " 'optimal_inaccurate'."))
+  }
+  out
+
+}
+
+# Prints a "Diagnostics" section if there is any issue. With stacking weights,
+# numerical issues are detailed only for models with weight above weight.min
+# (extreme candidates with negligible weight are expected in a stacking grid and
+# are counted); Pareto k issues are shown for every model, since they affect the
+# weights themselves. ... is passed to diagnostics_issues().
+print_diagnostics <- function(diag, weights = NULL, weight.min = 0.05, ...){
+
+  d <- diag$numerical
+  M <- nrow(d)
+  midx <- if(is.null(d$model)) seq_len(M) else d$model            # model of each row
+  num_issues <- diagnostics_issues(d, ...)
+  first_row <- !duplicated(midx)                                  # Pareto k values are per model, not per process
+  par_issues <- lapply(seq_len(M), function(i){
+    if(is.null(diag$pareto) || !first_row[i]) character(0) else pareto_issue(diag$pareto, midx[i])
+  })
+  show_num <- rep(TRUE, M)
   if(!is.null(weights)){
-    shown <- flagged[weights[flagged] > weight.min]
+    show_num <- is.na(weights[midx]) | weights[midx] > weight.min
   }
-  if(length(shown) == 0){
+  blocks <- lapply(seq_len(M), function(i){
+    c(if(show_num[i]) num_issues[[i]] else character(0), par_issues[[i]])
+  })
+  n_hidden <- length(unique(midx[lengths(num_issues) > 0 & !show_num]))
+  sol_issues <- if(is.null(diag$solver)) character(0) else solver_issues(diag$solver)
+
+  if(all(lengths(blocks) == 0) && n_hidden == 0 && length(sol_issues) == 0){
     return(invisible(NULL))
+  }
+
+  bullet <- function(msg){
+    cat(paste(strwrap(msg, width = 76, initial = "  - ", prefix = "    "),
+              collapse = "\n"), "\n", sep = "")
   }
 
   cat("----------------------------------------\n")
   cat("\tDiagnostics\n")
   cat("----------------------------------------\n")
-  for(i in shown){
-    if(nrow(d) > 1 || !is.null(weights)){
+  for(i in which(lengths(blocks) > 0)){
+    if(M > 1 || !is.null(weights)){
       lab <- rownames(d)[i]
       if(!is.null(weights)){
-        lab <- paste0(lab, " (stacking weight ", format(round(weights[i], 3)), ")")
+        lab <- paste0(lab, " (stacking weight ", format(round(weights[midx[i]], 3)), ")")
       }
       cat(lab, ":\n", sep = "")
     }
-    for(msg in issues[[i]]){
-      cat(paste(strwrap(msg, width = 76, initial = "  - ", prefix = "    "),
-                collapse = "\n"), "\n", sep = "")
+    for(msg in blocks[[i]]){
+      bullet(msg)
     }
   }
-  n_hidden <- length(flagged) - length(shown)
   if(n_hidden > 0){
-    cat(n_hidden, " other candidate model(s) with stacking weight at most ",
-        weight.min, " are also flagged; see the 'diagnostics' element.\n", sep = "")
+    cat(paste(strwrap(paste0(n_hidden, " other candidate model(s) with stacking",
+                             " weight at most ", weight.min, " have numerical",
+                             " flags; see the 'diagnostics' element."), width = 76),
+              collapse = "\n"), "\n", sep = "")
+  }
+  if(length(sol_issues) > 0){
+    cat("Stacking weights:\n")
+    for(msg in sol_issues){
+      bullet(msg)
+    }
   }
   cat("----------------------------------------\n")
 
   invisible(NULL)
+
+}
+
+# message when no solver reached an optimal solution and loo is not installed:
+# the fit is returned with NA weights, and this gives the code that computes
+# them. A function cannot see the name its output is assigned to, so the code
+# uses 'fit' as a placeholder.
+loo_fallback_message <- function(){
+
+  paste0("None of the CVXR solvers reached an optimal solution, and the fallback",
+         " loo::stacking_weights() needs the 'loo' package, which is not",
+         " installed. The stacking weights are set to NA; the fitted models are",
+         " kept. To compute the weights, run the following, with 'fit' replaced",
+         " by the name the output was saved as:\n\n",
+         "  install.packages(\"loo\")\n",
+         "  w <- as.numeric(loo::stacking_weights(do.call(\"cbind\", fit$loopd)))\n",
+         "  fit$stacking.weights <- w\n",
+         "  fit$stacking.summary[, \"weight\"] <- round(w, 3)\n")
+
+}
+
+# Parameters of a fitted model, as a named list read by name: for a stacked fit
+# (spLMstack, spGLMstack, stvcGLMstack and their posteriorPredict outputs) those
+# of candidate model i, from 'model.params' (one named list per candidate); for
+# an exact fit, its 'model.params'. For the spatial models nu is NA when the
+# correlation function is exponential (it is not used).
+model_params <- function(fit, i = 1){
+
+  mp <- fit$model.params
+  if(is.null(mp)){
+    stop("the fitted object has no 'model.params'; it was made by an earlier version of spStack, refit it with this version.")
+  }
+  pars <- if(length(mp) > 0 && is.list(mp[[1]])) mp[[i]] else mp
+  if(!is.null(pars[["phi"]]) && is.null(pars[["nu"]])){
+    pars[["nu"]] <- NA_real_
+  }
+  pars
+
+}
+
+# warns about arguments passed through ... that the function does not use
+check_dots <- function(...){
+
+  k <- ...length()
+  if(k > 0){
+    nms <- ...names()
+    if(is.null(nms)){
+      nms <- rep("", k)
+    }
+    nms[is.na(nms) | nms == ""] <- "<unnamed>"
+    for(nm in nms){
+      warning("'", nm, "' is not an argument", call. = FALSE)
+    }
+  }
+  invisible(NULL)
+
+}
+
+# stops if any of the named inputs has missing values
+check_no_missing <- function(...){
+
+  args <- list(...)
+  bad <- names(args)[vapply(args, anyNA, logical(1))]
+  if(length(bad) > 0){
+    stop("missing values (NA) in ", paste(bad, collapse = ", "), "; remove the",
+         " incomplete observations (and the corresponding rows of the",
+         " coordinates) before fitting.", call. = FALSE)
+  }
+  invisible(TRUE)
+
+}
+
+# stops unless V is a symmetric positive definite k x k matrix
+check_cov_matrix <- function(V, k, name){
+
+  V <- matrix(as.numeric(V), k, k)
+  if(!isSymmetric(V, tol = 100 * .Machine$double.eps * max(1, max(abs(V))))){
+    stop(name, " must be a symmetric matrix.", call. = FALSE)
+  }
+  if(inherits(tryCatch(chol(V), error = function(e) e), "error")){
+    stop(name, " must be positive definite.", call. = FALSE)
+  }
+  invisible(TRUE)
+
+}
+
+# priors of the conjugate Gaussian models: "flat" assigns p(beta, sigma.sq)
+# proportional to 1/sigma.sq; a list with tags 'beta.norm' and/or 'sigma.sq.ig'
+# assigns N(mu, sigma.sq*V) to beta and/or IG(a, b) to sigma.sq, a component not
+# supplied receiving its flat prior. Returns the arguments of the C++ routines
+# (beta.prior, beta.Norm, sigma.sq.IG) and their record for the output (out).
+parse_lm_priors <- function(priors, p){
+
+  msg <- "priors must be either 'flat' or a named list with tags 'beta.norm' and/or 'sigma.sq.ig'."
+  beta.prior <- "flat"
+  beta.Norm <- 0
+  sigma.sq.prior <- "flat"
+  sigma.sq.IG <- c(0.0, 0.0)
+
+  if(is.character(priors)){
+    if(length(priors) != 1 || tolower(priors) != "flat"){
+      stop(msg)
+    }
+  }else if(is.list(priors)){
+    if(is.null(names(priors))){
+      stop(msg)
+    }
+    names(priors) <- tolower(names(priors))
+    if(any(!names(priors) %in% c("beta.norm", "sigma.sq.ig"))){
+      stop("invalid tag(s) in priors: '",
+           paste(setdiff(names(priors), c("beta.norm", "sigma.sq.ig")), collapse = "', '"),
+           "'. Valid tags are 'beta.norm' and 'sigma.sq.ig'.")
+    }
+    if("beta.norm" %in% names(priors)){
+      beta.Norm <- priors[["beta.norm"]]
+      if(!is.list(beta.Norm) || length(beta.Norm) != 2){
+        stop("priors[['beta.norm']] must be a list of length 2.")
+      }
+      if(!is.numeric(beta.Norm[[1]]) || length(beta.Norm[[1]]) != p){
+        stop("priors[['beta.norm']][[1]] must be a numeric vector of length ", p, ".")
+      }
+      if(!is.numeric(beta.Norm[[2]]) || length(beta.Norm[[2]]) != p^2){
+        stop("priors[['beta.norm']][[2]] must be a ", p, "x", p, " covariance matrix.")
+      }
+      check_cov_matrix(beta.Norm[[2]], p, "the prior covariance of beta (beta.norm[[2]])")
+      beta.Norm <- list(as.double(beta.Norm[[1]]), matrix(as.double(beta.Norm[[2]]), p, p))
+      beta.prior <- "normal"
+    }
+    if("sigma.sq.ig" %in% names(priors)){
+      sigma.sq.IG <- priors[["sigma.sq.ig"]]
+      if(!is.numeric(sigma.sq.IG) || length(sigma.sq.IG) != 2 || any(!is.finite(sigma.sq.IG)) ||
+         any(sigma.sq.IG <= 0)){
+        stop("priors[['sigma.sq.ig']] must be a positive numeric vector of length 2.")
+      }
+      sigma.sq.prior <- "ig"
+    }
+  }else{
+    stop(msg)
+  }
+  storage.mode(sigma.sq.IG) <- "double"
+
+  out <- list(beta.Norm = if(beta.prior == "normal") list(mu = beta.Norm[[1]], V = beta.Norm[[2]]) else "flat",
+              sigma.sq.IG = if(sigma.sq.prior == "ig") sigma.sq.IG else "flat")
+  list(beta.prior = beta.prior, beta.Norm = beta.Norm, sigma.sq.IG = sigma.sq.IG, out = out)
+
+}
+
+# response, design matrices and space-time coordinates of the spatially-temporally
+# varying coefficients models (Gaussian response), with input checks
+stvc_lm_data <- function(formula, data, sp_coords, time_coords){
+
+  if(missing(formula) || !inherits(formula, "formula")){
+    stop("formula must be specified as a formula, e.g. y ~ x1 + (x1).")
+  }
+  holder <- parseFormula2(formula, data)
+  if(ncol(holder[[1L]]) != 1){
+    stop("the response must be a single numeric variable.")
+  }
+  y <- as.numeric(holder[[1L]])
+  X <- as.matrix(holder[[2L]])
+  X_tilde <- holder[[5L]]
+  if(is.null(X_tilde)){
+    stop("formula does not indicate varying coefficient terms; put them in parentheses, e.g. y ~ x1 + (x1).")
+  }
+  X_tilde <- as.matrix(X_tilde)
+  n <- nrow(X)
+
+  if(!is.matrix(sp_coords) || ncol(sp_coords) != 2 || nrow(sp_coords) != n){
+    stop("sp_coords must be an n x 2 matrix of spatial coordinates, with n = ", n,
+         " the number of observations in the model formula.")
+  }
+  if(is.data.frame(time_coords)){
+    time_coords <- as.matrix(time_coords)
+  }
+  if(is.vector(time_coords) && is.numeric(time_coords)){
+    time_coords <- matrix(time_coords, ncol = 1)
+  }
+  if(!is.matrix(time_coords) || ncol(time_coords) != 1 || nrow(time_coords) != n){
+    stop("time_coords must be an n x 1 matrix (or a vector of length n) of temporal coordinates, with n = ", n,
+         " the number of observations in the model formula.")
+  }
+  if(nrow(X_tilde) != n){
+    stop("the varying coefficient terms and the model formula have different numbers of observations.")
+  }
+
+  check_no_missing(y = y, X = X, X_tilde = X_tilde, sp_coords = sp_coords, time_coords = time_coords)
+  check_distinct_coords(cbind(sp_coords, time_coords),
+                        what = "spatial-temporal coordinates",
+                        hint = "Average the observations that share both location and time.")
+
+  storage.mode(y) <- "double"
+  storage.mode(X) <- "double"
+  storage.mode(X_tilde) <- "double"
+  storage.mode(sp_coords) <- "double"
+  storage.mode(time_coords) <- "double"
+
+  list(y = y, X = X, X.names = holder[[3L]], X_tilde = X_tilde, X_tilde.names = holder[[6L]],
+       sp_coords = sp_coords, time_coords = time_coords,
+       n = as.integer(n), p = as.integer(ncol(X)), r = as.integer(ncol(X_tilde)))
+
+}
+
+# process type of the spatially-temporally varying coefficients linear models
+check_stvc_lm_process_type <- function(process.type){
+
+  if(missing(process.type)){
+    stop("process.type must be specified. Choose from c('independent', 'independent.shared').")
+  }
+  if(!is.character(process.type) || length(process.type) != 1){
+    stop("process.type must be one of 'independent' or 'independent.shared'.")
+  }
+  if(process.type == "multivariate"){
+    stop("process.type = 'multivariate' is not available for the Gaussian model; choose 'independent' or 'independent.shared'.")
+  }
+  if(!process.type %in% c("independent", "independent.shared")){
+    stop("Invalid process.type. Choose from c('independent', 'independent.shared').")
+  }
+  process.type
 
 }

@@ -104,7 +104,18 @@
 #' \item{loopd}{If \code{loopd=TRUE}, contains leave-one-out predictive
 #'  densities.}
 #' \item{model.params}{Values of the fixed parameters that includes
-#'  \code{phi} (spatial decay), \code{nu} (spatial smoothness).}
+#'  \code{phi} (spatial decay), \code{nu} (spatial smoothness; \code{NA} for
+#'  the exponential correlation function).}
+#' \item{diagnostics}{a list of diagnostics. Element \code{numerical} is a
+#' data frame with one row and columns \code{min.pivot} (the smallest
+#' relative Cholesky pivot of the \eqn{n \times n}{n x n} correlation
+#' matrix; values below 1e-8 indicate a nearly singular correlation matrix),
+#' \code{min.cor} and \code{max.cor} (the correlations of the two
+#' farthest-apart and of the two closest locations; values of \code{min.cor}
+#' above 0.95 suggest an effective range far exceeding the extent of the
+#' data, values of \code{max.cor} below 0.05 nearly uncorrelated locations),
+#' obtained from quantities the fit computes anyway. If \code{verbose =
+#' TRUE}, a "Diagnostics" section is printed when any threshold is crossed.}
 #' }
 #' The return object might include additional data that can be used for
 #' subsequent prediction and/or model fit evaluation.
@@ -168,12 +179,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
                        loopd.nMC = 500, verbose = TRUE, ...){
 
   ##### check for unused args #####
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for(i in elip.args){
-    if (!i %in% formal.args)
-      warning("'", i, "' is not an argument")
-  }
+  check_dots(...)
 
   ##### family #####
   if(missing(family)){
@@ -252,6 +258,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
          different than data used in the model formula")
   }
 
+  check_no_missing(y = y, X = X, n.binom = n.binom, coords = coords)
   check_distinct_coords(coords)
 
   ## distances are computed in C++ from the coordinates
@@ -288,6 +295,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
         stop(paste("priors[['V.beta']] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(V.beta, p, "priors[[\'V.beta\']]")
     }
     if(!'nu.beta' %in% names(priors)){
       missing.flag <- missing.flag + 1
@@ -398,11 +406,7 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   ##### Leave-one-out setup #####
 
   if(loopd){
-    if(missing(loopd.method)){
-      stop("loopd.method must be specified")
-    }else{
-      loopd.method <- tolower(loopd.method)
-    }
+    loopd.method <- tolower(loopd.method)
     if(!loopd.method %in% c("exact", "cv")){
       stop("loopd.method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
     }
@@ -485,9 +489,14 @@ spGLMexact <- function(formula, data = parent.frame(), family,
   if(cor.fn == 'matern'){
     out$model.params <- list(phi = phi, nu = nu)
   }else{
-    out$model.params <- list(phi = phi)
+    out$model.params <- list(phi = phi, nu = NA_real_)
   }
+  out$diagnostics <- list(numerical = collect_diagnostics(list(samps)))
   out$run.time <- run.time
+
+  if(verbose){
+    print_diagnostics(out$diagnostics)
+  }
 
   class(out) <- "spGLMexact"
 

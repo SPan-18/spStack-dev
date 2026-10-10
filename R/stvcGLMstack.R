@@ -87,13 +87,35 @@
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
 #' \item{`n.models`}{number of candidate models that are fit.}
-#' \item{`candidate.models`}{a list of length \code{n_model} rows with each
-#' entry containing details of the model parameters.}
+#' \item{`model.params`}{a list with one element per candidate model, each a
+#'  named list of its parameters: \code{phi_s}, \code{phi_t} (vectors of
+#'  length \eqn{r} if \code{process.type = 'independent'}) and \code{boundary}.}
+#' \item{`stacking.summary`}{a matrix with one row per candidate model,
+#'  containing its parameters and its optimal stacking weight, for display.}
 #' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #' candidate models storing the optimal stacking weights.}
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
-#' \item{`solver.status`}{solver status as returned by the optimization
-#' routine.}
+#' \item{`diagnostics`}{a list of diagnostics. Element \code{numerical} is a
+#' data frame with one row per candidate model (per candidate model and
+#' process, with columns \code{model} and \code{process}, if
+#' \code{process.type = 'independent'}) and columns \code{min.pivot} (the
+#' smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+#' spatial-temporal correlation matrix; values below 1e-8 indicate a nearly
+#' singular correlation matrix), \code{min.cor} and \code{max.cor} (the
+#' correlations of the two farthest-apart and of the two closest space-time
+#' locations; values of \code{min.cor} above 0.95 suggest an effective range
+#' far exceeding the extent of the data, values of \code{max.cor} below 0.05
+#' nearly uncorrelated space-time locations), obtained from quantities the
+#' fit computes anyway. Element \code{solver} describes the optimization for
+#' the stacking weights: the solver used (\code{used}) and its status
+#' (\code{status}), the installed and requested solvers, the search order,
+#' the attempts with their status, and whether the fallback
+#' \code{loo::stacking_weights()} was used. If \code{verbose = TRUE}, a
+#' "Diagnostics" section is printed if there is an issue: numerical flags of
+#' candidate models with stacking weight above 0.05 (extreme candidates with
+#' negligible weight are expected in a stacking grid and are only counted),
+#' and solver problems (a requested solver not installed, an inaccurate
+#' solution, or the fallback).}
 #' }
 #' This object can be further used to recover posterior samples of the scale
 #' parameters in the model, and subsequrently, to make predictions at new
@@ -128,6 +150,9 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn, process.type, priors,
                          candidate.models, n.samples, loopd.controls,
                          parallel = FALSE, solver = NULL, verbose = TRUE, ...){
+
+  ##### check for unused args #####
+  check_dots(...)
 
   ##### check for unused args #####
   formal.args <- names(formals(sys.function(sys.parent())))
@@ -244,6 +269,8 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   storage.mode(sp_coords) <- "double"
   storage.mode(time_coords) <- "double"
 
+  check_no_missing(y = y, X = X, X_tilde = X_tilde, n.binom = n.binom,
+                   sp_coords = sp_coords, time_coords = time_coords)
   check_distinct_coords(cbind(sp_coords, time_coords),
                         what = "spatial-temporal coordinates",
                         hint = "Average the observations that share both location and time.")
@@ -281,6 +308,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
         stop(paste("priors[['V.beta']] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(V.beta, p, "priors[[\'V.beta\']]")
     }
     if(!'nu.beta' %in% names(priors)){
       missing.flag <- missing.flag + 1
@@ -330,6 +358,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
           stop(paste("priors[['IW.scale']] must be a ", r, "x", r,
                      " covariance matrix.", sep = ""))
         }
+        check_cov_matrix(IW.scale, r, "priors[['IW.scale']]")
       }
     }
     if(missing.flag > 0){
@@ -362,8 +391,8 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
         check_validity <- all(vapply(list_candidate, function(x){
           length(x) == 3 &&
           identical(sort(names(x)), c("boundary", "phi_s", "phi_t")) &&
-          is.numeric(x$phi_s) && length(x$phi_s) == 2 &&
-          is.numeric(x$phi_t) && length(x$phi_t) == 2 &&
+          is.numeric(x$phi_s) && length(x$phi_s) == r &&
+          is.numeric(x$phi_t) && length(x$phi_t) == r &&
           is.numeric(x$boundary) && length(x$boundary) == 1
           }, logical(1)))
       }
@@ -371,7 +400,8 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
         stop("error: each element of candidate.models must be a list of length 3
              with names 'phi_s', 'phi_t' and 'boundary' containing numeric
              values. If process.type = 'independent', then 'phi_s' and 'phi_t'
-             must be vectors of length 2, otherwise, they must be scalars.")
+             must be vectors of length r (the number of varying coefficients),
+             otherwise, they must be scalars.")
       }
     }
   }
@@ -569,15 +599,21 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
-  out <- get_stacking_weights(
+  # the solver details are kept in the 'diagnostics' element (and reported there
+  # if there is an issue) instead of being printed
+  out <- suppressMessages(get_stacking_weights(
     loopd_mat,
     solver = solver,
-    verbose = verbose
-  )
+    verbose = FALSE
+  ))
 
   w_hat <- out$weights
+  if(identical(out$solver, "none")){
+    message(loo_fallback_message())
+  }
   solver_status <- out$status
   solver_used <- out$solver
+  out_solver_details <- out$details
 
   run.time <- proc.time() - ptm
 
@@ -594,6 +630,13 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   loopd_list <- lapply(samps, function(x) x[["loopd"]])
   names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
 
+  diagnostics <- list(numerical = collect_diagnostics(samps, paste("Model", seq_along(list_candidate))))
+  diagnostics$solver <- c(list(used = solver_used, status = solver_status), out_solver_details)
+  if(verbose){
+    print_diagnostics(diagnostics, weights = w_hat,
+                      pivot.hint = "nearly coincident space-time locations, or very small decay parameters phi_s, phi_t")
+  }
+
   samps <- lapply(samps, function(x) x[c("beta", "z", "xi")])
   names(samps) <- paste("Model", 1:length(list_candidate), sep = "")
 
@@ -608,7 +651,12 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   out$cor.fn <- cor.fn
   out$process.type <- process.type
   out$n.samples <- n.samples
-  out$candidate.models <- list_candidate
+  # model parameters of each candidate, read by name (e.g. by posteriorPredict())
+  out$model.params <- lapply(list_candidate, function(x){
+    list(phi_s = as.numeric(x[["phi_s"]]), phi_t = as.numeric(x[["phi_t"]]),
+         boundary = as.numeric(x[["boundary"]]))
+  })
+  names(out$model.params) <- paste("Model", seq_along(list_candidate))
   out$priors <- list(mu.beta = rep(0, p), V.beta = V.beta, nu.beta = nu.beta,
                      nu.z = nu.z, sigmaSq.xi = sigmaSq.xi, IW.scale = IW.scale)
   out$samples <- samps
@@ -618,8 +666,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   out$stacking.summary <- stack_out
   out$stacking.weights <- w_hat
   out$run.time <- run.time
-  out$solver <- solver_used
-  out$solver.status <- solver_status
+  out$diagnostics <- diagnostics
 
   class(out) <- "stvcGLMstack"
 

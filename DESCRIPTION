@@ -22,7 +22,6 @@ Imports:
     future,
     future.apply,
     ggplot2,
-    loo,
     MBA,
     rstudioapi
 NeedsCompilation: yes
@@ -32,6 +31,7 @@ LazyData: true
 Suggests:
     dplyr,
     knitr,
+    loo,
     patchwork,
     rmarkdown,
     spelling,

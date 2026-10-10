@@ -211,23 +211,27 @@ extern "C" {
 
     }
 
-    // Allocations for XtX, XTildetX, and VbetaInv
+    // diagnostics: for each distinct correlation matrix (r of them for 'independent'), the correlations of the
+    // farthest-apart and the closest space-time locations and the smallest relative Cholesky pivot of its factor
+    // (no extra factorization)
+    int nDiag = (processType == "independent") ? r : 1;
+    double *diagPivot = (double *) R_alloc(nDiag, sizeof(double));
+    double *diagMinCor = (double *) R_alloc(nDiag, sizeof(double));
+    double *diagMaxCor = (double *) R_alloc(nDiag, sizeof(double));
+    for(k = 0; k < nDiag; k++){
+      corOffDiagRange(&Vz[nn * k], n, &diagMinCor[k], &diagMaxCor[k]);
+      diagPivot[k] = minRelPivot(&cholVz[nn * k], n, NULL, 1.0);
+    }
+
+    // Allocations for VbetaInv
     double *VbetaInv = (double *) R_alloc(pp, sizeof(double)); zeros(VbetaInv, pp);           // allocate VbetaInv
     double *Lbeta = (double *) R_alloc(pp, sizeof(double)); zeros(Lbeta, pp);                 // Cholesky of Vbeta
-    double *XtX = (double *) R_alloc(pp, sizeof(double)); zeros(XtX, pp);                     // Store XtX
-    double *XTildetX = (double *) R_alloc(nrp, sizeof(double)); zeros(XTildetX, nrp);         // Store XTildetX
 
     // Find VbetaInv
     F77_NAME(dcopy)(&pp, betaV, &incOne, VbetaInv, &incOne);                                                           // VbetaInv = Vbeta
     F77_NAME(dpotrf)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: prior covariance of beta is not positive definite.\n");} // VbetaInv = chol(Vbeta)
     F77_NAME(dcopy)(&pp, VbetaInv, &incOne, Lbeta, &incOne);                                                           // Lbeta = chol(Vbeta)
     F77_NAME(dpotri)(lower, &p, VbetaInv, &p, &info FCONE); if(info != 0){Rf_error("c++ error: inversion of the prior covariance of beta failed.\n");}       // VbetaInv = chol2inv(Vbeta)
-
-    // Find XtX
-    F77_NAME(dgemm)(ytran, ntran, &p, &p, &n, &one, X, &n, X, &n, &zero, XtX, &p FCONE FCONE);                   // XtX = t(X)*X
-
-    // Find t(X_tilde)*X
-    lmulm_XTilde_VC(ytran, n, r, p, X_tilde, X, XTildetX);
 
     // Allocations for I + Xtilde*Vz*t(Xtilde)
     double *XTildeVzXTildet = (double *) R_alloc(nn, sizeof(double)); zeros(XTildeVzXTildet, nn);
@@ -259,7 +263,7 @@ extern "C" {
     double *samp_Sigma = (double *) R_alloc(rr, sizeof(double)); zeros(samp_Sigma, rr);
 
     // Evaluate priming step
-    info = primingGLMvc(n, p, r, X, X_tilde, XtX, XTildetX, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
+    info = primingGLMvc(n, p, r, X, X_tilde, VbetaInv, Vz, processType, cholIplusXTildeVzXTildet,
                         sigmaSq_xi, tmp_nnr1, D1Inv, D1InvB1, cholschurA1, DInvB_pn, DInvB_nrn, cholschurA);
 
     R_chk_free(tmp_nnr1);
@@ -455,6 +459,8 @@ extern "C" {
     SET_VECTOR_ELT(resultName_r, 2, Rf_mkChar("xi"));
 
     Rf_namesgets(result_r, resultName_r);
+
+    result_r = PROTECT(appendDiagnosticsRows(result_r, diagPivot, diagMinCor, diagMaxCor, nDiag)); nProtect++;
 
     UNPROTECT(nProtect);
 

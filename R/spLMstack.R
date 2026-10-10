@@ -51,33 +51,41 @@
 #'  samples of fixed effects (\code{beta}), measurement error variance
 #'  (\code{sigmaSq}), spatial variance (\code{sigmaSq.z}), and spatial effects
 #'  (\code{z}) for that model.}
-#' \item{`loopd.pareto_k`}{if \code{loopd.method='PSIS'}, a list of length
-#' equal to total number of candidate models with each entry containing the
-#' Pareto \eqn{k} diagnostic values of the leave-one-out predictive densities
-#' under that particular model.}
 #' \item{`loopd`}{a list of length equal to total number of candidate models with
 #' each entry containing leave-one-out predictive densities under that
 #' particular model.}
 #' \item{`n.models`}{number of candidate models that are fit.}
-#' \item{`candidate.models`}{a matrix with \code{n_model} rows with each row
-#'  containing details of the model parameters and its optimal weight.}
+#' \item{`model.params`}{a list with one element per candidate model, each a
+#'  named list of its parameters: \code{phi}, \code{nu} (\code{NA} for the
+#'  exponential correlation function) and \code{noise_sp_ratio} (noise-to-spatial variance ratio).}
+#' \item{`stacking.summary`}{a matrix with one row per candidate model,
+#'  containing its parameters and its optimal stacking weight, for display.}
 #' \item{`stacking.weights`}{a numeric vector of length equal to the number of
 #'  candidate models storing the optimal stacking weights.}
 #' \item{`run.time`}{a \code{proc_time} object with runtime details.}
-#' \item{`solver.status`}{solver status as returned by the optimization
-#' routine.}
-#' \item{`diagnostics`}{a data frame with one row per candidate model and
-#'  columns \code{min.pivot} (the smallest relative Cholesky pivot of the
-#'  \eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a nearly
-#'  singular covariance matrix), \code{min.cor} and \code{max.cor} (the
-#'  correlations of the two farthest-apart and of the two closest locations;
-#'  values of \code{min.cor} above 0.95 suggest an effective range far
-#'  exceeding the extent of the data, values of \code{max.cor} below 0.05 nearly
-#'  uncorrelated locations). They are obtained from quantities the fits compute
-#'  anyway. If \code{verbose = TRUE}, a "Diagnostics" section is printed for
-#'  flagged candidate models with stacking weight above 0.05; extreme candidates
-#'  with negligible weight are expected in a stacking grid and are only
-#'  counted.}
+#' \item{`diagnostics`}{a list of diagnostics. Element \code{numerical} is a
+#'  data frame with one row per candidate model and columns \code{min.pivot}
+#'  (the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+#'  factorizations; values below 1e-8 indicate a nearly singular covariance
+#'  matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
+#'  farthest-apart and of the two closest locations; values of \code{min.cor}
+#'  above 0.95 suggest an effective range far exceeding the extent of the data,
+#'  values of \code{max.cor} below 0.05 nearly uncorrelated locations),
+#'  obtained from quantities the fits compute anyway. If
+#'  \code{loopd.method = 'PSIS'}, element \code{pareto} is a list with the
+#'  Pareto \eqn{k} diagnostic values of each candidate model (\code{k}), the
+#'  threshold above which they are unreliable (\code{threshold}) and the
+#'  number of values above it for each model (\code{n.high}). Element
+#'  \code{solver} describes the optimization for the stacking weights: the
+#'  solver used (\code{used}) and its status (\code{status}), the installed
+#'  and requested solvers, the search order, the attempts with their status,
+#'  and whether the fallback \code{loo::stacking_weights()} was used. If
+#'  \code{verbose = TRUE}, a "Diagnostics" section is printed if there is an
+#'  issue: numerical flags of candidate models with stacking weight above 0.05
+#'  (extreme candidates with negligible weight are expected in a stacking grid
+#'  and are only counted), Pareto \eqn{k} values above the threshold for any
+#'  model, and solver problems (a requested solver not installed, an
+#'  inaccurate solution, or the fallback).}
 #' }
 #' The return object might include additional data that is useful for subsequent
 #' prediction, model fit evaluation and other utilities.
@@ -170,12 +178,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
                       parallel = FALSE, solver = NULL, verbose = TRUE, ...){
 
   ##### check for unused args #####
-  formal.args <- names(formals(sys.function(sys.parent())))
-  elip.args <- names(list(...))
-  for (i in elip.args) {
-    if (!i %in% formal.args)
-      warning("'", i, "' is not an argument")
-  }
+  check_dots(...)
 
   ##### formula #####
   if (missing(formula)) {
@@ -209,6 +212,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
     number of rows is different than data used in the model formula")
   }
 
+  check_no_missing(y = y, X = X, coords = coords)
   check_distinct_coords(coords)
 
   ## distances are computed in C++ from the coordinates
@@ -267,6 +271,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
         stop(paste("error: beta.Norm[[2]] must be a ", p, "x", p,
                    " covariance matrix.", sep = ""))
       }
+      check_cov_matrix(beta.Norm[[2]], p, "the prior covariance of beta (beta.norm[[2]])")
       storage.mode(beta.Norm[[1]]) <- "double"
       storage.mode(beta.Norm[[2]]) <- "double"
       beta.prior <- "normal"
@@ -330,7 +335,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
              scalar numeric entries 'phi' and 'noise_sp_ratio'.")
       }
       candidate.models <- lapply(candidate.models, function(x){
-        x[["nu"]] <- 0.0
+        x[["nu"]] <- NA_real_                                  # not used by the exponential
         x
       })
       class(candidate.models) <- "candidateModels"
@@ -344,6 +349,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   if(missing(loopd.method)){
     message("loopd.method not specified. Using 'exact'.")
+    loopd.method <- "exact"
   }
 
   loopd.method <- tolower(loopd.method)
@@ -443,19 +449,28 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
 
   loopd_mat <- do.call("cbind", lapply(samps, function(x) x[["loopd"]]))
 
-  out <- get_stacking_weights(
+  # the solver details are kept in the 'diagnostics' element (and reported there
+  # if there is an issue) instead of being printed
+  out <- suppressMessages(get_stacking_weights(
     loopd_mat,
     solver = solver,
-    verbose = verbose
-  )
+    verbose = FALSE
+  ))
 
   w_hat <- out$weights
+  if(identical(out$solver, "none")){
+    message(loo_fallback_message())
+  }
   solver_status <- out$status
   solver_used <- out$solver
+  out_solver_details <- out$details
 
   run.time <- proc.time() - ptm
 
-  stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, unlist)))
+  # columns in a fixed order (exponential candidates carry nu = 0, appended last)
+  stack_out <- as.matrix(do.call("rbind", lapply(list_candidate, function(x){
+    unlist(x[c("phi", "nu", "noise_sp_ratio")])
+  })))
   stack_out <- cbind(stack_out, round(w_hat, 3))
   colnames(stack_out) = c("phi", "nu", "noise_sp_ratio", "weight")
   rownames(stack_out) = paste("Model", 1:nrow(stack_out))
@@ -471,22 +486,13 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   loopd_list <- lapply(samps, function(x) x[["loopd"]])
   names(loopd_list) <- paste("Model", 1:length(list_candidate), sep = "")
 
+  diagnostics <- list(numerical = collect_diagnostics(samps, paste("Model", seq_along(list_candidate))))
   if(loopd.method == "psis"){
     pareto_k_list <- lapply(samps, function(x) x[["loopd.pareto_k"]])
     names(pareto_k_list) <- names(loopd_list)
-    k_threshold <- psis_khat_threshold(n.samples)
-    n_high_k <- vapply(pareto_k_list, function(k) sum(k > k_threshold),
-                       integer(1))
-    if(any(n_high_k > 0)){
-      warning("Pareto k diagnostic values exceed ", round(k_threshold, 2),
-              " for some observations in ", sum(n_high_k > 0),
-              " candidate model(s); PSIS estimates of the corresponding",
-              " leave-one-out predictive densities may be unreliable. Consider",
-              " loopd.method = 'exact'.", call. = FALSE)
-    }
+    diagnostics$pareto <- pareto_diagnostics(pareto_k_list, n.samples)
   }
-
-  diagnostics <- collect_diagnostics(samps, paste("Model", seq_along(list_candidate)))
+  diagnostics$solver <- c(list(used = solver_used, status = solver_status), out_solver_details)
   if(verbose){
     print_diagnostics(diagnostics, weights = w_hat,
                       pivot.hint = "nearly coincident locations, a very small decay parameter, or a very small noise-to-spatial variance ratio")
@@ -516,15 +522,17 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   out$samples <- samps
   out$loopd <- loopd_list
   out$loopd.method <- loopd.method
-  if(loopd.method == "psis"){
-    out$loopd.pareto_k <- pareto_k_list
-  }
   out$n.models <- length(list_candidate)
-  out$candidate.models <- stack_out
+  # model parameters of each candidate, read by name (e.g. by posteriorPredict())
+  out$model.params <- lapply(list_candidate, function(x){
+    list(phi = as.numeric(x[["phi"]]), nu = as.numeric(x[["nu"]]),
+         noise_sp_ratio = as.numeric(x[["noise_sp_ratio"]]))
+  })
+  names(out$model.params) <- paste("Model", seq_along(list_candidate))
+  # table of the candidate models and their stacking weights (for display)
+  out$stacking.summary <- stack_out
   out$stacking.weights <- w_hat
   out$run.time <- run.time
-  out$solver <- solver_used
-  out$solver.status <- solver_status
   out$diagnostics <- diagnostics
 
   class(out) <- "spLMstack"
