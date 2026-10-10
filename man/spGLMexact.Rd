@@ -93,16 +93,16 @@ densities.}
 \item{model.params}{Values of the fixed parameters that includes
 \code{phi} (spatial decay), \code{nu} (spatial smoothness; \code{NA} for
 the exponential correlation function).}
-\item{diagnostics}{a list of diagnostics. Element \code{numerical} is a data
-frame with one row and columns \code{min.pivot} (the smallest relative
-Cholesky pivot of the \eqn{n \times n}{n x n} correlation matrix; values
-below 1e-8 indicate a nearly singular correlation matrix), \code{min.cor}
-and \code{max.cor} (the correlations of the two farthest-apart and of the
-two closest locations; values of \code{min.cor} above 0.95 suggest an
-effective range far exceeding the extent of the data, values of
-\code{max.cor} below 0.05 nearly uncorrelated locations), obtained from
-quantities the fit computes anyway. If \code{verbose = TRUE}, a
-"Diagnostics" section is printed when any threshold is crossed.}
+\item{diagnostics}{a list of diagnostics. Element \code{numerical} is a
+data frame with one row and columns \code{min.pivot} (the smallest
+relative Cholesky pivot of the \eqn{n \times n}{n x n} correlation
+matrix; values below 1e-8 indicate a nearly singular correlation matrix),
+\code{min.cor} and \code{max.cor} (the correlations of the two
+farthest-apart and of the two closest locations; values of \code{min.cor}
+above 0.95 suggest an effective range far exceeding the extent of the
+data, values of \code{max.cor} below 0.05 nearly uncorrelated locations),
+obtained from quantities the fit computes anyway. If \code{verbose =
+TRUE}, a "Diagnostics" section is printed when any threshold is crossed.}
 }
 The return object might include additional data that can be used for
 subsequent prediction and/or model fit evaluation.
@@ -164,44 +164,29 @@ values for \eqn{V_\beta}, \eqn{\nu_\beta}, \eqn{\nu_z}, \eqn{\sigma^2_\xi}
 are diagonal with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
 }
 \examples{
-# Example 1: Analyze spatial poisson count data
-data(simPoisson)
-dat <- simPoisson[1:10, ]
-mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 4, nu = 0.4),
-                   n.samples = 100, verbose = TRUE)
+data(simSpatial)
+dat <- simSpatial[1:100, ]
+coords <- as.matrix(dat[, c("s1", "s2")])
 
-# summarize posterior samples
+# Example 1: spatial Poisson count data
+mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
+                   coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
+                   n.samples = 100, verbose = TRUE)
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 
-# Example 2: Analyze spatial binomial count data
-data(simBinom)
-dat <- simBinom[1:10, ]
-mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 3, nu = 0.4),
-                   n.samples = 100, verbose = TRUE)
+# Example 2: spatial binomial count data
+mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,
+                   family = "binomial", coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
+                   n.samples = 100, verbose = FALSE)
 
-# summarize posterior samples
-post_beta <- mod2$samples$beta
-print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-
-# Example 3: Analyze spatial binary data
-data(simBinary)
-dat <- simBinary[1:10, ]
-mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 4, nu = 0.4),
-                   n.samples = 100, verbose = TRUE)
-
-# summarize posterior samples
-post_beta <- mod3$samples$beta
-print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+# Example 3: spatial binary data
+mod3 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
+                   coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
+                   n.samples = 100, verbose = FALSE)
 }
 \references{
 Bradley JR, Clinch M (2024). "Generating Independent Replicates

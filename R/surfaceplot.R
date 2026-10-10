@@ -8,7 +8,8 @@
 #' @param h integer; (optional) controls smoothness of the spatial interpolation
 #' as appearing in the [MBA::mba.surf()] function. Default is 8.
 #' @param col.pal Optional; color palette, preferably divergent, use
-#' \code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.
+#' \code{colorRampPalette} function from \code{grDevices}. Default is the
+#' colorblind-friendly diverging palette 'RdBu' from ColorBrewer.
 #' @param mark_points Logical; if \code{TRUE}, the input points are marked.
 #' Default is \code{FALSE}.
 #' @return a `ggplot` object containing the surface plot
@@ -18,16 +19,15 @@
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
-#' data(simGaussian)
-#' plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
+#' data(simSpatial)
+#' plot1 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
 #'                      var_name = "z_true")
 #' plot1
 #'
 #' # try your favourite color palette
-#' col.br <- colorRampPalette(c("blue", "white", "red"))
-#' col.br.pal <- col.br(100)
-#' plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
-#'                      var_name = "z_true", col.pal = col.br.pal)
+#' plot2 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
+#'                      var_name = "z_true",
+#'                      col.pal = hcl.colors(100, "PuOr", rev = TRUE))
 #' plot2
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
@@ -53,7 +53,7 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
           aspect.ratio = 1)
 
   if(missing(col.pal)){
-    plot <- plot + scale_fill_distiller(palette = "RdYlBu", direction = -1,
+    plot <- plot + scale_fill_distiller(palette = "RdBu", direction = -1,
                                         label = function(x) sprintf("%.1f", x))
   }else{
     plot <- plot + scale_fill_gradientn(colours = col.pal)
@@ -85,7 +85,8 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' @param h integer; (optional) controls smoothness of the spatial interpolation
 #' as appearing in the [MBA::mba.surf()] function. Default is 8.
 #' @param col.pal Optional; color palette, preferably divergent, use
-#' \code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.
+#' \code{colorRampPalette} function from \code{grDevices}. Default is the
+#' colorblind-friendly diverging palette 'RdBu' from ColorBrewer.
 #' @param mark_points Logical; if \code{TRUE}, the input points are marked.
 #' Default is \code{FALSE}.
 #' @return a list containing two `ggplot` objects
@@ -95,9 +96,9 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' @importFrom ggplot2 theme_bw theme element_line element_blank element_text
 #' @importFrom stats na.omit
 #' @examples
-#' data(simGaussian)
-#' plots_2 <- surfaceplot2(simGaussian, coords_name = c("s1", "s2"),
-#'                         var1_name = "z_true", var2_name = "y")
+#' data(simSpatial)
+#' plots_2 <- surfaceplot2(simSpatial, coords_name = c("s1", "s2"),
+#'                         var1_name = "z_true", var2_name = "y_gauss")
 #' plots_2
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
@@ -141,11 +142,11 @@ surfaceplot2 <- function(tab, coords_name, var1_name, var2_name,
   common_limits <- range(c(surf_df1$z, surf_df2$z))
 
   if(missing(col.pal)){
-    plot1 <- plot1 + scale_fill_distiller(palette = "RdYlBu", direction = -1,
+    plot1 <- plot1 + scale_fill_distiller(palette = "RdBu", direction = -1,
                                           label = function(x) sprintf("%.1f", x),
                                           limits = common_limits)
 
-    plot2 <- plot2 + scale_fill_distiller(palette = "RdYlBu", direction = -1,
+    plot2 <- plot2 + scale_fill_distiller(palette = "RdBu", direction = -1,
                                           label = function(x) sprintf("%.1f", x),
                                           limits = common_limits)
 

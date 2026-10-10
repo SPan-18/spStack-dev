@@ -103,41 +103,31 @@
 #'  Smoothed Importance Sampling." *Journal of Machine Learning Research*,
 #'  **25**(72), 1-58. URL \url{https://jmlr.org/papers/v25/19-556.html}.
 #' @examples
-#' # load data
-#' data(simGaussian)
-#' dat <- simGaussian[1:100, ]
+#' data(simSpatial)
+#' dat <- simSpatial[1:100, ]
 #'
 #' # setup prior list
-#' muBeta <- c(0, 0)
-#' VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
+#' muBeta <- c(0, 0, 0)
+#' VBeta <- diag(100, 3)
 #' sigmaSqIGa <- 2
 #' sigmaSqIGb <- 0.1
 #' prior_list <- list(beta.norm = list(muBeta, VBeta),
 #'                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 #'
-#' # supply fixed values of model parameters
-#' phi0 <- 3
-#' nu0 <- 0.75
-#' noise.sp.ratio <- 0.8
-#'
-#' mod1 <- spLMexact(y ~ x1, data = dat,
+#' mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   priors = prior_list,
-#'                   spParams = list(phi = phi0, nu = nu0),
-#'                   noise_sp_ratio = noise.sp.ratio,
+#'                   spParams = list(phi = 6, nu = 0.5),
+#'                   noise_sp_ratio = 0.5,
 #'                   n.samples = 100,
 #'                   loopd = TRUE, loopd.method = "exact")
 #'
-#' beta.post <- mod1$samples$beta
-#' z.post.median <- apply(mod1$samples$z, 1, median)
-#' dat$z.post.median <- z.post.median
-#' plot1 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-#'                      var_name = "z_true")
-#' plot2 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-#'                      var_name = "z.post.median")
-#' plot1
-#' plot2
+#' post_beta <- mod1$samples$beta
+#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#'
+#' # compare the posterior medians of the spatial effects with the truth
+#' cor(apply(mod1$samples$z, 1, median), dat$z_true)
 #' @export
 spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
                       priors = "flat",

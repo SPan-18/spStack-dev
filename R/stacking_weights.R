@@ -32,14 +32,14 @@
 #'  \code{NA} with status \code{"failed"}.
 #' @examples
 #' set.seed(1234)
-#' data(simGaussian)
-#' dat <- simGaussian[1:100, ]
+#' data(simSpatial)
+#' dat <- simSpatial[1:100, ]
 #'
-#' cand.mod <- candidateModels(list(phi = c(1.5, 3),
+#' cand.mod <- candidateModels(list(phi = c(3, 6),
 #'                                  nu = c(0.5, 1),
 #'                                  noise_sp_ratio = c(1)), "cartesian")
 #'
-#' mod1 <- spLMstack(y ~ x1, data = dat,
+#' mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   candidate.models = cand.mod,

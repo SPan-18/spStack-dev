@@ -56,8 +56,7 @@ prior.}
 
 \item{candidate.models}{an object of class \code{candidateModels} containing a
 list of candidate models for stacking, each with tags \code{phi_s}, \code{phi_t} and
-\code{noise_sp_ratio}: vectors of length \eqn{r} if \code{process.type =
-'independent'} (use \code{list()} entries in \code{\link[=candidateModels]{candidateModels()}}), otherwise
+\code{noise_sp_ratio}: vectors of length \eqn{r} if \code{process.type = 'independent'} (use \code{list()} entries in \code{\link[=candidateModels]{candidateModels()}}), otherwise
 scalars. See \code{\link[=candidateModels]{candidateModels()}} for details.}
 
 \item{n.samples}{number of posterior samples to be generated.}
@@ -102,7 +101,7 @@ particular model.}
 \item{\code{model.params}}{a list with one element per candidate model, each a
 named list of its parameters: \code{phi_s}, \code{phi_t} and
 \code{noise_sp_ratio} (vectors of length \eqn{r} if \code{process.type =
-'independent'}).}
+ 'independent'}).}
 \item{\code{stacking.summary}}{a matrix with one row per candidate model,
 containing its parameters and its optimal stacking weight, for display.}
 \item{\code{stacking.weights}}{a numeric vector of length equal to the number of
@@ -148,12 +147,12 @@ distribution \eqn{p(\sigma^2, \beta, z \mid y, M_g)} (see \code{\link[=stvcLMexa
 and find the leave-one-out predictive densities \eqn{p(y_i \mid y_{-i},
 M_g)}. The stacking weights solve
 \deqn{
-\begin{aligned}
-\max_{w_1, \ldots, w_G}& \, \frac{1}{n} \sum_{i = 1}^n \log \sum_{g = 1}^G
-w_g p(y_i \mid y_{-i}, M_g) \\
-\text{subject to} & \quad w_g \geq 0, \sum_{g = 1}^G w_g = 1.
-\end{aligned}
-}
+ \begin{aligned}
+ \max_{w_1, \ldots, w_G}& \, \frac{1}{n} \sum_{i = 1}^n \log \sum_{g = 1}^G
+ w_g p(y_i \mid y_{-i}, M_g) \\
+ \text{subject to} & \quad w_g \geq 0, \sum_{g = 1}^G w_g = 1.
+ \end{aligned}
+ }
 Candidate models that share the process parameters \eqn{(\phi_s, \phi_t)}
 are fitted together, building and factorizing the spatial-temporal
 correlation matrices only once.
@@ -161,38 +160,35 @@ correlation matrices only once.
 \examples{
 \donttest{
 set.seed(1234)
-n <- 100
-dat <- data.frame(s1 = runif(n), s2 = runif(n), t_coords = runif(n),
-                 x1 = rnorm(n))
-dat$slope <- 0.5 + sin(2 * pi * dat$s1) * cos(pi * dat$t_coords)
-dat$y <- 1 + dat$slope * dat$x1 + rnorm(n, sd = 0.5)
+data(simSpaceTime)
+dat <- simSpaceTime[1:100, ]
 
 # processes sharing (phi_s, phi_t, noise_sp_ratio): scalar candidates
-mod.list <- candidateModels(list(phi_s = c(1, 3), phi_t = c(0.5, 2),
-                                noise_sp_ratio = c(0.5, 2)), "cartesian")
-mod1 <- stvcLMstack(y ~ x1 + (x1), data = dat,
-                   sp_coords = as.matrix(dat[, c("s1", "s2")]),
-                   time_coords = as.matrix(dat[, "t_coords"]),
-                   cor.fn = "gneiting-decay",
-                   process.type = "independent.shared",
-                   candidate.models = mod.list,
-                   n.samples = 500)
+mod.list <- candidateModels(list(phi_s = c(2, 4), phi_t = c(1, 4),
+                                 noise_sp_ratio = c(0.5, 1)), "cartesian")
+mod1 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
+                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                    time_coords = as.matrix(dat[, "t_coords"]),
+                    cor.fn = "gneiting-decay",
+                    process.type = "independent.shared",
+                    candidate.models = mod.list,
+                    n.samples = 500)
 post_samps <- stackedSampler(mod1)
-slope <- sweep(post_samps$z[n + 1:n, ], 2, post_samps$beta[2, ], "+")
-cor(apply(slope, 1, median), dat$slope)
+n <- nrow(dat)
+cor(apply(post_samps$z[1:n, ], 1, median), dat$z1_true)
 
 # independent processes (r = 2): vector-valued candidates via list()
-mod.list2 <- candidateModels(list(phi_s = list(c(1, 1), c(3, 3)),
-                                 phi_t = list(c(1, 1)),
-                                 noise_sp_ratio = list(c(1, 1), c(2, 0.5))),
-                            "cartesian")
-mod2 <- stvcLMstack(y ~ x1 + (x1), data = dat,
-                   sp_coords = as.matrix(dat[, c("s1", "s2")]),
-                   time_coords = as.matrix(dat[, "t_coords"]),
-                   cor.fn = "gneiting-decay",
-                   process.type = "independent",
-                   candidate.models = mod.list2,
-                   n.samples = 500, verbose = FALSE)
+mod.list2 <- candidateModels(list(phi_s = list(c(3, 6), c(2, 2)),
+                                  phi_t = list(c(4, 2)),
+                                  noise_sp_ratio = list(c(0.5, 1), c(1, 1))),
+                             "cartesian")
+mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
+                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                    time_coords = as.matrix(dat[, "t_coords"]),
+                    cor.fn = "gneiting-decay",
+                    process.type = "independent",
+                    candidate.models = mod.list2,
+                    n.samples = 500, verbose = FALSE)
 }
 }
 \references{

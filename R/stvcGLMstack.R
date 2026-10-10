@@ -127,16 +127,16 @@
 #' @examples
 #' \donttest{
 #' set.seed(1234)
-#' data("sim_stvcPoisson")
-#' dat <- sim_stvcPoisson[1:100, ]
+#' data(simSpaceTime)
+#' dat <- simSpaceTime[1:100, ]
 #'
 #' # create list of candidate models (multivariate)
-#' mod.list2 <- candidateModels(list(phi_s = list(2, 3),
-#'                                   phi_t = list(1, 2),
+#' mod.list2 <- candidateModels(list(phi_s = list(2, 4),
+#'                                   phi_t = list(1, 4),
 #'                                   boundary = c(0.5, 0.75)), "cartesian")
 #'
 #' # fit a spatial-temporal varying coefficient model using predictive stacking
-#' mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
+#' mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
 #'                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
 #'                      time_coords = as.matrix(dat[, "t_coords"]),
 #'                      cor.fn = "gneiting-decay",
@@ -144,6 +144,7 @@
 #'                      candidate.models = mod.list2,
 #'                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
 #'                      n.samples = 500)
+#' post_samps <- stackedSampler(mod1)
 #' }
 #' @export
 stvcGLMstack <- function(formula, data = parent.frame(), family,

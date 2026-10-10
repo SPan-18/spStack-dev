@@ -78,19 +78,19 @@ densities.}
 the exponential correlation function) and \code{noise_sp_ratio}
 (noise-to-spatial variance ratio).}
 \item{diagnostics}{a list of fit diagnostics, obtained from quantities the
- fit computes anyway. Element \code{numerical} is a data frame with one row
- and columns \code{min.pivot} (the smallest relative Cholesky pivot of the
- \eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a
- nearly singular covariance matrix), \code{min.cor} and \code{max.cor} (the
- correlations of the two farthest-apart and of the two closest locations;
- values of \code{min.cor} above 0.95 suggest an effective range far
- exceeding the extent of the data, values of \code{max.cor} below 0.05
- nearly uncorrelated locations). If \code{loopd.method = 'PSIS'}, element
- \code{pareto} is a list with the Pareto \eqn{k} diagnostic values of the
- leave-one-out predictive densities (\code{k}), the threshold above which
- they are unreliable (\code{threshold}, Vehtari \emph{et al.} 2024) and the
- number of values above it (\code{n.high}). If \code{verbose = TRUE}, a
- "Diagnostics" section is printed when any threshold is crossed.}
+fit computes anyway. Element \code{numerical} is a data frame with one row
+and columns \code{min.pivot} (the smallest relative Cholesky pivot of the
+\eqn{n \times n}{n x n} factorizations; values below 1e-8 indicate a
+nearly singular covariance matrix), \code{min.cor} and \code{max.cor} (the
+correlations of the two farthest-apart and of the two closest locations;
+values of \code{min.cor} above 0.95 suggest an effective range far
+exceeding the extent of the data, values of \code{max.cor} below 0.05
+nearly uncorrelated locations). If \code{loopd.method = 'PSIS'}, element
+\code{pareto} is a list with the Pareto \eqn{k} diagnostic values of the
+leave-one-out predictive densities (\code{k}), the threshold above which
+they are unreliable (\code{threshold}, Vehtari \emph{et al.} 2024) and the
+number of values above it (\code{n.high}). If \code{verbose = TRUE}, a
+"Diagnostics" section is printed when any threshold is crossed.}
 }
 The return object might include additional data used for subsequent
 prediction and/or model fit evaluation.
@@ -132,41 +132,31 @@ subsequently, we sample \eqn{z} conditioned on the posterior samples of
 spatial variance are obtained as \eqn{\sigma^2_z = \sigma^2 / \delta^2}.
 }
 \examples{
-# load data
-data(simGaussian)
-dat <- simGaussian[1:100, ]
+data(simSpatial)
+dat <- simSpatial[1:100, ]
 
 # setup prior list
-muBeta <- c(0, 0)
-VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
+muBeta <- c(0, 0, 0)
+VBeta <- diag(100, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
-# supply fixed values of model parameters
-phi0 <- 3
-nu0 <- 0.75
-noise.sp.ratio <- 0.8
-
-mod1 <- spLMexact(y ~ x1, data = dat,
+mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  spParams = list(phi = phi0, nu = nu0),
-                  noise_sp_ratio = noise.sp.ratio,
+                  spParams = list(phi = 6, nu = 0.5),
+                  noise_sp_ratio = 0.5,
                   n.samples = 100,
                   loopd = TRUE, loopd.method = "exact")
 
-beta.post <- mod1$samples$beta
-z.post.median <- apply(mod1$samples$z, 1, median)
-dat$z.post.median <- z.post.median
-plot1 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-                     var_name = "z_true")
-plot2 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-                     var_name = "z.post.median")
-plot1
-plot2
+post_beta <- mod1$samples$beta
+print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+
+# compare the posterior medians of the spatial effects with the truth
+cor(apply(mod1$samples$z, 1, median), dat$z_true)
 }
 \references{
 Banerjee S (2020). "Modeling massive spatial datasets using a

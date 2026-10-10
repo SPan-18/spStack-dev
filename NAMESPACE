@@ -8,7 +8,6 @@ export(get_stacking_weights)
 export(iDist)
 export(posteriorPredict)
 export(recoverGLMscale)
-export(sim_spData)
 export(spGLMexact)
 export(spGLMstack)
 export(spLMexact)
@@ -44,17 +43,12 @@ importFrom(parallel,detectCores)
 importFrom(rstudioapi,isAvailable)
 importFrom(stats,
   as.formula,
-  dist,
   is.empty.model,
   model.frame,
   model.matrix,
   model.response,
   na.omit,
   na.pass,
-  rbinom,
-  rnorm,
-  rpois,
-  runif,
   terms
 )
 importFrom(utils,getFromNamespace)

@@ -132,16 +132,13 @@
 #' @examples
 #' \donttest{
 #' set.seed(1234)
-#' n <- 100
-#' dat <- data.frame(s1 = runif(n), s2 = runif(n), t_coords = runif(n),
-#'                   x1 = rnorm(n))
-#' dat$slope <- 0.5 + sin(2 * pi * dat$s1) * cos(pi * dat$t_coords)
-#' dat$y <- 1 + dat$slope * dat$x1 + rnorm(n, sd = 0.5)
+#' data(simSpaceTime)
+#' dat <- simSpaceTime[1:100, ]
 #'
 #' # processes sharing (phi_s, phi_t, noise_sp_ratio): scalar candidates
-#' mod.list <- candidateModels(list(phi_s = c(1, 3), phi_t = c(0.5, 2),
-#'                                  noise_sp_ratio = c(0.5, 2)), "cartesian")
-#' mod1 <- stvcLMstack(y ~ x1 + (x1), data = dat,
+#' mod.list <- candidateModels(list(phi_s = c(2, 4), phi_t = c(1, 4),
+#'                                  noise_sp_ratio = c(0.5, 1)), "cartesian")
+#' mod1 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
 #'                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
 #'                     time_coords = as.matrix(dat[, "t_coords"]),
 #'                     cor.fn = "gneiting-decay",
@@ -149,15 +146,15 @@
 #'                     candidate.models = mod.list,
 #'                     n.samples = 500)
 #' post_samps <- stackedSampler(mod1)
-#' slope <- sweep(post_samps$z[n + 1:n, ], 2, post_samps$beta[2, ], "+")
-#' cor(apply(slope, 1, median), dat$slope)
+#' n <- nrow(dat)
+#' cor(apply(post_samps$z[1:n, ], 1, median), dat$z1_true)
 #'
 #' # independent processes (r = 2): vector-valued candidates via list()
-#' mod.list2 <- candidateModels(list(phi_s = list(c(1, 1), c(3, 3)),
-#'                                   phi_t = list(c(1, 1)),
-#'                                   noise_sp_ratio = list(c(1, 1), c(2, 0.5))),
+#' mod.list2 <- candidateModels(list(phi_s = list(c(3, 6), c(2, 2)),
+#'                                   phi_t = list(c(4, 2)),
+#'                                   noise_sp_ratio = list(c(0.5, 1), c(1, 1))),
 #'                              "cartesian")
-#' mod2 <- stvcLMstack(y ~ x1 + (x1), data = dat,
+#' mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
 #'                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
 #'                     time_coords = as.matrix(dat[, "t_coords"]),
 #'                     cor.fn = "gneiting-decay",

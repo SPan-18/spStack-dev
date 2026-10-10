@@ -31,7 +31,8 @@ plotted}
 as appearing in the \code{\link[MBA:mba.surf]{MBA::mba.surf()}} function. Default is 8.}
 
 \item{col.pal}{Optional; color palette, preferably divergent, use
-\code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.}
+\code{colorRampPalette} function from \code{grDevices}. Default is the
+colorblind-friendly diverging palette 'RdBu' from ColorBrewer.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked.
 Default is \code{FALSE}.}
@@ -44,9 +45,9 @@ Make two side-by-side surface plots, particularly useful towards
 a comparative study of two spatial surfaces.
 }
 \examples{
-data(simGaussian)
-plots_2 <- surfaceplot2(simGaussian, coords_name = c("s1", "s2"),
-                        var1_name = "z_true", var2_name = "y")
+data(simSpatial)
+plots_2 <- surfaceplot2(simSpatial, coords_name = c("s1", "s2"),
+                        var1_name = "z_true", var2_name = "y_gauss")
 plots_2
 }
 \author{

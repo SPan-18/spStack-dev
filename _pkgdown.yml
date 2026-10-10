@@ -24,6 +24,7 @@ reference:
   - spLMstack
   - spGLMstack
   - stvcGLMstack
+  - stvcLMstack
   - candidateModels
 - title: Exact samplers and finds LOO-PD
   desc: |
@@ -32,6 +33,7 @@ reference:
   - spLMexact
   - spGLMexact
   - stvcGLMexact
+  - stvcLMexact
 - title: Downstream posterior sampling
   desc: |
     Posterior recovery of scale parameters and posterior predictive inference
@@ -60,14 +62,10 @@ reference:
   - cholUpdateDelBlock
 - title: Synthetic datasets
   desc: |
-    Various simulated spatial data sampled on unit square
+    Simulated spatial and spatial-temporal data on the unit square
   contents:
-  - sim_stvcPoisson
-  - simBinary
-  - simBinom
-  - simGaussian
-  - simPoisson
-  - sim_spData
+  - simSpatial
+  - simSpaceTime
 - title: Other utilities
   contents:
   - spStack

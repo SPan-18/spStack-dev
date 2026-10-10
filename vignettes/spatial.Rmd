@@ -53,19 +53,23 @@ library(spStack)
 library(ggplot2)
 library(patchwork)
 ```
-Some synthetic spatial data are lazy-loaded which includes synthetic spatial Gaussian data `simGaussian`, Poisson data `simPoisson`, binomial data `simBinom` and binary data `simBinary`. One can use the function `sim_spData()` to simulate spatial data. We will be applying our functions on these datasets.
+The package lazy-loads the synthetic dataset `simSpatial`, observed at 500 locations in the unit square. It has two covariates `x1` and `x2`, a spatial effect `z_true` with a ripple pattern, $z(s) = 1.5 \sin(4\pi \lVert s - (0.5, 0.5) \rVert)$, and one response for each family: Gaussian `y_gauss`, Poisson `y_pois`, binomial `y_binom` (out of `n_trials` trials) and binary `y_bin`. All the responses share the covariates and the spatial effect, so we apply every function in this article to the same data. The spatial effect is a deterministic surface, not a draw from a Gaussian process, so we can see how well the Gaussian process models recover it. See `?simSpatial` for the code that generated the data.
+
+```{r fig.align='center', fig.alt="Interpolated surface of the true spatial effect."}
+data("simSpatial")
+surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true")
+```
 
 ### Using fixed hyperparameters
-We first load the data `simGaussian` and set up the priors. Supplying the priors is optional. See the documentation of `spLMexact()` to learn more about the default priors. Besides, setting the priors, we also fix the values of the spatial process parameters (spatial decay $\phi$ and smoothness $\nu$) and the noise-to-spatial variance ratio ($\delta^2$).
+We first take the first 200 rows of the data and set up the priors. Supplying the priors is optional. See the documentation of `spLMexact()` to learn more about the default priors. Besides, setting the priors, we also fix the values of the spatial process parameters (spatial decay $\phi$ and smoothness $\nu$) and the noise-to-spatial variance ratio ($\delta^2$).
 ```{r}
-data("simGaussian")
-dat <- simGaussian[1:200, ] # work with first 200 rows
+dat <- simSpatial[1:200, ] # work with first 200 rows
 
-muBeta <- c(0, 0)
-VBeta <- cbind(c(1E4, 0.0), c(0.0, 1E4))
+muBeta <- c(0, 0, 0)
+VBeta <- diag(1E4, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 2
-phi0 <- 3
+phi0 <- 6
 nu0 <- 0.5
 noise_sp_ratio <- 0.8
 prior_list <- list(beta.norm = list(muBeta, VBeta),
@@ -73,13 +77,13 @@ prior_list <- list(beta.norm = list(muBeta, VBeta),
 nSamples <- 1000
 ```
 
-We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y ~ x1` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + z(s) + \epsilon(s)\;,$$ where the `y` corresponds to the response variable $y(s)$, which is regressed on the predictor `x1` given by $x_1(s)$. The intercept is automatically considered within the model, and hence `y ~ x1` is functionally equivalent to `y ~ 1 + x1`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`.
+We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y_gauss ~ x1 + x2` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + \beta_2 x_2(s) + z(s) + \epsilon(s)\;,$$ where `y_gauss` corresponds to the response variable $y(s)$, which is regressed on the predictors `x1` and `x2` given by $x_1(s)$ and $x_2(s)$. The intercept is automatically considered within the model, and hence `y_gauss ~ x1 + x2` is functionally equivalent to `y_gauss ~ 1 + x1 + x2`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`.
 
 If interested in calculation of leave-one-out predictive densities (LOO-PD), `loopd`  must be set `TRUE` (the default is `FALSE`). Method of LOO-PD calculation can be also set by the option `loopd.method` which support the keywords `"exact"` and `"psis"`. The option `"exact"` exploits the analytically available expressions of the predictive density and implements an efficient row-deletion Cholesky factor update for fast calculation and avoids refitting the model $n$ times, where $n$ is the sample size. On the other hand, `"psis"` implements Pareto-smoothed importance sampling and finds approximate LOO-PD and is much faster than `"exact"`.
 
 We pass these arguments into the function `spLMexact()`.
 ```{r spLMexactLOO_exact}
-mod1 <- spLMexact(y ~ x1, data = dat,
+mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
@@ -100,7 +104,7 @@ print(summary_beta)
 ### Leave-one-out predictive densities using PSIS
 Out of curiosity, we find the LOO-PD for the same model using the approximate method that uses Pareto-smoothed importance sampling, or PSIS. See @LOOCV_vehtari17 for details.
 ```{r spLMexactLOO_PSIS}
-mod2 <- spLMexact(y ~ x1, data = dat,
+mod2 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
@@ -129,12 +133,12 @@ plot1
 ### Using predictive stacking
 Next, we move on to the Bayesian spatial stacking algorithm for Gaussian data. We supply the same prior list and provide candidate models constructed using `candidateModels()`.
 ```{r spLMstack}
-cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10),
                                  nu = c(0.5, 1, 1.5),
                                  noise_sp_ratio = c(0.5, 1.5)),
                             "cartesian")
 
-mod3 <- spLMstack(y ~ x1, data = dat,
+mod3 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
@@ -164,8 +168,8 @@ rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
 ```
 
-The synthetic data `simGaussian` was simulated using the true value $\beta = (2, 5)^\T$. We notice that the stacked posterior is concentrated around the truth.
-```{r, fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the fixed effects"}
+The response `y_gauss` was simulated using the true value $\beta = (2, 5, -1)^\T$. We notice that the stacked posterior is concentrated around the truth.
+```{r, fig.align='center', fig.height=3, fig.width=8, fig.alt="Posterior distributions of the fixed effects"}
 library(tidyr)
 library(dplyr)
 
@@ -174,8 +178,8 @@ post_beta_df <- post_beta_df %>%
   mutate(row = paste0("beta", row_number()-1)) %>%
   pivot_longer(-row, names_to = "sample", values_to = "value")
 
-# True values of beta0 and beta1
-truth <- data.frame(row = c("beta0", "beta1"), true_value = c(2, 5))
+# True values of beta0, beta1 and beta2
+truth <- data.frame(row = c("beta0", "beta1", "beta2"), true_value = c(2, 5, -1))
 
 ggplot(post_beta_df, aes(x = value)) +
   geom_density(fill = "lightblue", alpha = 0.6) +
@@ -220,23 +224,11 @@ The effect of a covariate may itself vary over space. The functions `stvcLMexact
 $$y(\ell) = x(\ell)^\T \beta + \tilde{x}(\ell)^\T z(\ell) + \epsilon(\ell), \quad \epsilon(\ell) \sim \N(0, \sigma^2),$$
 where each of the $r$ varying coefficients $z_j$ is an independent Gaussian process with variance $\sigma^2_{z_j} = \sigma^2/\delta^2_j$ and a Gneiting space-time correlation function with decay parameters $\phi_s$ and $\phi_t$. The joint posterior is available in closed form and is sampled exactly. If all observations share one time point, the Gneiting correlation reduces to the exponential correlation $\exp(-\phi_s \lVert s - s' \rVert)$ ($\phi_t$ then has no effect), and these functions fit a spatially varying coefficients model.
 
-We simulate data from the model $$y(s) = \beta_0 + z_0(s) + \{\beta_1 + z_1(s)\} x_1(s) + \epsilon(s)\;,$$ with $\beta = (1, 2)^\T$, independent processes $z_0$ and $z_1$ with exponential correlation ($\phi = 3$) and unit variance, and $\sigma^2 = 0.2$, so that $\delta^2 = 0.2$.
-```{r}
-n <- 250
-s1 <- runif(n); s2 <- runif(n)
-x1 <- rnorm(n)
-R <- exp(-3 * as.matrix(dist(cbind(s1, s2))))
-L <- t(chol(R))
-z0 <- drop(L %*% rnorm(n))          # varying intercept
-z1 <- drop(L %*% rnorm(n))          # varying slope of x1
-y <- 1 + z0 + (2 + z1) * x1 + rnorm(n, sd = sqrt(0.2))
-dat_svc <- data.frame(s1, s2, x1, y, slope_true = 2 + z1)
-```
-
-In the `formula`, the variables in parentheses receive varying coefficients: `y ~ x1 + (1 + x1)` has fixed effects for the intercept and `x1`, and varying coefficients for both (the intercept is included in both parts by default, so `y ~ x1 + (x1)` is the same model). With `process.type = "independent.shared"`, the processes share the decay parameters and the noise-to-spatial variance ratio; with `process.type = "independent"`, each process has its own, supplied as vectors of length $r$. We supply a constant time coordinate.
+The response `y_svc` of `simSpatial` was simulated from $$y(s) = 2 + \{5 + z(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \N(0, 0.5^2)\;,$$ so that the ripple $z(s)$ is now the spatially varying part of the slope of $x_1$. In the `formula`, the variables in parentheses receive varying coefficients: `y_svc ~ x1 + x2 + (x1)` has fixed effects for the intercept, `x1` and `x2`, and varying coefficients for the intercept and `x1` (the intercept is included in both parts by default). With `process.type = "independent.shared"`, the processes share the decay parameters and the noise-to-spatial variance ratio; with `process.type = "independent"`, each process has its own, supplied as vectors of length $r$. We supply a constant time coordinate.
 ```{r stvcLMexact_svc}
-mod4 <- stvcLMexact(y ~ x1 + (1 + x1), data = dat_svc,
-                    sp_coords = as.matrix(dat_svc[, c("s1", "s2")]),
+n <- nrow(dat)
+mod4 <- stvcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
+                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = matrix(0, n, 1),
                     cor.fn = "gneiting-decay",
                     process.type = "independent.shared",
@@ -245,7 +237,7 @@ mod4 <- stvcLMexact(y ~ x1 + (1 + x1), data = dat_svc,
                     n.samples = 1000, loopd = TRUE, verbose = TRUE)
 ```
 
-The posterior samples of the fixed effects, the noise variance $\sigma^2$, and the process variances $\sigma^2_z = \sigma^2/\delta^2$ are summarized below.
+The posterior samples of the fixed effects, the noise variance $\sigma^2$, and the process variance $\sigma^2_z = \sigma^2/\delta^2$ are summarized below.
 ```{r}
 summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod4$X.names
@@ -256,11 +248,11 @@ print(quantile(mod4$samples$sigmaSq.z, c(0.025, 0.5, 0.975)))
 
 Next, we use predictive stacking over candidate values of $\phi_s$ and $\delta^2$. For `process.type = "independent"`, each candidate value is a vector of length $r$, supplied as `list()` entries in `candidateModels()`.
 ```{r stvcLMstack_svc}
-cand.svc <- candidateModels(list(phi_s = c(1.5, 3, 6), phi_t = 1,
-                                 noise_sp_ratio = c(0.2, 1)), "cartesian")
+cand.svc <- candidateModels(list(phi_s = c(3, 6, 10), phi_t = 1,
+                                 noise_sp_ratio = c(0.1, 0.5)), "cartesian")
 
-mod5 <- stvcLMstack(y ~ x1 + (1 + x1), data = dat_svc,
-                    sp_coords = as.matrix(dat_svc[, c("s1", "s2")]),
+mod5 <- stvcLMstack(y_svc ~ x1 + x2 + (x1), data = dat,
+                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = matrix(0, n, 1),
                     cor.fn = "gneiting-decay",
                     process.type = "independent.shared",
@@ -269,11 +261,11 @@ mod5 <- stvcLMstack(y ~ x1 + (1 + x1), data = dat_svc,
 post_svc <- stackedSampler(mod5)
 ```
 
-The samples of $z$ are stacked by process: rows $1, \ldots, n$ hold $z_0$ and rows $n+1, \ldots, 2n$ hold $z_1$. The varying slope of `x1` at each location is $\beta_1 + z_1(s)$, which we compare with its true value.
+The samples of $z$ are stacked by process: rows $1, \ldots, n$ hold the varying intercept and rows $n+1, \ldots, 2n$ the varying part of the slope of `x1`. The slope of `x1` at each location is $\beta_1 + z_2(s)$, whose true value is $5 + z(s)$.
 ```{r fig.align='center', fig.alt="Stacked posterior of the spatially varying slope against its true value"}
 slope <- sweep(post_svc$z[n + seq_len(n), ], 2, post_svc$beta[2, ], "+")
 slope_summ <- t(apply(slope, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-slope_df <- data.frame(truth = dat_svc$slope_true, sL = slope_summ[, 1],
+slope_df <- data.frame(truth = 5 + dat$z_true, sL = slope_summ[, 1],
                        sM = slope_summ[, 2], sU = slope_summ[, 3])
 
 ggplot(data = slope_df, aes(x = truth)) +
@@ -288,8 +280,9 @@ ggplot(data = slope_df, aes(x = truth)) +
 
 Finally, we compare the interpolated surfaces of the true slope and its posterior median.
 ```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Interpolated surfaces of the true spatially varying slope and its posterior median."}
-dat_svc$slope_hat <- slope_summ[, 2]
-plot_slope <- surfaceplot2(dat_svc, coords_name = c("s1", "s2"),
+dat$slope_true <- 5 + dat$z_true
+dat$slope_hat <- slope_summ[, 2]
+plot_slope <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                            var1_name = "slope_true", var2_name = "slope_hat")
 patchwork::wrap_plots(plot_slope) +
     patchwork::plot_layout(guides = "collect") &
@@ -301,14 +294,11 @@ patchwork::wrap_plots(plot_slope) +
 We also offer functions for Bayesian analysis of spatially point-referenced Poisson, binomial count, and binary data.
 
 #### Spatial Poisson count data
-We first load and plot the point-referenced Poisson count data.
+We plot the Poisson counts `y_pois` at the same 200 locations.
 ```{r fig.align='center'}
-data("simPoisson")
-dat <- simPoisson[1:200, ] # work with first 200 observations
-
 ggplot(dat, aes(x = s1, y = s2)) +
-  geom_point(aes(color = y), alpha = 0.75) +
-  scale_color_distiller(palette = "RdYlGn", direction = -1,
+  geom_point(aes(color = y_pois), alpha = 0.75) +
+  scale_color_distiller(palette = "RdBu", direction = -1,
                         label = function(x) sprintf("%.0f", x)) +
   guides(alpha = 'none') + theme_bw() +
   theme(axis.ticks = element_line(linewidth = 0.25),
@@ -318,12 +308,12 @@ ggplot(dat, aes(x = s1, y = s2)) +
 ```
 
 #### Under fixed hyperparameters
-Next, we demonstrate the function `spGLMexact()` which delivers posterior samples of the fixed effects and the spatial random effects. The option `family` must be specified correctly while using this function. For instance, in the following example, the formula `y ~ x1` and `family = "poisson"` corresponds to the spatial regression model $$y(s) \sim \mathsf{Poisson} (\lambda(s)), \quad \log \lambda(s) = \beta_0 + \beta_1 x_1(s) + z(s)\;.$$
+Next, we demonstrate the function `spGLMexact()` which delivers posterior samples of the fixed effects and the spatial random effects. The option `family` must be specified correctly while using this function. For instance, in the following example, the formula `y_pois ~ x1 + x2` and `family = "poisson"` corresponds to the spatial regression model $$y(s) \sim \mathsf{Poisson} (\lambda(s)), \quad \log \lambda(s) = \beta_0 + \beta_1 x_1(s) + \beta_2 x_2(s) + z(s)\;.$$
 
 We provide fixed values of the spatial process parameters and a boundary adjustment parameter, given by the argument `boundary`, which if not supplied, defaults to 0.5. For details on the priors and its default value, see function documentation.
 
 ```{r spGLMexact_Pois}
-mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
+mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    spParams = list(phi = phi0, nu = nu0),
                    priors = list(nu.beta = 5, nu.z = 5),
@@ -331,7 +321,7 @@ mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
                    n.samples = 1000, verbose = TRUE)
 ```
 
-We next collect the samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (2, -0.5)$ (for more details, see the documentation of the data `simPoisson`).
+We next collect the samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (2, -0.5, 0.3)$ (for more details, see the documentation of the data `simSpatial`).
 ```{r}
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
@@ -359,10 +349,10 @@ ggplot(post_scale_df, aes(x = value)) +
 #### Using predictive stacking
 Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD.
 ```{r spGLMstack_Pois}
-cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.5, 1.5),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.5),
                                  boundary = c(0.5, 0.6)), "cartesian")
 
-mod2 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
                    n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
@@ -392,19 +382,19 @@ Subsequently, we summarize the posterior samples of the fixed effects.
 ```{r}
 post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-rownames(summary_beta) <- mod3$X.names
+rownames(summary_beta) <- mod2$X.names
 print(summary_beta)
 ```
 
-The synthetic data `simPoisson` was simulated using $\beta = (2, -0.5)^\T$.
-```{r, fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Posterior distributions of the fixed effects"}
+The response `y_pois` was simulated using $\beta = (2, -0.5, 0.3)^\T$.
+```{r, fig.align='center', fig.height=3, fig.width=8, fig.alt="Posterior distributions of the fixed effects"}
 post_beta_df <- as.data.frame(post_beta)
 post_beta_df <- post_beta_df %>%
   mutate(row = paste0("beta", row_number()-1)) %>%
   pivot_longer(-row, names_to = "sample", values_to = "value")
 
-# True values of beta0 and beta1
-truth <- data.frame(row = c("beta0", "beta1"), true_value = c(2, -0.5))
+# True values of beta0, beta1 and beta2
+truth <- data.frame(row = c("beta0", "beta1", "beta2"), true_value = c(2, -0.5, 0.3))
 
 ggplot(post_beta_df, aes(x = value)) +
   geom_density(fill = "lightblue", alpha = 0.6) +
@@ -445,18 +435,15 @@ patchwork::wrap_plots(plot_z) +
 ```
 
 ### Spatial binomial count data
-This will follow the same workflow as Poisson data with the exception that the structure of `formula` that defines the model will also contain the total number of trials at each location. Here, we present only the `spGLMexact()` function for brevity.
+This will follow the same workflow as Poisson data with the exception that the structure of `formula` that defines the model will also contain the total number of trials at each location. We use the binomial counts `y_binom` out of `n_trials` trials at the same 200 locations. Here, we present only the `spGLMexact()` function for brevity.
 ```{r}
-data("simBinom")
-dat <- simBinom[1:200, ] # work with first 200 rows
-
-mod1 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
+mod1 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 3, nu = 0.5),
+                   spParams = list(phi = 6, nu = 0.5),
                    boundary = 0.5, n.samples = 1000, verbose = FALSE)
 ```
 
-Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5)$.
+Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5, 0.5)$.
 ```{r}
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
@@ -465,18 +452,15 @@ print(summary_beta)
 ```
 
 ### Spatial binary data
-Finally, we present only the `spGLMexact()` function for spatial binary data to avoid repetition. In this case, unlike the binomial model, almost nothing changes from that of in the case of spatial Poisson data.
+Finally, we present only the `spGLMexact()` function for the spatial binary data `y_bin` to avoid repetition. In this case, unlike the binomial model, almost nothing changes from that of in the case of spatial Poisson data.
 ```{r}
-data("simBinary")
-dat <- simBinary[1:200, ]
-
-mod1 <- spGLMexact(y ~ x1, data = dat, family = "binary",
+mod1 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 4, nu = 0.4),
+                   spParams = list(phi = 6, nu = 0.5),
                    boundary = 0.5, n.samples = 1000, verbose = FALSE)
 ```
 
-Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5)$.
+Similarly, we collect the posterior samples of the fixed effects and summarize them. The true value of the fixed effects with which the data was simulated is $\beta = (0.5, -0.5, 0.5)$.
 ```{r}
 post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))

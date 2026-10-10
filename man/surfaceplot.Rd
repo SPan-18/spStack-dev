@@ -19,7 +19,8 @@ the points}
 as appearing in the \code{\link[MBA:mba.surf]{MBA::mba.surf()}} function. Default is 8.}
 
 \item{col.pal}{Optional; color palette, preferably divergent, use
-\code{colorRampPalette} function from \code{grDevices}. Default is 'RdYlBu'.}
+\code{colorRampPalette} function from \code{grDevices}. Default is the
+colorblind-friendly diverging palette 'RdBu' from ColorBrewer.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked.
 Default is \code{FALSE}.}
@@ -31,16 +32,15 @@ a \code{ggplot} object containing the surface plot
 Make a surface plot
 }
 \examples{
-data(simGaussian)
-plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
+data(simSpatial)
+plot1 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
                      var_name = "z_true")
 plot1
 
 # try your favourite color palette
-col.br <- colorRampPalette(c("blue", "white", "red"))
-col.br.pal <- col.br(100)
-plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
-                     var_name = "z_true", col.pal = col.br.pal)
+plot2 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
+                     var_name = "z_true",
+                     col.pal = hcl.colors(100, "PuOr", rev = TRUE))
 plot2
 }
 \author{

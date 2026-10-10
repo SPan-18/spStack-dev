@@ -173,27 +173,23 @@ exact leave-one-out predictive densities are obtained in closed form from
 the same factorizations.
 }
 \examples{
-set.seed(1234)
-n <- 100
-dat <- data.frame(s1 = runif(n), s2 = runif(n), t_coords = runif(n),
-                 x1 = rnorm(n))
-# the slope of x1 varies smoothly over space and time
-dat$slope <- 0.5 + sin(2 * pi * dat$s1) * cos(pi * dat$t_coords)
-dat$y <- 1 + dat$slope * dat$x1 + rnorm(n, sd = 0.5)
+data(simSpaceTime)
+dat <- simSpaceTime[1:100, ]
 
-mod1 <- stvcLMexact(y ~ x1 + (x1), data = dat,
-                   sp_coords = as.matrix(dat[, c("s1", "s2")]),
-                   time_coords = as.matrix(dat[, "t_coords"]),
-                   cor.fn = "gneiting-decay",
-                   process.type = "independent",
-                   sptParams = list(phi_s = c(2, 3), phi_t = c(1, 1)),
-                   noise_sp_ratio = c(1, 0.5),
-                   n.samples = 500, loopd = TRUE, verbose = FALSE)
+mod1 <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
+                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                    time_coords = as.matrix(dat[, "t_coords"]),
+                    cor.fn = "gneiting-decay",
+                    process.type = "independent",
+                    sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                    noise_sp_ratio = c(0.5, 1),
+                    n.samples = 500, loopd = TRUE, verbose = FALSE)
 
-# rows n+1, ..., 2n of z hold the process of x1; its varying slope is
-# beta_1 + z_2
-slope <- sweep(mod1$samples$z[n + 1:n, ], 2, mod1$samples$beta[2, ], "+")
-cor(apply(slope, 1, median), dat$slope)
+# rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the
+# varying slope of x1
+n <- nrow(dat)
+z_hat <- apply(mod1$samples$z, 1, median)
+cor(z_hat[1:n], dat$z1_true)
 }
 \references{
 Bhattacharya A, Chakraborty A, Mallick BK (2016). "Fast sampling

@@ -40,17 +40,15 @@
 #' n_pred <- 10
 #'
 #' # Example 1: Spatial linear model
-#' # load and split data into training and prediction sets
-#' data(simGaussian)
-#' dat <- simGaussian
-#' dat_train <- dat[1:n_train, ]
-#' dat_pred <- dat[n_train + 1:n_pred, ]
+#' # split the data into training and prediction sets
+#' data(simSpatial)
+#' dat_train <- simSpatial[1:n_train, ]
+#' dat_pred <- simSpatial[n_train + 1:n_pred, ]
 #'
 #' # fit a spatial linear model using predictive stacking
-#' cand.mod <- candidateModels(list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
-#'                                  noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
-#'
-#' mod1 <- spLMstack(y ~ x1, data = dat_train,
+#' cand.mod <- candidateModels(list(phi = c(3, 6), nu = c(0.5, 1),
+#'                                  noise_sp_ratio = c(0.5, 1)), "cartesian")
+#' mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
 #'                   coords = as.matrix(dat_train[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   candidate.models = cand.mod,
@@ -59,7 +57,7 @@
 #'
 #' # prepare new coordinates and covariates for prediction
 #' sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-#' X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+#' X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 #'
 #' # carry out posterior prediction
 #' mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new,
@@ -68,18 +66,9 @@
 #' # sample from the stacked posterior and posterior predictive distribution
 #' post_samps <- stackedSampler(mod.pred)
 #'
-#' # analyze posterior samples
-#' postpred_z <- post_samps$z.pred
-#' post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-#' z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
-#'                       zM = post_z_summ[, 2], zU = post_z_summ[, 3])
-#' library(ggplot2)
-#' ggplot(data = z_combn, aes(x = z)) +
-#'   geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, color = "skyblue") +
-#'   geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
-#'   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
-#'   xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
-#'   theme(panel.background = element_blank(), aspect.ratio = 1)
+#' # compare the predicted spatial effects with the truth
+#' z_pred <- apply(post_samps$z.pred, 1, median)
+#' cor(z_pred, dat_pred$z_true)
 #' @export
 posteriorPredict <- function(mod_out, coords_new, covars_new, joint = FALSE,
                              nBinom_new){

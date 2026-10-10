@@ -165,17 +165,23 @@
 #' *Statistics and Computing*, **27**(5), 1413-1432. ISSN 0960-3174.
 #' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
-#' data("sim_stvcPoisson")
-#' dat <- sim_stvcPoisson[1:100, ]
+#' data(simSpaceTime)
+#' dat <- simSpaceTime[1:100, ]
 #'
 #' # Fit a spatial-temporal varying coefficient Poisson GLM
-#' mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+#' mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
 #'                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
 #'                      time_coords = as.matrix(dat[, "t_coords"]),
 #'                      cor.fn = "gneiting-decay",
-#'                      process.type = "multivariate",
-#'                      sptParams = list(phi_s = 1, phi_t = 1),
+#'                      process.type = "independent",
+#'                      sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
 #'                      verbose = FALSE, n.samples = 100)
+#'
+#' # rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the
+#' # varying slope of x1
+#' n <- nrow(dat)
+#' z_hat <- apply(mod1$samples$z, 1, median)
+#' cor(z_hat[1:n], dat$z1_true)
 #' @export
 stvcGLMexact <- function(formula, data = parent.frame(), family,
                          sp_coords, time_coords, cor.fn,

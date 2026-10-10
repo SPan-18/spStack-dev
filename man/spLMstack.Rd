@@ -93,28 +93,28 @@ containing its parameters and its optimal stacking weight, for display.}
 candidate models storing the optimal stacking weights.}
 \item{\code{run.time}}{a \code{proc_time} object with runtime details.}
 \item{\code{diagnostics}}{a list of diagnostics. Element \code{numerical} is a
- data frame with one row per candidate model and columns \code{min.pivot}
- (the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
- factorizations; values below 1e-8 indicate a nearly singular covariance
- matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
- farthest-apart and of the two closest locations; values of \code{min.cor}
- above 0.95 suggest an effective range far exceeding the extent of the data,
- values of \code{max.cor} below 0.05 nearly uncorrelated locations),
- obtained from quantities the fits compute anyway. If
- \code{loopd.method = 'PSIS'}, element \code{pareto} is a list with the
- Pareto \eqn{k} diagnostic values of each candidate model (\code{k}), the
- threshold above which they are unreliable (\code{threshold}) and the
- number of values above it for each model (\code{n.high}). Element
- \code{solver} describes the optimization for the stacking weights: the
- solver used (\code{used}) and its status (\code{status}), the installed
- and requested solvers, the search order, the attempts with their status,
- and whether the fallback \code{loo::stacking_weights()} was used. If
- \code{verbose = TRUE}, a "Diagnostics" section is printed if there is an
- issue: numerical flags of candidate models with stacking weight above 0.05
- (extreme candidates with negligible weight are expected in a stacking grid
- and are only counted), Pareto \eqn{k} values above the threshold for any
- model, and solver problems (a requested solver not installed, an
- inaccurate solution, or the fallback).}
+data frame with one row per candidate model and columns \code{min.pivot}
+(the smallest relative Cholesky pivot of the \eqn{n \times n}{n x n}
+factorizations; values below 1e-8 indicate a nearly singular covariance
+matrix), \code{min.cor} and \code{max.cor} (the correlations of the two
+farthest-apart and of the two closest locations; values of \code{min.cor}
+above 0.95 suggest an effective range far exceeding the extent of the data,
+values of \code{max.cor} below 0.05 nearly uncorrelated locations),
+obtained from quantities the fits compute anyway. If
+\code{loopd.method = 'PSIS'}, element \code{pareto} is a list with the
+Pareto \eqn{k} diagnostic values of each candidate model (\code{k}), the
+threshold above which they are unreliable (\code{threshold}) and the
+number of values above it for each model (\code{n.high}). Element
+\code{solver} describes the optimization for the stacking weights: the
+solver used (\code{used}) and its status (\code{status}), the installed
+and requested solvers, the search order, the attempts with their status,
+and whether the fallback \code{loo::stacking_weights()} was used. If
+\code{verbose = TRUE}, a "Diagnostics" section is printed if there is an
+issue: numerical flags of candidate models with stacking weight above 0.05
+(extreme candidates with negligible weight are expected in a stacking grid
+and are only counted), Pareto \eqn{k} values above the threshold for any
+model, and solver problems (a requested solver not installed, an
+inaccurate solution, or the fallback).}
 }
 The return object might include additional data that is useful for subsequent
 prediction, model fit evaluation and other utilities.
@@ -146,27 +146,17 @@ to find the optimal stacking weights \eqn{\hat{w}_1, \ldots, \hat{w}_G}.
 }
 \examples{
 set.seed(1234)
-# load data and work with first 100 rows
-data(simGaussian)
-dat <- simGaussian[1:100, ]
+data(simSpatial)
+dat <- simSpatial[1:100, ]
 
-# setup prior list
-muBeta <- c(0, 0)
-VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
-sigmaSqIGa <- 2
-sigmaSqIGb <- 2
-prior_list <- list(beta.norm = list(muBeta, VBeta),
-                   sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
-
-cand.mod <- candidateModels(list(phi = c(1.5, 3),
+cand.mod <- candidateModels(list(phi = c(3, 6),
                                  nu = c(0.5, 1),
-                                 noise_sp_ratio = c(1)),
+                                 noise_sp_ratio = c(0.5, 1)),
                             "cartesian")
 
-mod1 <- spLMstack(y ~ x1, data = dat,
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  priors = prior_list,
                   candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
@@ -175,27 +165,8 @@ post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 
-post_z <- post_samps$z
-post_z_summ <- t(apply(post_z, 1,
-                       function(x) quantile(x, c(0.025, 0.5, 0.975))))
-
-z_combn <- data.frame(z = dat$z_true,
-                      zL = post_z_summ[, 1],
-                      zM = post_z_summ[, 2],
-                      zU = post_z_summ[, 3])
-
-library(ggplot2)
-plot1 <- ggplot(data = z_combn, aes(x = z)) +
-  geom_point(aes(y = zM), size = 0.25,
-             color = "darkblue", alpha = 0.5) +
-  geom_errorbar(aes(ymin = zL, ymax = zU),
-                width = 0.05, alpha = 0.15) +
-  geom_abline(slope = 1, intercept = 0,
-              color = "red", linetype = "solid") +
-  xlab("True z") + ylab("Stacked posterior of z") +
-  theme_bw() +
-  theme(panel.background = element_blank(),
-        aspect.ratio = 1)
+# compare the posterior medians of the spatial effects with the truth
+cor(apply(post_samps$z, 1, median), dat$z_true)
 }
 \references{
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto

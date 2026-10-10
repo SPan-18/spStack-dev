@@ -23,41 +23,108 @@ header-includes:
 
 In this article, we discuss the following functions -
 
+- `stvcLMexact()`
+- `stvcLMstack()`
 - `stvcGLMexact()`
 - `stvcGLMstack()`
 - `recoverGLMscale()`
 
-These functions can be used to fit non-Gaussian spatial-temporal point-referenced data.
+These functions can be used to fit Gaussian and non-Gaussian spatial-temporal point-referenced data with spatially-temporally varying coefficients.
 
 ```{r}
 library(patchwork)
 set.seed(1729)
 ```
 
+## Data
 
-## Bayesian non-Gaussian spatially-temporally varying coefficient models
-
-We illustrate the spatially-temporally varying coefficient model using the synthetic spatial-temporal Poisson count data.
-
-We first load the data `sim_stvcPoisson` which consists of data at 500 spatial-temporal locations. We use the first 100 locations for the following analysis.
+The package lazy-loads the synthetic dataset `simSpaceTime`, observed at 500 space-time coordinates $\ell = (s, t)$ with $s$ in the unit square and $t$ in the unit interval. It has two covariates `x1` and `x2`, a varying intercept `z1_true` that is a wave travelling across space over time, $z_1(\ell) = \sin\{2\pi(s_1 - t)\}$, and a varying slope of `x1`, `z2_true`, $z_2(\ell) = \cos(2\pi s_2) \cos(\pi t)$. The Gaussian response `y_gauss` and the Poisson response `y_pois` share them. Both surfaces are deterministic, not draws from Gaussian processes. See `?simSpaceTime` for the code that generated the data. We use the first 200 space-time coordinates for the following analysis.
 ```{r}
 library(spStack)
-data("sim_stvcPoisson")
-n_train <- 100
-dat <- sim_stvcPoisson[1:n_train, ]
-```
-
-The dataset consists of one covariate `x1`, response variable `y`, spatial locations given by `s1` and `s2`, a temporal coordinate `t_coords`, and the true spatially-temporally varying coefficients `z1_true` and `z2_true` associated with an intercept and `x1`, respectively. We elaborate below.
-```{r}
+data("simSpaceTime")
+n_train <- 200
+dat <- simSpaceTime[1:n_train, ]
 head(dat)
 ```
 
 ### Formula for varying coefficients model
-We define the spatially-temporally varying coefficients model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Suppose $\ell = (s, t)$ refers to a space-time ccoordinate. See "Technical Overview for more details". Then, given `family = "poisson"`, the formula `y ~ x1 + (x1)` corresponds to the spatial-temporal generalized linear model
-$$y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;,$$ where the `y` corresponds to the response variable $y(\ell)$, which is regressed on the predictor `x1` given by $x_1(\ell)$. The model variables specified outside the parentheses corresponds to predictors with fixed effects, and the model inside the parentheses correspond to variables with spatial-temporal varying coefficient. The intercept is automatically considered within both the fixed and varying coefficient components of the model, and hence `y ~ x1 + (x1)` is functionally equivalent to `y ~ 1 + x1 + (1 + x1)`. The spatially-temporally varying coefficients $z(\ell) = (z_1(\ell), z_2(\ell))^{\T}$ is multivariate Gaussian process, and we pursue the following specifications for $z(\ell)$ - independent process, independent process with shared parameters, and a multivariate process. For now, we only support the `cor.fn="gneiting-decay"` covariogram. See "Technical Overview" for more details.
+We define the spatially-temporally varying coefficients model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Suppose $\ell = (s, t)$ refers to a space-time coordinate. See "Technical Overview" for more details. The formula `y_gauss ~ x1 + x2 + (x1)` corresponds to the spatial-temporal linear model
+$$y(\ell) = \beta_0 + \beta_1 x_1(\ell) + \beta_2 x_2(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell) + \epsilon(\ell)\;,$$ where `y_gauss` corresponds to the response variable $y(\ell)$, which is regressed on the predictors `x1` and `x2` given by $x_1(\ell)$ and $x_2(\ell)$. The model variables specified outside the parentheses correspond to predictors with fixed effects, and the model inside the parentheses correspond to variables with spatial-temporal varying coefficients. The intercept is automatically considered within both the fixed and varying coefficient components of the model, and hence `y_gauss ~ x1 + x2 + (x1)` is functionally equivalent to `y_gauss ~ 1 + x1 + x2 + (1 + x1)`. For now, we only support the `cor.fn="gneiting-decay"` covariogram. To implement a model with just a spatial-temporal random effect, one may specify the formula `y_gauss ~ x1 + x2 + (1)`.
 
-To implement a model, with just a spatial-temporal random effect, one may specify the formula `y ~ x1 + (1)` which corresponds to the model
-$$y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell)\;.$$
+## Bayesian Gaussian spatially-temporally varying coefficient models
+
+For a Gaussian response, the model is
+$$y(\ell) = x(\ell)^\T \beta + \tilde{x}(\ell)^\T z(\ell) + \epsilon(\ell), \quad \epsilon(\ell) \sim \N(0, \sigma^2),$$
+where each of the $r$ varying coefficients $z_j$ is an independent Gaussian process with variance $\sigma^2_{z_j} = \sigma^2/\delta^2_j$ and a Gneiting correlation function with decay parameters $\phi_{s,j}$ and $\phi_{t,j}$. Given these and the noise-to-spatial variance ratios $\delta^2_j$, the joint posterior distribution is available in closed form and `stvcLMexact()` samples from it exactly. With `process.type = "independent"`, each process has its own $(\phi_s, \phi_t, \delta^2)$, supplied as vectors of length $r$; with `process.type = "independent.shared"`, the processes share one.
+```{r stvcLMexact}
+mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
+                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                      time_coords = as.matrix(dat[, "t_coords"]),
+                      cor.fn = "gneiting-decay",
+                      process.type = "independent",
+                      sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                      noise_sp_ratio = c(0.5, 1),
+                      n.samples = 1000, loopd = TRUE, verbose = TRUE)
+```
+
+The fixed effects are summarized below; `y_gauss` was simulated with $\beta = (2, 5, -1)^\T$. The samples of the process variances are returned as `sigmaSq.z`.
+```{r}
+summary_beta <- t(apply(mod_lm$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod_lm$X.names
+print(summary_beta)
+```
+
+Next, we stack candidate models built from candidate values of the process parameters and noise-to-spatial variance ratios. For `process.type = "independent"`, the candidate values are vectors of length $r$, supplied as `list()` entries in `candidateModels()`.
+```{r stvcLMstack}
+mod.list.lm <- candidateModels(list(phi_s = list(c(3, 6), c(2, 4)),
+                                    phi_t = list(c(4, 2), c(1, 1)),
+                                    noise_sp_ratio = list(c(0.5, 1), c(1, 2))),
+                               "cartesian")
+
+mod_lm_stack <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
+                            sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                            time_coords = as.matrix(dat[, "t_coords"]),
+                            cor.fn = "gneiting-decay",
+                            process.type = "independent",
+                            candidate.models = mod.list.lm,
+                            n.samples = 1000, verbose = TRUE)
+post_lm <- stackedSampler(mod_lm_stack)
+```
+
+The samples of $z$ are stacked by process: rows $1, \ldots, n$ hold $z_1$ and rows $n+1, \ldots, 2n$ hold $z_2$. We compare their stacked posteriors with the true values.
+```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Stacked posterior of the varying coefficients against their true values."}
+post_z1_summ <- t(apply(post_lm$z[1:n_train, ], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+post_z2_summ <- t(apply(post_lm$z[n_train + 1:n_train, ], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+
+z1_combn <- data.frame(z = dat$z1_true, zL = post_z1_summ[, 1],
+                       zM = post_z1_summ[, 2], zU = post_z1_summ[, 3])
+z2_combn <- data.frame(z = dat$z2_true, zL = post_z2_summ[, 1],
+                       zM = post_z2_summ[, 2], zU = post_z2_summ[, 3])
+
+library(ggplot2)
+plot_z1_summ <- ggplot(data = z1_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z1") + ylab("Stacked posterior of z1") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z2") + ylab("Stacked posterior of z2") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+plot_z1_summ + plot_z2_summ
+```
+
+## Bayesian non-Gaussian spatially-temporally varying coefficient models
+
+We now analyze the Poisson counts `y_pois`. Given `family = "poisson"`, the formula `y_pois ~ x1 + x2 + (x1)` corresponds to the spatial-temporal generalized linear model
+$$y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + \beta_2 x_2(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;.$$ The spatially-temporally varying coefficients $z(\ell) = (z_1(\ell), z_2(\ell))^{\T}$ is a multivariate Gaussian process, and we pursue the following specifications for $z(\ell)$ - independent process, independent process with shared parameters, and a multivariate process. See "Technical Overview" for more details.
 
 ### Using fixed hyperparameters
 We use the function `stvcGLMexact()` to fit spatially-temporally varying coefficient generalized linear models. In the following code snippets, we demonstrate the uasge of the argument `process.Type` to implement different variations of spatial-temporal process specifications for the varying coefficients.
@@ -66,13 +133,13 @@ We use the function `stvcGLMexact()` to fit spatially-temporally varying coeffic
 In this case, since there are two independent processes $z_1(\ell)$ and $z_2(\ell)$ the candidate values of the spatial-temporal process parameters `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 2. Here, the scale parameter $\sigma = (\sigma^2_{z1}, \sigma^2_{z2})^{\T}$ has dimension 2.
 
 ```{r}
-mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "independent",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = c(1, 2), phi_t = c(1, 2)),
+                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -99,13 +166,13 @@ ggplot(post_scale_df, aes(x = value)) +
 In this case, the processes $z_1(\ell)$ and $z_2(\ell)$ are independent but share a common covariance matrix. Hence, `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 1. Here, the scale parameter $\sigma = \sigma_z^2$ is 1-dimensional.
 
 ```{r}
-mod2 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod2 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "independent.shared",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 1, phi_t = 1),
+                     sptParams = list(phi_s = 4, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -131,13 +198,13 @@ ggplot(post_scale_df, aes(x = value)) +
 In this case, $z(\ell) = (z_1(\ell), z_2(\ell))^{\T}$ is a 2-dimensional Gaussian process with covariance matrix $\Sigma$. Further, we put an inverse-Wishart prior on $\Sigma$, which can be specified through the `priors` argument. If not supplied, uses the default $\IW (\nu_z + 2r, I_r)$, where $r = 2$ is the dimension of the multivariate process. Here, `sptParams` is a list with tags `phi_s` and `phi_t`, with each tag being of length 1, and the scale parameter $\sigma = \Sigma$ is an $2 \times 2$ matrix.
 
 ```{r}
-mod3 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod3 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 1, phi_t = 1),
+                     sptParams = list(phi_s = 4, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -195,14 +262,14 @@ For implementing predictive stacking for spatially-temporally varying models, we
 **Step 1.** Create candidate models.
 ```{r}
 mod.list <- candidateModels(list(
-  phi_s = list(1, 2, 3),
-  phi_t = list(1, 2, 4),
+  phi_s = list(2, 4),
+  phi_t = list(1, 4),
   boundary = c(0.5, 0.75)), "cartesian")
 ```
 
 **Step 2.** Run `stvcGLMstack()`.
 ```{r}
-mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",

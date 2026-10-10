@@ -133,44 +133,29 @@
 #' *Statistics and Computing*, **27**(5), 1413-1432. ISSN 0960-3174.
 #' \doi{10.1007/s11222-016-9696-4}.
 #' @examples
-#' # Example 1: Analyze spatial poisson count data
-#' data(simPoisson)
-#' dat <- simPoisson[1:10, ]
-#' mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
-#'                    coords = as.matrix(dat[, c("s1", "s2")]),
-#'                    cor.fn = "matern",
-#'                    spParams = list(phi = 4, nu = 0.4),
-#'                    n.samples = 100, verbose = TRUE)
+#' data(simSpatial)
+#' dat <- simSpatial[1:100, ]
+#' coords <- as.matrix(dat[, c("s1", "s2")])
 #'
-#' # summarize posterior samples
+#' # Example 1: spatial Poisson count data
+#' mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
+#'                    coords = coords, cor.fn = "matern",
+#'                    spParams = list(phi = 6, nu = 0.5),
+#'                    n.samples = 100, verbose = TRUE)
 #' post_beta <- mod1$samples$beta
 #' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #'
-#' # Example 2: Analyze spatial binomial count data
-#' data(simBinom)
-#' dat <- simBinom[1:10, ]
-#' mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
-#'                    coords = as.matrix(dat[, c("s1", "s2")]),
-#'                    cor.fn = "matern",
-#'                    spParams = list(phi = 3, nu = 0.4),
-#'                    n.samples = 100, verbose = TRUE)
+#' # Example 2: spatial binomial count data
+#' mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,
+#'                    family = "binomial", coords = coords, cor.fn = "matern",
+#'                    spParams = list(phi = 6, nu = 0.5),
+#'                    n.samples = 100, verbose = FALSE)
 #'
-#' # summarize posterior samples
-#' post_beta <- mod2$samples$beta
-#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#'
-#' # Example 3: Analyze spatial binary data
-#' data(simBinary)
-#' dat <- simBinary[1:10, ]
-#' mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
-#'                    coords = as.matrix(dat[, c("s1", "s2")]),
-#'                    cor.fn = "matern",
-#'                    spParams = list(phi = 4, nu = 0.4),
-#'                    n.samples = 100, verbose = TRUE)
-#'
-#' # summarize posterior samples
-#' post_beta <- mod3$samples$beta
-#' print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#' # Example 3: spatial binary data
+#' mod3 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
+#'                    coords = coords, cor.fn = "matern",
+#'                    spParams = list(phi = 6, nu = 0.5),
+#'                    n.samples = 100, verbose = FALSE)
 #' @export
 spGLMexact <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,
