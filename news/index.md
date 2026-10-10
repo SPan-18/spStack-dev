@@ -2,6 +2,71 @@
 
 ## spStack (development version)
 
+- New synthetic datasets `simSpatial` and `simSpaceTime` replace
+  `simGaussian`, `simPoisson`, `simBinom`, `simBinary` and
+  `sim_stvcPoisson`, and `sim_spData()` is removed. `simSpatial` has one
+  set of locations, covariates `x1`, `x2` and a spatial effect with a
+  ripple pattern, shared by Gaussian, Poisson, binomial and binary
+  responses (and a Gaussian response with a spatially varying slope);
+  `simSpaceTime` has a varying intercept that travels across space over
+  time and a varying slope of `x1`, shared by Gaussian and Poisson
+  responses. The true surfaces are deterministic, so the examples and
+  vignettes show how well the Gaussian process models recover them. All
+  examples and vignettes now use these two datasets, and the examples no
+  longer draw plots. The code that generates the data is in `data-raw/`
+  and in the examples of the dataset help pages. Code that loads the old
+  datasets must be updated.
+- [`surfaceplot()`](https://span-18.github.io/spStack-dev/reference/surfaceplot.md),
+  [`surfaceplot2()`](https://span-18.github.io/spStack-dev/reference/surfaceplot2.md):
+  the default palette is now the colorblind-friendly diverging
+  ColorBrewer palette ‘RdBu’ (it was ‘RdYlBu’).
+- [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),
+  [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md):
+  new functions for the Bayesian linear model with spatially-temporally
+  varying coefficients (Gaussian response). Each of the r varying
+  coefficients has an independent spatial-temporal process (Gneiting
+  correlation) with its own (`process.type = "independent"`) or a common
+  (`"independent.shared"`) set of decay parameters `phi_s`, `phi_t` and
+  noise-to-spatial variance ratio `noise_sp_ratio`; the inverse-gamma
+  prior is on the noise variance `sigmaSq`, and the process variances
+  are returned as `sigmaSq.z = sigmaSq / noise_sp_ratio`. The joint
+  posterior is sampled exactly by composition; the nr-dimensional latent
+  process is drawn with the update of Bhattacharya, Chakraborty and
+  Mallick (2016) (Matheron’s rule), which needs only n x n Cholesky
+  factorizations and processes the draws with level-3 BLAS (1.3-5.9x
+  faster than factorizing its nr x nr posterior covariance for r \>= 2,
+  n \>= 1000). Exact leave-one-out predictive densities are computed in
+  closed form from the same factorizations (3-7% added to a fit), or by
+  PSIS.
+  [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
+  stacks candidate models given by
+  [`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md),
+  building and factorizing each correlation matrix once per distinct
+  (`phi_s`, `phi_t`).
+  [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  and
+  [`stackedSampler()`](https://span-18.github.io/spStack-dev/reference/stackedSampler.md)
+  support both.
+- [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md):
+  with `loopd = TRUE` and `loopd.method` not supplied, the call stopped
+  with “loopd.method must be specified” although the argument has a
+  default (`"exact"`); the default is now used.
+- [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
+  without `loopd.method`, the message said ‘exact’ would be used but the
+  argument was never set, so the call stopped; it now uses ‘exact’.
+- [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  candidate models for `process.type = "independent"` were required to
+  have `phi_s` and `phi_t` of length 2 whatever the number of varying
+  coefficients; they must now have length r.
+- [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  for the spatial-temporal models: a `coords_new` or `covars_new` list
+  without the required tags (`sp` and `time`, `fixed` and `vc`) is now
+  reported with an informative error.
+- Stacking functions with `process.type = "independent"` and PSIS: the
+  Pareto k message of a candidate model in the “Diagnostics” section was
+  repeated once per process; it is now printed once.
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
   [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md):
@@ -107,17 +172,117 @@
   so later random numbers in the session no longer repeat the ones used
   by the cross-validation draws.
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
-  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
-  new `diagnostics` element (one row per model) with the smallest
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  new `diagnostics` element collecting the fit diagnostics, with no
+  warnings issued (for the GLMs the pivot is that of chol(Vz), and for
+  `process.type = "independent"` there is one row per process).
+  `diagnostics$numerical` (one row per model) holds the smallest
   relative Cholesky pivot of the n x n factorizations and the
   correlations of the two farthest-apart and the two closest locations,
   taken from quantities the fit computes anyway (no extra
-  factorization). With `verbose = TRUE`, a “Diagnostics” section flags a
-  nearly singular covariance matrix (pivot \< 1e-8), an effective range
-  far beyond the extent of the data (farthest-pair correlation \> 0.95)
-  or nearly uncorrelated locations (closest-pair correlation \< 0.05);
-  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
-  reports only flagged candidates with stacking weight above 0.05.
+  factorization). `diagnostics$pareto` holds the Pareto k values of PSIS
+  leave-one-out (previously `loopd.pareto_k` and a warning), with the
+  threshold and the number of values above it. The stacking functions:
+  `diagnostics$solver` holds the solver details of the stacking weights
+  (solver used and status, installed and requested solvers, search
+  order, each attempt with its status, and whether the
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  fallback was used); this replaces the top-level `solver` and
+  `solver.status` elements and the solver messages printed with
+  `verbose = TRUE`. With `verbose = TRUE`, a “Diagnostics” section is
+  printed only if there is an issue: a nearly singular covariance matrix
+  (pivot \< 1e-8), an effective range far beyond the extent of the data
+  (farthest-pair correlation \> 0.95), nearly uncorrelated locations
+  (closest-pair correlation \< 0.05), Pareto k values above the
+  threshold, or a solver problem (requested solver not installed,
+  inaccurate solution, fallback). In the stacking functions, numerical
+  flags are detailed only for candidates with stacking weight above
+  0.05.
+- [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  new element `model.params`, a list with the parameters of each
+  candidate model as a named list (`phi`, `nu`, `noise_sp_ratio` or
+  `boundary`; `phi_s`, `phi_t`, `boundary` for
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)).
+  [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  and
+  [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
+  now read the model parameters only from it (by name, through one
+  internal accessor), instead of from the printed table of each model
+  class. The table of candidate models and stacking weights is now
+  `stacking.summary` in all three functions, and the `candidate.models`
+  element is removed (it was this table in
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)/[`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
+  and the parameter list in
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)).
+  Stacked fits saved with earlier versions must be refitted to be used
+  with
+  [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  or
+  [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md).
+- [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md):
+  for the exponential correlation function `nu` is now `NA` (it was 0)
+  in `model.params`.
+- [`get_stacking_weights()`](https://span-18.github.io/spStack-dev/reference/get_stacking_weights.md):
+  returns the solver details in a new `details` element; the error
+  message when both CVXR and the loo fallback fail now reports the last
+  CVXR error (it was always NULL).
+- [`get_stacking_weights()`](https://span-18.github.io/spStack-dev/reference/get_stacking_weights.md):
+  the
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  fallback (used when no CVXR solver reaches an optimal solution) was
+  given the shifted predictive densities instead of the log predictive
+  densities, so its weights were not the stacking optimum; it now gets
+  the log densities.
+- `loo` moves from Imports to Suggests: it is used only by that
+  fallback. If it is needed but not installed, the stacking functions
+  return the fitted models with `NA` stacking weights and a message
+  giving the code that computes the weights once `loo` is installed.
+- All model-fitting functions: missing values in the response,
+  covariates, binomial trials or coordinates now stop with an
+  informative error. Previously
+  [`model.frame()`](https://rdrr.io/r/stats/model.frame.html) silently
+  dropped incomplete rows of the data but not of the coordinates, which
+  stopped with a misleading error about the number of coordinate rows.
+- All model-fitting functions: `beta.norm[[2]]`
+  ([`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)),
+  `V.beta` and `IW.scale` (GLMs) are checked to be symmetric and
+  positive definite; a non-symmetric matrix was previously used through
+  its lower triangle without notice.
+- All model-fitting functions: arguments passed through `...` are
+  reported with a warning (they are not used). The previous check
+  compared them with the arguments of the calling function, so it could
+  warn or stay silent incorrectly when the function was called from
+  another function.
+- [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md):
+  exact leave-one-out and K-fold cross-validation can be interrupted by
+  the user (Esc / Ctrl-C) between sites or folds, with all memory
+  released.
+- [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md):
+  the check that new locations differ from the observed ones bins the
+  coordinates instead of comparing all pairs (5000 new and 5000 observed
+  locations: about 38 s to 0.1 s), with the same result.
+- [`cholUpdateRankOne()`](https://span-18.github.io/spStack-dev/reference/cholUpdate.md),
+  [`cholUpdateDel()`](https://span-18.github.io/spStack-dev/reference/cholUpdate.md),
+  [`cholUpdateDelBlock()`](https://span-18.github.io/spStack-dev/reference/cholUpdate.md)
+  with `lower = FALSE`: the C++ code now works on a copy, so the input
+  matrix can never be modified in place.
+- Internal: unused C++ code removed (the superseded one-draw-at-a-time
+  GLM projections, the unreachable GLM PSIS branch and its helpers, and
+  other dead routines); the unused `t(X) X` and `t(XTilde) X` products
+  in the varying-coefficients pre-processing are no longer computed.
 - GLMs: the latent pseudo-data are now drawn on the log scale, as log
   G1 - log G2 with gamma variates G1, G2 (binomial, binary) and as log G
   with an underflow-safe draw for shape \< 1 (Poisson). Previously, a
@@ -185,7 +350,8 @@
   a duplicate must coincide in both space and time.
 - PSIS leave-one-out predictive densities (`loopd.method = "PSIS"`) are
   reimplemented in C++ following the loo package, with O(S) memory;
-  Pareto k diagnostics are returned as `loopd.pareto_k`.
+  Pareto k diagnostics are returned in the `diagnostics` element (see
+  below).
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md):
   the inverse-gamma prior is now placed on the measurement error

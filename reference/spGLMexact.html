@@ -182,7 +182,20 @@ densities.</p></dd>
 
 <dt>model.params</dt>
 <dd><p>Values of the fixed parameters that includes
-<code>phi</code> (spatial decay), <code>nu</code> (spatial smoothness).</p></dd>
+<code>phi</code> (spatial decay), <code>nu</code> (spatial smoothness; <code>NA</code> for
+the exponential correlation function).</p></dd>
+
+<dt>diagnostics</dt>
+<dd><p>a list of diagnostics. Element <code>numerical</code> is a
+data frame with one row and columns <code>min.pivot</code> (the smallest
+relative Cholesky pivot of the \(n \times n\) correlation
+matrix; values below 1e-8 indicate a nearly singular correlation matrix),
+<code>min.cor</code> and <code>max.cor</code> (the correlations of the two
+farthest-apart and of the two closest locations; values of <code>min.cor</code>
+above 0.95 suggest an effective range far exceeding the extent of the
+data, values of <code>max.cor</code> below 0.05 nearly uncorrelated locations),
+obtained from quantities the fit computes anyway. If <code>verbose =
+TRUE</code>, a "Diagnostics" section is printed when any threshold is crossed.</p></dd>
 
 
 </dl><p>The return object might include additional data that can be used for
@@ -271,31 +284,33 @@ Evaluation Using Leave-One-out Cross-Validation and WAIC."
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># Example 1: Analyze spatial poisson count data</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simPoisson</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
-<span class="r-in"><span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
-<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">4</span>, nu <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span>,</span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpatial</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">coords</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># Example 1: spatial Poisson count data</span></span></span>
+<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="va">y_pois</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
+<span class="r-in"><span>                   coords <span class="op">=</span> <span class="va">coords</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
+<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">6</span>, nu <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	Model description</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Model fit with 10 observations.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Model fit with 100 observations.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Family = poisson.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of covariates 2 (including intercept).</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> Number of covariates 3 (including intercept).</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Using the matern spatial correlation function.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Priors:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	beta: Gaussian</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	mu:	0.00	0.00	</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	mu:	0.00	0.00	0.00	</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	cov:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 100.00	 0.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 0.00	 100.00	</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	 100.00	 0.00	 0.00	</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	 0.00	 100.00	 0.00	</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	 0.00	 0.00	 100.00	</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.z ~ IG(nu.z/2, nu.z/2)</span>
@@ -304,107 +319,28 @@ Evaluation Using Leave-One-out Cross-Validation and WAIC."
 <span class="r-out co"><span class="r-pr">#&gt;</span> 	Boundary adjustment parameter = 0.50.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Spatial process parameters:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	phi = 4.00, and, nu = 0.40.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	phi = 6.00, and, nu = 0.50.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> Number of posterior samples = 100.</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># summarize posterior samples</span></span></span>
 <span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">beta</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            2.5%       50%     97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.4031546  2.131636 4.3996223</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -1.2780079 -0.401876 0.6808467</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>             2.5%        50%      97.5%</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1,]  0.85321873  1.7792510  3.5396481</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -0.84012204 -0.5900074 -0.3406932</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [3,]  0.07424866  0.4209770  0.7270565</span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 2: Analyze spatial binomial count data</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simBinom</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simBinom</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">mod2</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">y</span>, <span class="va">n_trials</span><span class="op">)</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"binomial"</span>,</span></span>
-<span class="r-in"><span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
-<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">3</span>, nu <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	Model description</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Model fit with 10 observations.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Family = binomial.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of covariates 2 (including intercept).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Using the matern spatial correlation function.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Priors:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	beta: Gaussian</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	mu:	0.00	0.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	cov:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 100.00	 0.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 0.00	 100.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.z ~ IG(nu.z/2, nu.z/2)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	nu.beta = 2.10, nu.z = 2.10.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.xi = 0.10.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	Boundary adjustment parameter = 0.50.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Spatial process parameters:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	phi = 3.00, and, nu = 0.40.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of posterior samples = 100.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
+<span class="r-in"><span><span class="co"># Example 2: spatial binomial count data</span></span></span>
+<span class="r-in"><span><span class="va">mod2</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="va">y_binom</span>, <span class="va">n_trials</span><span class="op">)</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>,</span></span>
+<span class="r-in"><span>                   family <span class="op">=</span> <span class="st">"binomial"</span>, coords <span class="op">=</span> <span class="va">coords</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
+<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">6</span>, nu <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># summarize posterior samples</span></span></span>
-<span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">mod2</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">beta</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           2.5%        50%    97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] -1.152229  1.0638569 3.177919</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -1.948063 -0.6444146 1.765978</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># Example 3: Analyze spatial binary data</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simBinary</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simBinary</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">10</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">mod3</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"binary"</span>,</span></span>
-<span class="r-in"><span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
-<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">4</span>, nu <span class="op">=</span> <span class="fl">0.4</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	Model description</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Model fit with 10 observations.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Family = binary.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of covariates 2 (including intercept).</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Using the matern spatial correlation function.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Priors:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	beta: Gaussian</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	mu:	0.00	0.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	cov:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 100.00	 0.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	 0.00	 100.00	</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.z ~ IG(nu.z/2, nu.z/2)</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	nu.beta = 2.10, nu.z = 2.10.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	sigmaSq.xi = 0.10.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	Boundary adjustment parameter = 0.50.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Spatial process parameters:</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> 	phi = 4.00, and, nu = 0.40.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> Number of posterior samples = 100.</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
-<span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="co"># summarize posterior samples</span></span></span>
-<span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">mod3</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">beta</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>           2.5%        50%     97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1,] -2.286179  1.0835017 4.2971743</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [2,] -1.947643 -0.4570675 0.8338287</span>
+<span class="r-in"><span><span class="co"># Example 3: spatial binary data</span></span></span>
+<span class="r-in"><span><span class="va">mod3</span> <span class="op">&lt;-</span> <span class="fu">spGLMexact</span><span class="op">(</span><span class="va">y_bin</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"binary"</span>,</span></span>
+<span class="r-in"><span>                   coords <span class="op">=</span> <span class="va">coords</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
+<span class="r-in"><span>                   spParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fl">6</span>, nu <span class="op">=</span> <span class="fl">0.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>, verbose <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

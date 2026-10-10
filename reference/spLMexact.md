@@ -108,29 +108,28 @@ An object of class `spLMexact`, which is a list with the following tags
 
   If `loopd=TRUE`, contains leave-one-out predictive densities.
 
-- loopd.pareto_k:
-
-  If `loopd.method='PSIS'`, contains the Pareto \\k\\ diagnostic values
-  of the leave-one-out predictive densities (Vehtari *et al.* 2024).
-
 - model.params:
 
   Values of the fixed parameters that includes `phi` (spatial decay),
-  `nu` (spatial smoothness) and `noise_sp_ratio` (noise-to-spatial
-  variance ratio).
+  `nu` (spatial smoothness; `NA` for the exponential correlation
+  function) and `noise_sp_ratio` (noise-to-spatial variance ratio).
 
 - diagnostics:
 
-  a data frame with one row and columns `min.pivot` (the smallest
-  relative Cholesky pivot of the \\n \times n\\ factorizations; values
-  below 1e-8 indicate a nearly singular covariance matrix), `min.cor`
-  and `max.cor` (the correlations of the two farthest-apart and of the
-  two closest locations; values of `min.cor` above 0.95 suggest an
-  effective range far exceeding the extent of the data, values of
-  `max.cor` below 0.05 nearly uncorrelated locations). They are obtained
-  from quantities the fit computes anyway. If `verbose = TRUE`, a
-  "Diagnostics" section is printed when any of these thresholds is
-  crossed.
+  a list of fit diagnostics, obtained from quantities the fit computes
+  anyway. Element `numerical` is a data frame with one row and columns
+  `min.pivot` (the smallest relative Cholesky pivot of the \\n \times
+  n\\ factorizations; values below 1e-8 indicate a nearly singular
+  covariance matrix), `min.cor` and `max.cor` (the correlations of the
+  two farthest-apart and of the two closest locations; values of
+  `min.cor` above 0.95 suggest an effective range far exceeding the
+  extent of the data, values of `max.cor` below 0.05 nearly uncorrelated
+  locations). If `loopd.method = 'PSIS'`, element `pareto` is a list
+  with the Pareto \\k\\ diagnostic values of the leave-one-out
+  predictive densities (`k`), the threshold above which they are
+  unreliable (`threshold`, Vehtari *et al.* 2024) and the number of
+  values above it (`n.high`). If `verbose = TRUE`, a "Diagnostics"
+  section is printed when any threshold is crossed.
 
 The return object might include additional data used for subsequent
 prediction and/or model fit evaluation.
@@ -183,29 +182,23 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ## Examples
 
 ``` r
-# load data
-data(simGaussian)
-dat <- simGaussian[1:100, ]
+data(simSpatial)
+dat <- simSpatial[1:100, ]
 
 # setup prior list
-muBeta <- c(0, 0)
-VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
+muBeta <- c(0, 0, 0)
+VBeta <- diag(100, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 
-# supply fixed values of model parameters
-phi0 <- 3
-nu0 <- 0.75
-noise.sp.ratio <- 0.8
-
-mod1 <- spLMexact(y ~ x1, data = dat,
+mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  spParams = list(phi = phi0, nu = nu0),
-                  noise_sp_ratio = noise.sp.ratio,
+                  spParams = list(phi = 6, nu = 0.5),
+                  noise_sp_ratio = 0.5,
                   n.samples = 100,
                   loopd = TRUE, loopd.method = "exact")
 #> ----------------------------------------
@@ -213,37 +206,38 @@ mod1 <- spLMexact(y ~ x1, data = dat,
 #> ----------------------------------------
 #> Model fit with 100 observations.
 #> 
-#> Number of covariates 2 (including intercept).
+#> Number of covariates 3 (including intercept).
 #> 
 #> Using the matern spatial correlation function.
 #> 
 #> Priors:
 #>  beta: Gaussian
-#>  mu: 0.00    0.00    
+#>  mu: 0.00    0.00    0.00    
 #>  cov:
-#>   1.00    0.00   
-#>   0.00    1.00   
+#>   100.00  0.00    0.00   
+#>   0.00    100.00  0.00   
+#>   0.00    0.00    100.00 
 #> 
 #>  sigma.sq: Inverse-Gamma
 #>  shape = 2.00, scale = 0.10.
 #> 
 #> Spatial process parameters:
-#>  phi = 3.00, and, nu = 0.75.
-#> Noise-to-spatial variance ratio = 0.80.
+#>  phi = 6.00, and, nu = 0.50.
+#> Noise-to-spatial variance ratio = 0.50.
 #> 
 #> Number of posterior samples = 100.
 #> 
 #> LOO-PD calculation method = exact.
 #> ----------------------------------------
 
-beta.post <- mod1$samples$beta
-z.post.median <- apply(mod1$samples$z, 1, median)
-dat$z.post.median <- z.post.median
-plot1 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-                     var_name = "z_true")
-plot2 <- surfaceplot(dat, coords_name = c("s1", "s2"),
-                     var_name = "z.post.median")
-plot1
+post_beta <- mod1$samples$beta
+print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#>           2.5%       50%      97.5%
+#> [1,]  1.614160  2.001286  2.5524403
+#> [2,]  4.722533  4.843061  4.9485778
+#> [3,] -1.113002 -1.003259 -0.8567504
 
-plot2
+# compare the posterior medians of the spatial effects with the truth
+cor(apply(mod1$samples$z, 1, median), dat$z_true)
+#> [1] 0.9520644
 ```

@@ -118,13 +118,6 @@ tags -
   (`sigmaSq`), spatial variance (`sigmaSq.z`), and spatial effects (`z`)
   for that model.
 
-- `loopd.pareto_k`:
-
-  if `loopd.method='PSIS'`, a list of length equal to total number of
-  candidate models with each entry containing the Pareto \\k\\
-  diagnostic values of the leave-one-out predictive densities under that
-  particular model.
-
 - `loopd`:
 
   a list of length equal to total number of candidate models with each
@@ -135,10 +128,16 @@ tags -
 
   number of candidate models that are fit.
 
-- `candidate.models`:
+- `model.params`:
 
-  a matrix with `n_model` rows with each row containing details of the
-  model parameters and its optimal weight.
+  a list with one element per candidate model, each a named list of its
+  parameters: `phi`, `nu` (`NA` for the exponential correlation
+  function) and `noise_sp_ratio` (noise-to-spatial variance ratio).
+
+- `stacking.summary`:
+
+  a matrix with one row per candidate model, containing its parameters
+  and its optimal stacking weight, for display.
 
 - `stacking.weights`:
 
@@ -149,24 +148,31 @@ tags -
 
   a `proc_time` object with runtime details.
 
-- `solver.status`:
-
-  solver status as returned by the optimization routine.
-
 - `diagnostics`:
 
-  a data frame with one row per candidate model and columns `min.pivot`
-  (the smallest relative Cholesky pivot of the \\n \times n\\
-  factorizations; values below 1e-8 indicate a nearly singular
-  covariance matrix), `min.cor` and `max.cor` (the correlations of the
-  two farthest-apart and of the two closest locations; values of
-  `min.cor` above 0.95 suggest an effective range far exceeding the
-  extent of the data, values of `max.cor` below 0.05 nearly uncorrelated
-  locations). They are obtained from quantities the fits compute anyway.
-  If `verbose = TRUE`, a "Diagnostics" section is printed for flagged
-  candidate models with stacking weight above 0.05; extreme candidates
-  with negligible weight are expected in a stacking grid and are only
-  counted.
+  a list of diagnostics. Element `numerical` is a data frame with one
+  row per candidate model and columns `min.pivot` (the smallest relative
+  Cholesky pivot of the \\n \times n\\ factorizations; values below 1e-8
+  indicate a nearly singular covariance matrix), `min.cor` and `max.cor`
+  (the correlations of the two farthest-apart and of the two closest
+  locations; values of `min.cor` above 0.95 suggest an effective range
+  far exceeding the extent of the data, values of `max.cor` below 0.05
+  nearly uncorrelated locations), obtained from quantities the fits
+  compute anyway. If `loopd.method = 'PSIS'`, element `pareto` is a list
+  with the Pareto \\k\\ diagnostic values of each candidate model (`k`),
+  the threshold above which they are unreliable (`threshold`) and the
+  number of values above it for each model (`n.high`). Element `solver`
+  describes the optimization for the stacking weights: the solver used
+  (`used`) and its status (`status`), the installed and requested
+  solvers, the search order, the attempts with their status, and whether
+  the fallback
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  was used. If `verbose = TRUE`, a "Diagnostics" section is printed if
+  there is an issue: numerical flags of candidate models with stacking
+  weight above 0.05 (extreme candidates with negligible weight are
+  expected in a stacking grid and are only counted), Pareto \\k\\ values
+  above the threshold for any model, and solver problems (a requested
+  solver not installed, an inaccurate solution, or the fallback).
 
 The return object might include additional data that is useful for
 subsequent prediction, model fit evaluation and other utilities.
@@ -213,84 +219,45 @@ Sudipto Banerjee <sudipto@ucla.edu>
 
 ``` r
 set.seed(1234)
-# load data and work with first 100 rows
-data(simGaussian)
-dat <- simGaussian[1:100, ]
+data(simSpatial)
+dat <- simSpatial[1:100, ]
 
-# setup prior list
-muBeta <- c(0, 0)
-VBeta <- cbind(c(1.0, 0.0), c(0.0, 1.0))
-sigmaSqIGa <- 2
-sigmaSqIGb <- 2
-prior_list <- list(beta.norm = list(muBeta, VBeta),
-                   sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
-
-cand.mod <- candidateModels(list(phi = c(1.5, 3),
+cand.mod <- candidateModels(list(phi = c(3, 6),
                                  nu = c(0.5, 1),
-                                 noise_sp_ratio = c(1)),
+                                 noise_sp_ratio = c(0.5, 1)),
                             "cartesian")
 
-mod1 <- spLMstack(y ~ x1, data = dat,
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
-                  priors = prior_list,
                   candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.031s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -29.233
-#> ℹ Compile time: 0.031s
-#> ℹ Solver time: 0.005s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | noise_sp_ratio | weight |
 #> +---------+-----+-----+----------------+--------+
-#> | Model 1 |  1.5|  0.5|               1| 0      |
-#> | Model 2 |  3.0|  0.5|               1| 0      |
-#> | Model 3 |  1.5|  1.0|               1| 0      |
-#> | Model 4 |  3.0|  1.0|               1| 1      |
+#> | Model 1 |    3|  0.5|             0.5| 0      |
+#> | Model 2 |    6|  0.5|             0.5| 0      |
+#> | Model 3 |    3|  1.0|             0.5| 0      |
+#> | Model 4 |    6|  1.0|             0.5| 1      |
+#> | Model 5 |    3|  0.5|             1.0| 0      |
+#> | Model 6 |    6|  0.5|             1.0| 0      |
+#> | Model 7 |    3|  1.0|             1.0| 0      |
+#> | Model 8 |    6|  1.0|             1.0| 0      |
 #> +---------+-----+-----+----------------+--------+
 #> 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                 2.5%      50%    97.5%
-#> (Intercept) 0.878944 1.739341 2.612417
-#> x1          4.745753 4.925319 5.076682
+#>                  2.5%        50%      97.5%
+#> (Intercept)  1.528014  2.2337693  2.9973924
+#> x1           4.729069  4.8543561  4.9913745
+#> x2          -1.130784 -0.9844785 -0.8387339
 
-post_z <- post_samps$z
-post_z_summ <- t(apply(post_z, 1,
-                       function(x) quantile(x, c(0.025, 0.5, 0.975))))
-
-z_combn <- data.frame(z = dat$z_true,
-                      zL = post_z_summ[, 1],
-                      zM = post_z_summ[, 2],
-                      zU = post_z_summ[, 3])
-
-library(ggplot2)
-plot1 <- ggplot(data = z_combn, aes(x = z)) +
-  geom_point(aes(y = zM), size = 0.25,
-             color = "darkblue", alpha = 0.5) +
-  geom_errorbar(aes(ymin = zL, ymax = zU),
-                width = 0.05, alpha = 0.15) +
-  geom_abline(slope = 1, intercept = 0,
-              color = "red", linetype = "solid") +
-  xlab("True z") + ylab("Stacked posterior of z") +
-  theme_bw() +
-  theme(panel.background = element_blank(),
-        aspect.ratio = 1)
+# compare the posterior medians of the spatial effects with the truth
+cor(apply(post_samps$z, 1, median), dat$z_true)
+#> [1] 0.9574472
 ```

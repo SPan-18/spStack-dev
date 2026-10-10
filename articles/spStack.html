@@ -83,8 +83,12 @@ details surrounding the methodology can be found in the articles <span class="ci
 <div class="section level2">
 <h2 id="bayesian-gaussian-spatial-regression-models">Bayesian Gaussian spatial regression models<a class="anchor" aria-label="anchor" href="#bayesian-gaussian-spatial-regression-models"></a>
 </h2>
-<p>Here is a quick example using the lazyloaded synthetic data
-<code>simGaussian</code>.</p>
+<p>Here is a quick example using the Gaussian response
+<code>y_gauss</code> of the lazyloaded synthetic data
+<code>simSpatial</code>, observed at 500 locations in the unit square
+with two covariates <code>x1</code> and <code>x2</code> and a spatial
+effect <code>z_true</code> with a ripple pattern (see
+<code><a href="../reference/simSpatial.html">?simSpatial</a></code>).</p>
 <p><strong>Step 1.</strong> Load the library spStack and prepare the
 data. Here we split the data into <code>dat_train</code> and
 <code>dat_pred</code> - we train our model on <code>dat_train</code> and
@@ -97,9 +101,9 @@ in <code>dat_pred</code>.</p>
 <span><span class="va">n_train</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
 <span><span class="va">n_pred</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"simGaussian"</span><span class="op">)</span></span>
-<span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simGaussian</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
-<span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simGaussian</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span></code></pre></div>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"simSpatial"</span><span class="op">)</span></span>
+<span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
+<span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span></code></pre></div>
 <p><strong>Step 2.</strong> Run the function <code><a href="../reference/spLMstack.html">spLMstack()</a></code> -
 define the model with a formula, input the spatial coordinates as a
 matrix, specify the correlation function, and accordingly provide
@@ -110,60 +114,110 @@ parallelization plan can be used if <code>parallel</code> is set
 <code>TRUE</code>, and <code>solver</code> argument specifies the solver
 used to carry out the optimization routine to get stacking weights.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">3</span>, <span class="fl">5</span><span class="op">)</span>,</span>
-<span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.75</span>, <span class="fl">1.25</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span>, <span class="fl">10</span><span class="op">)</span>,</span>
+<span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>,</span>
 <span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                            <span class="st">"cartesian"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spLMstack.html">spLMstack</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat_train</span>,</span>
+<span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spLMstack.html">spLMstack</a></span><span class="op">(</span><span class="va">y_gauss</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat_train</span>,</span>
 <span>                  coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_train</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span>
 <span>                  cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span>
 <span>                  candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span>
 <span>                  n.samples <span class="op">=</span> <span class="fl">1000</span>, loopd.method <span class="op">=</span> <span class="st">"psis"</span>,</span>
 <span>                  parallel <span class="op">=</span> <span class="cn">FALSE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
-<span><span class="co">#&gt; --------------------------------------------------</span></span>
-<span><span class="co">#&gt; Solver diagnostics:</span></span>
-<span><span class="co">#&gt; Installed solvers: CLARABEL, SCS, OSQP, HIGHS</span></span>
-<span><span class="co">#&gt; Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span></span>
-<span><span class="co">#&gt; Solver search order: CLARABEL -&gt; SCS</span></span>
-<span><span class="co">#&gt; --------------------------------------------------</span></span>
-<span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.799s</span></span>
-<span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
-<span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -60.5492</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 3.799s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.009s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
-<span><span class="co">#&gt;            | phi | nu   | noise_sp_ratio | weight |</span></span>
-<span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span>
-<span><span class="co">#&gt; | Model 1  |  1.5|  0.75|             0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 2  |  3.0|  0.75|             0.5| 0.743  |</span></span>
-<span><span class="co">#&gt; | Model 3  |  5.0|  0.75|             0.5| 0.055  |</span></span>
-<span><span class="co">#&gt; | Model 4  |  1.5|  1.25|             0.5| 0.202  |</span></span>
-<span><span class="co">#&gt; | Model 5  |  3.0|  1.25|             0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 6  |  5.0|  1.25|             0.5| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 7  |  1.5|  0.75|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 8  |  3.0|  0.75|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 9  |  5.0|  0.75|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 10 |  1.5|  1.25|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 11 |  3.0|  1.25|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 12 |  5.0|  1.25|             1.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 13 |  1.5|  0.75|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 14 |  3.0|  0.75|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 15 |  5.0|  0.75|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 16 |  1.5|  1.25|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 17 |  3.0|  1.25|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 18 |  5.0|  1.25|             2.0| 0.000  |</span></span>
-<span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span>
-<span><span class="co">#&gt; Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6</span></span>
-<span><span class="co">#&gt; candidate model(s); PSIS estimates of the corresponding leave-one-out</span></span>
-<span><span class="co">#&gt; predictive densities may be unreliable. Consider loopd.method = 'exact'.</span></span></code></pre></div>
+<span><span class="co">#&gt;            | phi | nu  | noise_sp_ratio | weight |</span></span>
+<span><span class="co">#&gt; +----------+-----+-----+----------------+--------+</span></span>
+<span><span class="co">#&gt; | Model 1  |    3|  0.5|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 2  |    6|  0.5|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 3  |   10|  0.5|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 4  |    3|  1.0|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 5  |    6|  1.0|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 6  |   10|  1.0|             0.5| 1      |</span></span>
+<span><span class="co">#&gt; | Model 7  |    3|  0.5|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 8  |    6|  0.5|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 9  |   10|  0.5|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 10 |    3|  1.0|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 11 |    6|  1.0|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 12 |   10|  1.0|             1.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 13 |    3|  0.5|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 14 |    6|  0.5|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 15 |   10|  0.5|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 16 |    3|  1.0|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 17 |    6|  1.0|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; | Model 18 |   10|  1.0|             2.0| 0      |</span></span>
+<span><span class="co">#&gt; +----------+-----+-----+----------------+--------+</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; ----------------------------------------</span></span>
+<span><span class="co">#&gt;  Diagnostics</span></span>
+<span><span class="co">#&gt; ----------------------------------------</span></span>
+<span><span class="co">#&gt; Model 1 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 8 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 2 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 16 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 3 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 29 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 4 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 5 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 6 (stacking weight 1):</span></span>
+<span><span class="co">#&gt;   - 19 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 7 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 8 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 9 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 11 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 10 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 11 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 12 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 14 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 15 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 3 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 17 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; Model 18 (stacking weight 0):</span></span>
+<span><span class="co">#&gt;   - 2 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of</span></span>
+<span><span class="co">#&gt;     the corresponding leave-one-out predictive densities may be unreliable;</span></span>
+<span><span class="co">#&gt;     consider loopd.method = 'exact'.</span></span>
+<span><span class="co">#&gt; ----------------------------------------</span></span></code></pre></div>
 <p><strong>Step 3.</strong> Use the helper function
 <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code> to sample from the stacked posterior
 distribution. These samples serve as the final posterior samples
@@ -177,9 +231,10 @@ posterior samples of the corresponding parameter.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                 2.5%      50%    97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) 1.165301 2.324636 3.196070</span></span>
-<span><span class="co">#&gt; x1          4.857643 4.974654 5.106086</span></span></code></pre></div>
+<span><span class="co">#&gt;                  2.5%       50%     97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  1.565441  2.002206  2.458732</span></span>
+<span><span class="co">#&gt; x1           4.733082  4.861075  4.988097</span></span>
+<span><span class="co">#&gt; x2          -1.140405 -1.002560 -0.861761</span></span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The following optional steps are only required
 if interested in posterior predictive inference.</p>
@@ -191,7 +246,7 @@ the covariates at these new locations are given by
 <code>X_new</code>.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sp_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">n_pred</span><span class="op">)</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x2</span><span class="op">)</span></span></code></pre></div>
 <p><strong>(Optional) Step 5.</strong> Pass the output obtained by
 running <code><a href="../reference/spLMstack.html">spLMstack()</a></code> through the function
 <code><a href="../reference/posteriorPredict.html">posteriorPredict()</a></code> along with the new coordinates and
@@ -213,7 +268,7 @@ values.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">postpred_y</span> <span class="op">&lt;-</span> <span class="va">postpred_samps</span><span class="op">$</span><span class="va">y.pred</span></span>
 <span><span class="va">post_y_summ</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">postpred_y</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="va">y_combn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">dat_pred</span><span class="op">$</span><span class="va">y</span>, yL <span class="op">=</span> <span class="va">post_y_summ</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
+<span><span class="va">y_combn</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>y <span class="op">=</span> <span class="va">dat_pred</span><span class="op">$</span><span class="va">y_gauss</span>, yL <span class="op">=</span> <span class="va">post_y_summ</span><span class="op">[</span>, <span class="fl">1</span><span class="op">]</span>,</span>
 <span>                      yM <span class="op">=</span> <span class="va">post_y_summ</span><span class="op">[</span>, <span class="fl">2</span><span class="op">]</span>, yU <span class="op">=</span> <span class="va">post_y_summ</span><span class="op">[</span>, <span class="fl">3</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://ggplot2.tidyverse.org" class="external-link">ggplot2</a></span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://ggplot2.tidyverse.org/reference/ggplot.html" class="external-link">ggplot</a></span><span class="op">(</span>data <span class="op">=</span> <span class="va">y_combn</span>, <span class="fu"><a href="https://ggplot2.tidyverse.org/reference/aes.html" class="external-link">aes</a></span><span class="op">(</span>x <span class="op">=</span> <span class="va">y</span><span class="op">)</span><span class="op">)</span> <span class="op">+</span></span>
@@ -230,8 +285,8 @@ Models” and “Posterior Predictive Inference”.</p>
 <h2 id="bayesian-non-gaussian-spatial-regression-models">Bayesian non-Gaussian spatial regression models<a class="anchor" aria-label="anchor" href="#bayesian-non-gaussian-spatial-regression-models"></a>
 </h2>
 <p>The workflow for the spatial generalized linear models are similar.
-Here is a quick example using the lazyloaded synthetic data
-<code>simPoisson</code>.</p>
+Here is a quick example using the Poisson response <code>y_pois</code>
+of the same data <code>simSpatial</code>.</p>
 <p><strong>Step 1.</strong> Prepare data by splitting into train and
 test sets.</p>
 <div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
@@ -239,10 +294,8 @@ test sets.</p>
 <span><span class="va">n_train</span> <span class="op">&lt;-</span> <span class="fl">100</span></span>
 <span><span class="va">n_pred</span> <span class="op">&lt;-</span> <span class="fl">50</span></span>
 <span></span>
-<span><span class="co"># load spatial Poisson data</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"simPoisson"</span><span class="op">)</span></span>
-<span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
-<span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span></code></pre></div>
+<span><span class="va">dat_train</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n_train</span>, <span class="op">]</span></span>
+<span><span class="va">dat_pred</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="va">n_train</span> <span class="op">+</span> <span class="fl">1</span><span class="op">:</span><span class="va">n_pred</span>, <span class="op">]</span></span></code></pre></div>
 <p><strong>Step 2.</strong> Run the function <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code>
 after specifying the <code>family</code>, and providing candidate models
 constructed using <code><a href="../reference/candidateModels.html">candidateModels()</a></code>. The
@@ -256,10 +309,10 @@ cross-validation with
 and using 500 Monte Carlo samples for calculating each predictive
 density.</p>
 <div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">4</span>, <span class="fl">5</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span>, <span class="fl">10</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.0</span><span class="op">)</span>,</span>
 <span>                                 boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span>
 <span></span>
-<span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spGLMstack.html">spGLMstack</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat_train</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span>
+<span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/spGLMstack.html">spGLMstack</a></span><span class="op">(</span><span class="va">y_pois</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat_train</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span>
 <span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_train</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span>
 <span>                   candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span>
 <span>                   priors <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>nu.beta <span class="op">=</span> <span class="fl">5</span>, nu.z <span class="op">=</span> <span class="fl">5</span><span class="op">)</span>,</span>
@@ -267,33 +320,17 @@ density.</p>
 <span>                   loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span>
 <span>                   verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Some priors were not supplied. Using defaults.</span></span>
-<span><span class="co">#&gt; --------------------------------------------------</span></span>
-<span><span class="co">#&gt; Solver diagnostics:</span></span>
-<span><span class="co">#&gt; Installed solvers: CLARABEL, SCS, OSQP, HIGHS</span></span>
-<span><span class="co">#&gt; Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span></span>
-<span><span class="co">#&gt; Solver search order: CLARABEL -&gt; SCS</span></span>
-<span><span class="co">#&gt; --------------------------------------------------</span></span>
-<span><span class="co">#&gt; ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.887s</span></span>
-<span><span class="co">#&gt; ─────────────────────────────── Numerical solver ───────────────────────────────</span></span>
-<span><span class="co">#&gt; ──────────────────────────────────── Summary ───────────────────────────────────</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Status: optimal</span></span>
-<span><span class="co">#&gt; <span style="color: #00BB00;">✔</span> Optimal value: -148.776</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Compile time: 0.887s</span></span>
-<span><span class="co">#&gt; <span style="color: #00BBBB;">ℹ</span> Solver time: 0.043s</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; STACKING WEIGHTS:</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           | phi | nu  | boundary | weight |</span></span>
 <span><span class="co">#&gt; +---------+-----+-----+----------+--------+</span></span>
 <span><span class="co">#&gt; | Model 1 |    3|  0.5|       0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 2 |    4|  0.5|       0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 3 |    5|  0.5|       0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 2 |    6|  0.5|       0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 3 |   10|  0.5|       0.5| 0      |</span></span>
 <span><span class="co">#&gt; | Model 4 |    3|  1.0|       0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 5 |    4|  1.0|       0.5| 1      |</span></span>
-<span><span class="co">#&gt; | Model 6 |    5|  1.0|       0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 5 |    6|  1.0|       0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 6 |   10|  1.0|       0.5| 1      |</span></span>
 <span><span class="co">#&gt; +---------+-----+-----+----------+--------+</span></span></code></pre></div>
 <p><strong>Step 3.</strong> Run <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code> to obtain
 posterior samples from the stacked posterior and then analyze the
@@ -305,9 +342,10 @@ output.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%        50%     97.5%</span></span>
-<span><span class="co">#&gt; (Intercept)  0.6982427  2.0558630  3.319770</span></span>
-<span><span class="co">#&gt; x1          -0.6860426 -0.5708112 -0.465655</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  1.0386174  1.7320419  2.4407602</span></span>
+<span><span class="co">#&gt; x1          -0.7649680 -0.5416002 -0.3693263</span></span>
+<span><span class="co">#&gt; x2           0.2099681  0.4461940  0.7626159</span></span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The following optional steps are only required
 if interested in posterior predictive inference.</p>
@@ -316,7 +354,7 @@ if interested in posterior predictive inference.</p>
 predictive inference.</p>
 <div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sp_pred</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat_pred</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/rep.html" class="external-link">rep</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">n_pred</span><span class="op">)</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span><span class="op">)</span><span class="op">)</span></span></code></pre></div>
+<span><span class="va">X_new</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/cbind.html" class="external-link">cbind</a></span><span class="op">(</span><span class="fl">1</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x1</span>, <span class="va">dat_pred</span><span class="op">$</span><span class="va">x2</span><span class="op">)</span></span></code></pre></div>
 <p><strong>(Optional) Step 5.</strong> Finally, pass the model output
 through the function <code><a href="../reference/posteriorPredict.html">posteriorPredict()</a></code></p>
 <div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">

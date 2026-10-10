@@ -45,7 +45,8 @@ surfaceplot2(
 - col.pal:
 
   Optional; color palette, preferably divergent, use `colorRampPalette`
-  function from `grDevices`. Default is 'RdYlBu'.
+  function from `grDevices`. Default is the colorblind-friendly
+  diverging palette 'RdBu' from ColorBrewer.
 
 - mark_points:
 
@@ -63,9 +64,9 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ## Examples
 
 ``` r
-data(simGaussian)
-plots_2 <- surfaceplot2(simGaussian, coords_name = c("s1", "s2"),
-                        var1_name = "z_true", var2_name = "y")
+data(simSpatial)
+plots_2 <- surfaceplot2(simSpatial, coords_name = c("s1", "s2"),
+                        var1_name = "z_true", var2_name = "y_gauss")
 plots_2
 #> [[1]]
 

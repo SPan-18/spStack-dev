@@ -16,12 +16,8 @@
 <url><loc>https://span-18.github.io/spStack-dev/reference/index.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/posteriorPredict.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/recoverGLMscale.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/simBinary.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/simBinom.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/simGaussian.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/simPoisson.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/sim_spData.html</loc></url>
-<url><loc>https://span-18.github.io/spStack-dev/reference/sim_stvcPoisson.html</loc></url>
+<url><loc>https://span-18.github.io/spStack-dev/reference/simSpaceTime.html</loc></url>
+<url><loc>https://span-18.github.io/spStack-dev/reference/simSpatial.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/spGLMexact.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/spGLMstack.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/spLMexact.html</loc></url>
@@ -30,6 +26,8 @@
 <url><loc>https://span-18.github.io/spStack-dev/reference/stackedSampler.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/stvcGLMexact.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/stvcGLMstack.html</loc></url>
+<url><loc>https://span-18.github.io/spStack-dev/reference/stvcLMexact.html</loc></url>
+<url><loc>https://span-18.github.io/spStack-dev/reference/stvcLMstack.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/surfaceplot.html</loc></url>
 <url><loc>https://span-18.github.io/spStack-dev/reference/surfaceplot2.html</loc></url>
 </urlset>

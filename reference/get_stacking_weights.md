@@ -33,15 +33,37 @@ A list with elements:
 
 - `weights`:
 
-  optimal stacking weights as a numeric vector of length \\M\\
+  optimal stacking weights as a numeric vector of length \\M\\ (`NA` if
+  no solver succeeded, see Details).
 
 - `status`:
 
-  solver status, returns `"optimal"` if solver succeeded.
+  solver status, returns `"optimal"` if solver succeeded, and `"failed"`
+  if no solver succeeded.
 
 - `solver`:
 
-  name of the solver used.
+  name of the solver used (`"none"` if no solver succeeded).
+
+- `details`:
+
+  a list with the installed CVXR solvers (`installed`), the requested
+  solver(s) (`requested`) and those of them not installed
+  (`missing.requested`), the order in which the solvers were tried
+  (`search.order`), a data frame of the attempts with the status or
+  error of each solver (`attempts`), and whether the fallback
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  was used (`fallback`).
+
+## Details
+
+The weights maximize the log score of the stacked leave-one-out
+predictive densities (Yao *et al.* 2018) over the simplex, using the
+CVXR solvers in the order given above. If none of them reaches an
+optimal solution,
+[`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+is used as a fallback when the package loo is installed; otherwise the
+weights are returned as `NA` with status `"failed"`.
 
 ## References
 
@@ -65,44 +87,28 @@ Sudipto Banerjee <sudipto@ucla.edu>
 
 ``` r
 set.seed(1234)
-data(simGaussian)
-dat <- simGaussian[1:100, ]
+data(simSpatial)
+dat <- simSpatial[1:100, ]
 
-cand.mod <- candidateModels(list(phi = c(1.5, 3),
+cand.mod <- candidateModels(list(phi = c(3, 6),
                                  nu = c(0.5, 1),
                                  noise_sp_ratio = c(1)), "cartesian")
 
-mod1 <- spLMstack(y ~ x1, data = dat,
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 4.119s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -54.6976
-#> ℹ Compile time: 4.119s
-#> ℹ Solver time: 0.009s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | noise_sp_ratio | weight |
 #> +---------+-----+-----+----------------+--------+
-#> | Model 1 |  1.5|  0.5|               1| 0.000  |
-#> | Model 2 |  3.0|  0.5|               1| 0.333  |
-#> | Model 3 |  1.5|  1.0|               1| 0.000  |
-#> | Model 4 |  3.0|  1.0|               1| 0.667  |
+#> | Model 1 |    3|  0.5|               1| 0      |
+#> | Model 2 |    6|  0.5|               1| 0      |
+#> | Model 3 |    3|  1.0|               1| 0      |
+#> | Model 4 |    6|  1.0|               1| 1      |
 #> +---------+-----+-----+----------------+--------+
 #> 
 
@@ -117,15 +123,15 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.292s
+#> ℹ Compile time: 1.006s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -54.6976
-#> ℹ Compile time: 0.292s
-#> ℹ Solver time: 0.057s
+#> ✔ Optimal value: -42.5932
+#> ℹ Compile time: 1.006s
+#> ℹ Solver time: 0.048s
 print(round(w_hat$weights, 4))
-#> [1] 0.0000 0.3333 0.0000 0.6667
+#> [1] 0 0 0 1
 print(w_hat$solver)
 #> [1] "CVXR:CLARABEL"
 print(w_hat$status)

@@ -12,6 +12,9 @@ linear and generalized linear models.
 - [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
   : Bayesian spatially-temporally varying coefficients generalized
   linear model using predictive stacking
+- [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
+  : Bayesian spatially-temporally varying coefficients linear model
+  using predictive stacking
 - [`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md)
   : Create a collection of candidate models for stacking
 
@@ -27,6 +30,8 @@ predictive densities
   : Univariate Bayesian spatial generalized linear model
 - [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
   : Bayesian spatially-temporally varying generalized linear model
+- [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
+  : Bayesian spatially-temporally varying coefficients linear model
 
 ## Downstream posterior sampling
 
@@ -71,21 +76,12 @@ those designing their own cross-validation algorithms
 
 ## Synthetic datasets
 
-Various simulated spatial data sampled on unit square
+Simulated spatial and spatial-temporal data on the unit square
 
-- [`sim_stvcPoisson`](https://span-18.github.io/spStack-dev/reference/sim_stvcPoisson.md)
-  : Synthetic point-referenced spatial-temporal Poisson count data
-  simulated using spatially-temporally varying coefficients
-- [`simBinary`](https://span-18.github.io/spStack-dev/reference/simBinary.md)
-  : Synthetic point-referenced binary data
-- [`simBinom`](https://span-18.github.io/spStack-dev/reference/simBinom.md)
-  : Synthetic point-referenced binomial count data
-- [`simGaussian`](https://span-18.github.io/spStack-dev/reference/simGaussian.md)
-  : Synthetic point-referenced Gaussian data
-- [`simPoisson`](https://span-18.github.io/spStack-dev/reference/simPoisson.md)
-  : Synthetic point-referenced Poisson count data
-- [`sim_spData()`](https://span-18.github.io/spStack-dev/reference/sim_spData.md)
-  : Simulate spatial data on unit square
+- [`simSpatial`](https://span-18.github.io/spStack-dev/reference/simSpatial.md)
+  : Synthetic point-referenced spatial data
+- [`simSpaceTime`](https://span-18.github.io/spStack-dev/reference/simSpaceTime.md)
+  : Synthetic point-referenced spatial-temporal data
 
 ## Other utilities
 

@@ -92,44 +92,26 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"simPoisson"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simPoisson</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">5</span>, <span class="fl">7</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpatial</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                                 boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
-<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="spGLMstack.html">spGLMstack</a></span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
+<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="spGLMstack.html">spGLMstack</a></span><span class="op">(</span><span class="va">y_pois</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
 <span class="r-in"><span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
 <span class="r-in"><span>                   candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span></span>
 <span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">100</span>,</span></span>
 <span class="r-in"><span>                   loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                   verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --------------------------------------------------</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Solver diagnostics:</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Installed solvers: CLARABEL, SCS, OSQP, HIGHS</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Requested solver: DEFAULT (CLARABEL -&gt; ECOS -&gt; SCS)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> Solver search order: CLARABEL -&gt; SCS</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> --------------------------------------------------</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Problem: 1 variable, 2 constraints (DCP)</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compilation: <span style="color: #0000BB;">"CLARABEL"</span> via CVXR::FlipObjective -&gt; CVXR::Dcp2Cone -&gt; CVXR::CvxAttr2Constr -&gt; CVXR::ConeMatrixStuffing -&gt; CVXR::Clarabel_Solver</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.032s</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ─────────────────────────────── Numerical solver ───────────────────────────────</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> ──────────────────────────────────── Summary ───────────────────────────────────</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Status: optimal</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BB00;">✔</span> Optimal value: -154.519</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Compile time: 0.032s</span>
-<span class="r-msg co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> Solver time: 0.006s</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> STACKING WEIGHTS:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           | phi | nu  | boundary | weight |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------+--------+</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1 |    3|  0.5|       0.5| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2 |    5|  0.5|       0.5| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3 |    7|  0.5|       0.5| 0.000  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4 |    3|  1.5|       0.5| 0.398  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 5 |    5|  1.5|       0.5| 0.082  |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 6 |    7|  1.5|       0.5| 0.520  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1 |    3|  0.5|       0.5| 0      |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2 |    6|  0.5|       0.5| 0      |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3 |    3|  1.0|       0.5| 0      |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4 |    6|  1.0|       0.5| 1      |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------+--------+</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span></span></span>

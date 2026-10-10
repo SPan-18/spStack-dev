@@ -171,10 +171,16 @@ following tags -
 
   number of candidate models that are fit.
 
-- `candidate.models`:
+- `model.params`:
 
-  a list of length `n_model` rows with each entry containing details of
-  the model parameters.
+  a list with one element per candidate model, each a named list of its
+  parameters: `phi_s`, `phi_t` (vectors of length \\r\\ if
+  `process.type = 'independent'`) and `boundary`.
+
+- `stacking.summary`:
+
+  a matrix with one row per candidate model, containing its parameters
+  and its optimal stacking weight, for display.
 
 - `stacking.weights`:
 
@@ -185,9 +191,30 @@ following tags -
 
   a `proc_time` object with runtime details.
 
-- `solver.status`:
+- `diagnostics`:
 
-  solver status as returned by the optimization routine.
+  a list of diagnostics. Element `numerical` is a data frame with one
+  row per candidate model (per candidate model and process, with columns
+  `model` and `process`, if `process.type = 'independent'`) and columns
+  `min.pivot` (the smallest relative Cholesky pivot of the \\n \times
+  n\\ spatial-temporal correlation matrix; values below 1e-8 indicate a
+  nearly singular correlation matrix), `min.cor` and `max.cor` (the
+  correlations of the two farthest-apart and of the two closest
+  space-time locations; values of `min.cor` above 0.95 suggest an
+  effective range far exceeding the extent of the data, values of
+  `max.cor` below 0.05 nearly uncorrelated space-time locations),
+  obtained from quantities the fit computes anyway. Element `solver`
+  describes the optimization for the stacking weights: the solver used
+  (`used`) and its status (`status`), the installed and requested
+  solvers, the search order, the attempts with their status, and whether
+  the fallback
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  was used. If `verbose = TRUE`, a "Diagnostics" section is printed if
+  there is an issue: numerical flags of candidate models with stacking
+  weight above 0.05 (extreme candidates with negligible weight are
+  expected in a stacking grid and are only counted), and solver problems
+  (a requested solver not installed, an inaccurate solution, or the
+  fallback).
 
 This object can be further used to recover posterior samples of the
 scale parameters in the model, and subsequrently, to make predictions at
@@ -199,16 +226,16 @@ new locations or times using the function
 ``` r
 # \donttest{
 set.seed(1234)
-data("sim_stvcPoisson")
-dat <- sim_stvcPoisson[1:100, ]
+data(simSpaceTime)
+dat <- simSpaceTime[1:100, ]
 
 # create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(2, 3),
-                                  phi_t = list(1, 2),
+mod.list2 <- candidateModels(list(phi_s = list(2, 4),
+                                  phi_t = list(1, 4),
                                   boundary = c(0.5, 0.75)), "cartesian")
 
 # fit a spatial-temporal varying coefficient model using predictive stacking
-mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
@@ -216,36 +243,21 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
                      candidate.models = mod.list2,
                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                      n.samples = 500)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.032s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -245.706
-#> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.006s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi_s | phi_t | boundary | weight |
 #> +---------+-------+-------+----------+--------+
 #> | Model 1 |      2|      1|      0.50| 0.000  |
-#> | Model 2 |      3|      1|      0.50| 0.404  |
-#> | Model 3 |      2|      2|      0.50| 0.000  |
-#> | Model 4 |      3|      2|      0.50| 0.122  |
+#> | Model 2 |      4|      1|      0.50| 0.000  |
+#> | Model 3 |      2|      4|      0.50| 0.000  |
+#> | Model 4 |      4|      4|      0.50| 0.317  |
 #> | Model 5 |      2|      1|      0.75| 0.000  |
-#> | Model 6 |      3|      1|      0.75| 0.000  |
-#> | Model 7 |      2|      2|      0.75| 0.000  |
-#> | Model 8 |      3|      2|      0.75| 0.474  |
+#> | Model 6 |      4|      1|      0.75| 0.000  |
+#> | Model 7 |      2|      4|      0.75| 0.598  |
+#> | Model 8 |      4|      4|      0.75| 0.085  |
 #> +---------+-------+-------+----------+--------+
 #> 
+post_samps <- stackedSampler(mod1)
 # }
 ```

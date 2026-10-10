@@ -45,44 +45,26 @@ Sudipto Banerjee <sudipto@ucla.edu>
 
 ``` r
 set.seed(1234)
-data("simPoisson")
-dat <- simPoisson[1:100, ]
-cand.mod <- candidateModels(list(phi = c(3, 5, 7), nu = c(0.5, 1.5),
+data(simSpatial)
+dat <- simSpatial[1:100, ]
+cand.mod <- candidateModels(list(phi = c(3, 6), nu = c(0.5, 1),
                                  boundary = c(0.5)), "cartesian")
 
-mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
                    n.samples = 100,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                    verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.032s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -154.519
-#> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.006s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | boundary | weight |
 #> +---------+-----+-----+----------+--------+
-#> | Model 1 |    3|  0.5|       0.5| 0.000  |
-#> | Model 2 |    5|  0.5|       0.5| 0.000  |
-#> | Model 3 |    7|  0.5|       0.5| 0.000  |
-#> | Model 4 |    3|  1.5|       0.5| 0.398  |
-#> | Model 5 |    5|  1.5|       0.5| 0.082  |
-#> | Model 6 |    7|  1.5|       0.5| 0.520  |
+#> | Model 1 |    3|  0.5|       0.5| 0      |
+#> | Model 2 |    6|  0.5|       0.5| 0      |
+#> | Model 3 |    3|  1.0|       0.5| 0      |
+#> | Model 4 |    6|  1.0|       0.5| 1      |
 #> +---------+-----+-----+----------+--------+
 #> 
 

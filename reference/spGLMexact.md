@@ -136,7 +136,21 @@ An object of class `spGLMexact`, which is a list with the following tags
 - model.params:
 
   Values of the fixed parameters that includes `phi` (spatial decay),
-  `nu` (spatial smoothness).
+  `nu` (spatial smoothness; `NA` for the exponential correlation
+  function).
+
+- diagnostics:
+
+  a list of diagnostics. Element `numerical` is a data frame with one
+  row and columns `min.pivot` (the smallest relative Cholesky pivot of
+  the \\n \times n\\ correlation matrix; values below 1e-8 indicate a
+  nearly singular correlation matrix), `min.cor` and `max.cor` (the
+  correlations of the two farthest-apart and of the two closest
+  locations; values of `min.cor` above 0.95 suggest an effective range
+  far exceeding the extent of the data, values of `max.cor` below 0.05
+  nearly uncorrelated locations), obtained from quantities the fit
+  computes anyway. If `verbose = TRUE`, a "Diagnostics" section is
+  printed when any threshold is crossed.
 
 The return object might include additional data that can be used for
 subsequent prediction and/or model fit evaluation.
@@ -225,31 +239,33 @@ Soumyakanti Pan <span18@ucla.edu>
 ## Examples
 
 ``` r
-# Example 1: Analyze spatial poisson count data
-data(simPoisson)
-dat <- simPoisson[1:10, ]
-mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 4, nu = 0.4),
+data(simSpatial)
+dat <- simSpatial[1:100, ]
+coords <- as.matrix(dat[, c("s1", "s2")])
+
+# Example 1: spatial Poisson count data
+mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
+                   coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
                    n.samples = 100, verbose = TRUE)
 #> ----------------------------------------
 #>  Model description
 #> ----------------------------------------
-#> Model fit with 10 observations.
+#> Model fit with 100 observations.
 #> 
 #> Family = poisson.
 #> 
-#> Number of covariates 2 (including intercept).
+#> Number of covariates 3 (including intercept).
 #> 
 #> Using the matern spatial correlation function.
 #> 
 #> Priors:
 #>  beta: Gaussian
-#>  mu: 0.00    0.00    
+#>  mu: 0.00    0.00    0.00    
 #>  cov:
-#>   100.00  0.00   
-#>   0.00    100.00 
+#>   100.00  0.00    0.00   
+#>   0.00    100.00  0.00   
+#>   0.00    0.00    100.00 
 #> 
 #>  sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)
 #>  sigmaSq.z ~ IG(nu.z/2, nu.z/2)
@@ -258,105 +274,26 @@ mod1 <- spGLMexact(y ~ x1, data = dat, family = "poisson",
 #>  Boundary adjustment parameter = 0.50.
 #> 
 #> Spatial process parameters:
-#>  phi = 4.00, and, nu = 0.40.
+#>  phi = 6.00, and, nu = 0.50.
 #> 
 #> Number of posterior samples = 100.
 #> ----------------------------------------
-
-# summarize posterior samples
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>            2.5%       50%     97.5%
-#> [1,]  0.4031546  2.131636 4.3996223
-#> [2,] -1.2780079 -0.401876 0.6808467
+#>             2.5%        50%      97.5%
+#> [1,]  0.85321873  1.7792510  3.5396481
+#> [2,] -0.84012204 -0.5900074 -0.3406932
+#> [3,]  0.07424866  0.4209770  0.7270565
 
-# Example 2: Analyze spatial binomial count data
-data(simBinom)
-dat <- simBinom[1:10, ]
-mod2 <- spGLMexact(cbind(y, n_trials) ~ x1, data = dat, family = "binomial",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 3, nu = 0.4),
-                   n.samples = 100, verbose = TRUE)
-#> ----------------------------------------
-#>  Model description
-#> ----------------------------------------
-#> Model fit with 10 observations.
-#> 
-#> Family = binomial.
-#> 
-#> Number of covariates 2 (including intercept).
-#> 
-#> Using the matern spatial correlation function.
-#> 
-#> Priors:
-#>  beta: Gaussian
-#>  mu: 0.00    0.00    
-#>  cov:
-#>   100.00  0.00   
-#>   0.00    100.00 
-#> 
-#>  sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)
-#>  sigmaSq.z ~ IG(nu.z/2, nu.z/2)
-#>  nu.beta = 2.10, nu.z = 2.10.
-#>  sigmaSq.xi = 0.10.
-#>  Boundary adjustment parameter = 0.50.
-#> 
-#> Spatial process parameters:
-#>  phi = 3.00, and, nu = 0.40.
-#> 
-#> Number of posterior samples = 100.
-#> ----------------------------------------
+# Example 2: spatial binomial count data
+mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,
+                   family = "binomial", coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
+                   n.samples = 100, verbose = FALSE)
 
-# summarize posterior samples
-post_beta <- mod2$samples$beta
-print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>           2.5%        50%    97.5%
-#> [1,] -1.152229  1.0638569 3.177919
-#> [2,] -1.948063 -0.6444146 1.765978
-
-# Example 3: Analyze spatial binary data
-data(simBinary)
-dat <- simBinary[1:10, ]
-mod3 <- spGLMexact(y ~ x1, data = dat, family = "binary",
-                   coords = as.matrix(dat[, c("s1", "s2")]),
-                   cor.fn = "matern",
-                   spParams = list(phi = 4, nu = 0.4),
-                   n.samples = 100, verbose = TRUE)
-#> ----------------------------------------
-#>  Model description
-#> ----------------------------------------
-#> Model fit with 10 observations.
-#> 
-#> Family = binary.
-#> 
-#> Number of covariates 2 (including intercept).
-#> 
-#> Using the matern spatial correlation function.
-#> 
-#> Priors:
-#>  beta: Gaussian
-#>  mu: 0.00    0.00    
-#>  cov:
-#>   100.00  0.00   
-#>   0.00    100.00 
-#> 
-#>  sigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)
-#>  sigmaSq.z ~ IG(nu.z/2, nu.z/2)
-#>  nu.beta = 2.10, nu.z = 2.10.
-#>  sigmaSq.xi = 0.10.
-#>  Boundary adjustment parameter = 0.50.
-#> 
-#> Spatial process parameters:
-#>  phi = 4.00, and, nu = 0.40.
-#> 
-#> Number of posterior samples = 100.
-#> ----------------------------------------
-
-# summarize posterior samples
-post_beta <- mod3$samples$beta
-print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>           2.5%        50%     97.5%
-#> [1,] -2.286179  1.0835017 4.2971743
-#> [2,] -1.947643 -0.4570675 0.8338287
+# Example 3: spatial binary data
+mod3 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
+                   coords = coords, cor.fn = "matern",
+                   spParams = list(phi = 6, nu = 0.5),
+                   n.samples = 100, verbose = FALSE)
 ```

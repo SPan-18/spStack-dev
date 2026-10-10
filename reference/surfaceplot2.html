@@ -91,7 +91,8 @@ as appearing in the <code><a href="https://finleya.github.io/MBA/reference/mba.s
 
 <dt id="arg-col-pal">col.pal<a class="anchor" aria-label="anchor" href="#arg-col-pal"></a></dt>
 <dd><p>Optional; color palette, preferably divergent, use
-<code>colorRampPalette</code> function from <code>grDevices</code>. Default is 'RdYlBu'.</p></dd>
+<code>colorRampPalette</code> function from <code>grDevices</code>. Default is the
+colorblind-friendly diverging palette 'RdBu' from ColorBrewer.</p></dd>
 
 
 <dt id="arg-mark-points">mark_points<a class="anchor" aria-label="anchor" href="#arg-mark-points"></a></dt>
@@ -111,9 +112,9 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simGaussian</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">plots_2</span> <span class="op">&lt;-</span> <span class="fu">surfaceplot2</span><span class="op">(</span><span class="va">simGaussian</span>, coords_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                        var1_name <span class="op">=</span> <span class="st">"z_true"</span>, var2_name <span class="op">=</span> <span class="st">"y"</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpatial</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">plots_2</span> <span class="op">&lt;-</span> <span class="fu">surfaceplot2</span><span class="op">(</span><span class="va">simSpatial</span>, coords_name <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                        var1_name <span class="op">=</span> <span class="st">"z_true"</span>, var2_name <span class="op">=</span> <span class="st">"y_gauss"</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">plots_2</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [[1]]</span>
 <span class="r-plt img"><img src="surfaceplot2-1.png" alt="" width="700" height="433"></span>

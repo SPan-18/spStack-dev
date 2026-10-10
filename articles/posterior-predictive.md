@@ -11,9 +11,14 @@ functions
 [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
 [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
-[`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
-[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
-etc.
+[`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),
+[`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md),
+[`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+and
+[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md).
+We use the synthetic datasets `simSpatial` and `simSpaceTime`: we fit
+the models on the first rows of a dataset and predict at the next ones,
+where we compare the predictions with the true values.
 
 ``` r
 
@@ -33,7 +38,8 @@ corresponding posterior predictive distributions.
 ## Prediction in spatial linear model
 
 Define the collection of candidate models and fit using
-[`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md).
+[`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
+to the Gaussian response `y_gauss` of `simSpatial`.
 
 ``` r
 
@@ -41,16 +47,16 @@ Define the collection of candidate models and fit using
 n_train <- 150
 n_pred <- 50
 
-data("simGaussian")
-dat_train <- simGaussian[1:n_train, ]
-dat_pred <- simGaussian[n_train + 1:n_pred, ]
+data("simSpatial")
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
-cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
-                                 nu = c(0.75, 1.25),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10),
+                                 nu = c(0.5, 1),
                                  noise_sp_ratio = c(0.5, 1, 2)),
                             "cartesian")
 
-mod1 <- spLMstack(y ~ x1, data = dat_train,
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
@@ -58,66 +64,87 @@ mod1 <- spLMstack(y ~ x1, data = dat_train,
                   parallel = FALSE, verbose = TRUE)
 ```
 
-    ## --------------------------------------------------
-
-    ## Solver diagnostics:
-
-    ## Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-
-    ## Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-
-    ## Solver search order: CLARABEL -> SCS
-
-    ## --------------------------------------------------
-
-    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-
-    ## ℹ Problem: 1 variable, 2 constraints (DCP)
-
-    ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-
-    ## ℹ Compile time: 3.423s
-
-    ## ─────────────────────────────── Numerical solver ───────────────────────────────
-
-    ## ──────────────────────────────────── Summary ───────────────────────────────────
-
-    ## ✔ Status: optimal
-
-    ## ✔ Optimal value: -84.439
-
-    ## ℹ Compile time: 3.423s
-
-    ## ℹ Solver time: 0.012s
-
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##            | phi | nu   | noise_sp_ratio | weight |
-    ## +----------+-----+------+----------------+--------+
-    ## | Model 1  |  1.5|  0.75|             0.5| 0.000  |
-    ## | Model 2  |  3.0|  0.75|             0.5| 0.000  |
-    ## | Model 3  |  5.0|  0.75|             0.5| 0.717  |
-    ## | Model 4  |  1.5|  1.25|             0.5| 0.283  |
-    ## | Model 5  |  3.0|  1.25|             0.5| 0.000  |
-    ## | Model 6  |  5.0|  1.25|             0.5| 0.000  |
-    ## | Model 7  |  1.5|  0.75|             1.0| 0.000  |
-    ## | Model 8  |  3.0|  0.75|             1.0| 0.000  |
-    ## | Model 9  |  5.0|  0.75|             1.0| 0.000  |
-    ## | Model 10 |  1.5|  1.25|             1.0| 0.000  |
-    ## | Model 11 |  3.0|  1.25|             1.0| 0.000  |
-    ## | Model 12 |  5.0|  1.25|             1.0| 0.000  |
-    ## | Model 13 |  1.5|  0.75|             2.0| 0.000  |
-    ## | Model 14 |  3.0|  0.75|             2.0| 0.000  |
-    ## | Model 15 |  5.0|  0.75|             2.0| 0.000  |
-    ## | Model 16 |  1.5|  1.25|             2.0| 0.000  |
-    ## | Model 17 |  3.0|  1.25|             2.0| 0.000  |
-    ## | Model 18 |  5.0|  1.25|             2.0| 0.000  |
-    ## +----------+-----+------+----------------+--------+
-
-    ## Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6
-    ## candidate model(s); PSIS estimates of the corresponding leave-one-out
-    ## predictive densities may be unreliable. Consider loopd.method = 'exact'.
+    ##            | phi | nu  | noise_sp_ratio | weight |
+    ## +----------+-----+-----+----------------+--------+
+    ## | Model 1  |    3|  0.5|             0.5| 0      |
+    ## | Model 2  |    6|  0.5|             0.5| 0      |
+    ## | Model 3  |   10|  0.5|             0.5| 0      |
+    ## | Model 4  |    3|  1.0|             0.5| 0      |
+    ## | Model 5  |    6|  1.0|             0.5| 0      |
+    ## | Model 6  |   10|  1.0|             0.5| 1      |
+    ## | Model 7  |    3|  0.5|             1.0| 0      |
+    ## | Model 8  |    6|  0.5|             1.0| 0      |
+    ## | Model 9  |   10|  0.5|             1.0| 0      |
+    ## | Model 10 |    3|  1.0|             1.0| 0      |
+    ## | Model 11 |    6|  1.0|             1.0| 0      |
+    ## | Model 12 |   10|  1.0|             1.0| 0      |
+    ## | Model 13 |    3|  0.5|             2.0| 0      |
+    ## | Model 14 |    6|  0.5|             2.0| 0      |
+    ## | Model 15 |   10|  0.5|             2.0| 0      |
+    ## | Model 16 |    3|  1.0|             2.0| 0      |
+    ## | Model 17 |    6|  1.0|             2.0| 0      |
+    ## | Model 18 |   10|  1.0|             2.0| 0      |
+    ## +----------+-----+-----+----------------+--------+
+    ## 
+    ## ----------------------------------------
+    ##  Diagnostics
+    ## ----------------------------------------
+    ## Model 1 (stacking weight 0):
+    ##   - 10 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 2 (stacking weight 0):
+    ##   - 21 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 3 (stacking weight 0):
+    ##   - 50 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 4 (stacking weight 0):
+    ##   - 1 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 5 (stacking weight 0):
+    ##   - 10 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 6 (stacking weight 1):
+    ##   - 18 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 7 (stacking weight 0):
+    ##   - 2 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 8 (stacking weight 0):
+    ##   - 6 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 9 (stacking weight 0):
+    ##   - 16 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 11 (stacking weight 0):
+    ##   - 2 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 12 (stacking weight 0):
+    ##   - 4 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 14 (stacking weight 0):
+    ##   - 3 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## Model 15 (stacking weight 0):
+    ##   - 1 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+    ##     the corresponding leave-one-out predictive densities may be unreliable;
+    ##     consider loopd.method = 'exact'.
+    ## ----------------------------------------
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),
@@ -126,7 +153,7 @@ and finally sample from the *stacked posterior*.
 ``` r
 
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new, joint = TRUE)
 post_samps <- stackedSampler(mod.pred)
 ```
@@ -145,19 +172,19 @@ plot_z_summ <- ggplot(data = z_combn, aes(x = z)) +
   geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
   geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
-  xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
+  xlab("True z") + ylab("Posterior predictive of z") + theme_bw() +
   theme(panel.grid = element_blank(), aspect.ratio = 1)
 
 postpred_y <- post_samps$y.pred
 post_y_summ <- t(apply(postpred_y, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-y_combn <- data.frame(y = dat_pred$y, yL = post_y_summ[, 1],
+y_combn <- data.frame(y = dat_pred$y_gauss, yL = post_y_summ[, 1],
                       yM = post_y_summ[, 2], yU = post_y_summ[, 3])
 
 plot_y_summ <- ggplot(data = y_combn, aes(x = y)) +
   geom_errorbar(aes(ymin = yL, ymax = yU), alpha = 0.5, color = "skyblue") +
   geom_point(aes(y = yM), size = 0.5, color = "darkblue", alpha = 0.5) +
   geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
-  xlab("True y") + ylab("Posterior of y") + theme_bw() +
+  xlab("True y") + ylab("Posterior predictive of y") + theme_bw() +
   theme(panel.grid = element_blank(), aspect.ratio = 1)
 
 plot_z_summ + plot_y_summ
@@ -169,7 +196,7 @@ plot_z_summ + plot_y_summ
 
 Define the collection of candidate parameters and fit the model using
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md).
-We use spatial Poisson count data `simPoisson` for this example.
+We use the Poisson counts `y_pois` of `simSpatial` for this example.
 
 ``` r
 
@@ -177,15 +204,13 @@ We use spatial Poisson count data `simPoisson` for this example.
 n_train <- 150
 n_pred <- 50
 
-# load spatial Poisson data
-data("simPoisson")
-dat_train <- simPoisson[1:n_train, ]
-dat_pred <- simPoisson[n_train + 1:n_pred, ]
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
-cand.mod <- candidateModels(list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.0),
                                  boundary = c(0.5)), "cartesian")
 
-mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
+mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
                    priors = list(nu.beta = 5, nu.z = 5),
@@ -196,49 +221,17 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
 
     ## Some priors were not supplied. Using defaults.
 
-    ## --------------------------------------------------
-
-    ## Solver diagnostics:
-
-    ## Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-
-    ## Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-
-    ## Solver search order: CLARABEL -> SCS
-
-    ## --------------------------------------------------
-
-    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-
-    ## ℹ Problem: 1 variable, 2 constraints (DCP)
-
-    ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-
-    ## ℹ Compile time: 0.264s
-
-    ## ─────────────────────────────── Numerical solver ───────────────────────────────
-
-    ## ──────────────────────────────────── Summary ───────────────────────────────────
-
-    ## ✔ Status: optimal
-
-    ## ✔ Optimal value: -235.103
-
-    ## ℹ Compile time: 0.264s
-
-    ## ℹ Solver time: 0.047s
-
     ## 
     ## STACKING WEIGHTS:
     ## 
     ##           | phi | nu  | boundary | weight |
     ## +---------+-----+-----+----------+--------+
     ## | Model 1 |    3|  0.5|       0.5| 0      |
-    ## | Model 2 |    4|  0.5|       0.5| 0      |
-    ## | Model 3 |    5|  0.5|       0.5| 0      |
+    ## | Model 2 |    6|  0.5|       0.5| 0      |
+    ## | Model 3 |   10|  0.5|       0.5| 0      |
     ## | Model 4 |    3|  1.0|       0.5| 0      |
-    ## | Model 5 |    4|  1.0|       0.5| 0      |
-    ## | Model 6 |    5|  1.0|       0.5| 1      |
+    ## | Model 5 |    6|  1.0|       0.5| 0      |
+    ## | Model 6 |   10|  1.0|       0.5| 1      |
     ## +---------+-----+-----+----------+--------+
 
 Define the new coordinates, run
@@ -249,7 +242,7 @@ usage, we specify `joint=FALSE` for the prediction task.
 ``` r
 
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new, joint = FALSE)
 post_samps <- stackedSampler(mod.pred)
 ```
@@ -274,7 +267,7 @@ plot_z_summ <- ggplot(data = z_combn, aes(x = z)) +
 
 postpred_y <- post_samps$y.pred
 post_y_summ <- t(apply(postpred_y, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-y_combn <- data.frame(y = dat_pred$y, yL = post_y_summ[, 1],
+y_combn <- data.frame(y = dat_pred$y_pois, yL = post_y_summ[, 1],
                       yM = post_y_summ[, 2], yU = post_y_summ[, 3])
 
 plot_y_summ <- ggplot(data = y_combn, aes(x = y)) +
@@ -293,27 +286,26 @@ plot_z_summ + plot_y_summ
 
 Define the collection of candidate parameters and fit the model using
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md).
-We use spatial Poisson count data `sim_stvcPoisson` for this example.
+We use the Poisson counts `y_pois` of `simSpaceTime` for this example.
 
 ``` r
 
 # Example 2: Spatial-temporal model with varying coefficients
-n_train <- 150
+n_train <- 300
 n_pred <- 50
-data("sim_stvcPoisson")
-dat <- sim_stvcPoisson[1:(n_train + n_pred), ]
+data("simSpaceTime")
 
 # split dataset into test and train
-dat_train <- dat[1:n_train, ]
-dat_pred <- dat[n_train + 1:n_pred, ]
+dat_train <- simSpaceTime[1:n_train, ]
+dat_pred <- simSpaceTime[n_train + 1:n_pred, ]
 
 # create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(1, 2, 3),
-                                  phi_t = list(1, 2, 4),
+mod.list2 <- candidateModels(list(phi_s = list(2, 4),
+                                  phi_t = list(1, 4),
                                   boundary = c(0.5, 0.75)), "cartesian")
 
 # fit a spatial-temporal varying coefficient model using predictive stacking
-mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
+mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat_train, family = "poisson",
                      sp_coords = as.matrix(dat_train[, c("s1", "s2")]),
                      time_coords = as.matrix(dat_train[, "t_coords"]),
                      cor.fn = "gneiting-decay",
@@ -323,62 +315,20 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat_train, family = "poisson",
                      n.samples = 500)
 ```
 
-    ## --------------------------------------------------
-
-    ## Solver diagnostics:
-
-    ## Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-
-    ## Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-
-    ## Solver search order: CLARABEL -> SCS
-
-    ## --------------------------------------------------
-
-    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-
-    ## ℹ Problem: 1 variable, 2 constraints (DCP)
-
-    ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-
-    ## ℹ Compile time: 0.031s
-
-    ## ─────────────────────────────── Numerical solver ───────────────────────────────
-
-    ## ──────────────────────────────────── Summary ───────────────────────────────────
-
-    ## ✔ Status: optimal
-
-    ## ✔ Optimal value: -478.059
-
-    ## ℹ Compile time: 0.031s
-
-    ## ℹ Solver time: 0.012s
-
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##            | phi_s | phi_t | boundary | weight |
-    ## +----------+-------+-------+----------+--------+
-    ## | Model 1  |      1|      1|      0.50| 0.000  |
-    ## | Model 2  |      2|      1|      0.50| 0.000  |
-    ## | Model 3  |      3|      1|      0.50| 0.139  |
-    ## | Model 4  |      1|      2|      0.50| 0.000  |
-    ## | Model 5  |      2|      2|      0.50| 0.000  |
-    ## | Model 6  |      3|      2|      0.50| 0.000  |
-    ## | Model 7  |      1|      4|      0.50| 0.000  |
-    ## | Model 8  |      2|      4|      0.50| 0.000  |
-    ## | Model 9  |      3|      4|      0.50| 0.367  |
-    ## | Model 10 |      1|      1|      0.75| 0.000  |
-    ## | Model 11 |      2|      1|      0.75| 0.000  |
-    ## | Model 12 |      3|      1|      0.75| 0.000  |
-    ## | Model 13 |      1|      2|      0.75| 0.000  |
-    ## | Model 14 |      2|      2|      0.75| 0.000  |
-    ## | Model 15 |      3|      2|      0.75| 0.000  |
-    ## | Model 16 |      1|      4|      0.75| 0.000  |
-    ## | Model 17 |      2|      4|      0.75| 0.000  |
-    ## | Model 18 |      3|      4|      0.75| 0.493  |
-    ## +----------+-------+-------+----------+--------+
+    ##           | phi_s | phi_t | boundary | weight |
+    ## +---------+-------+-------+----------+--------+
+    ## | Model 1 |      2|      1|      0.50| 0.000  |
+    ## | Model 2 |      4|      1|      0.50| 0.000  |
+    ## | Model 3 |      2|      4|      0.50| 0.031  |
+    ## | Model 4 |      4|      4|      0.50| 0.000  |
+    ## | Model 5 |      2|      1|      0.75| 0.000  |
+    ## | Model 6 |      4|      1|      0.75| 0.000  |
+    ## | Model 7 |      2|      4|      0.75| 0.969  |
+    ## | Model 8 |      4|      4|      0.75| 0.000  |
+    ## +---------+-------+-------+----------+--------+
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),
@@ -390,10 +340,11 @@ for this particular example.
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
 tm_pred <- as.matrix(dat_pred[, "t_coords"])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)     # covariates with fixed effects
+XTilde_new <- cbind(1, dat_pred$x1)              # covariates with varying coefficients
 mod_pred <- posteriorPredict(mod1,
                              coords_new = list(sp = sp_pred, time = tm_pred),
-                             covars_new = list(fixed = X_new, vc = X_new),
+                             covars_new = list(fixed = X_new, vc = XTilde_new),
                              joint = FALSE)
 
 # sample from the stacked posterior and posterior predictive distribution

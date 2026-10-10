@@ -2,12 +2,15 @@
 
 In this article, we discuss the following functions -
 
+- [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
+- [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
 - [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
 - [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
 - [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
 
-These functions can be used to fit non-Gaussian spatial-temporal
-point-referenced data.
+These functions can be used to fit Gaussian and non-Gaussian
+spatial-temporal point-referenced data with spatially-temporally varying
+coefficients.
 
 ``` r
 
@@ -15,75 +18,234 @@ library(patchwork)
 set.seed(1729)
 ```
 
-## Bayesian non-Gaussian spatially-temporally varying coefficient models
+## Data
 
-We illustrate the spatially-temporally varying coefficient model using
-the synthetic spatial-temporal Poisson count data.
-
-We first load the data `sim_stvcPoisson` which consists of data at 500
-spatial-temporal locations. We use the first 100 locations for the
-following analysis.
+The package lazy-loads the synthetic dataset `simSpaceTime`, observed at
+500 space-time coordinates $`\ell = (s, t)`$ with $`s`$ in the unit
+square and $`t`$ in the unit interval. It has two covariates `x1` and
+`x2`, a varying intercept `z1_true` that is a wave travelling across
+space over time, $`z_1(\ell) = \sin\{2\pi(s_1 - t)\}`$, and a varying
+slope of `x1`, `z2_true`, $`z_2(\ell) = \cos(2\pi s_2) \cos(\pi t)`$.
+The Gaussian response `y_gauss` and the Poisson response `y_pois` share
+them. Both surfaces are deterministic, not draws from Gaussian
+processes. See
+[`?simSpaceTime`](https://span-18.github.io/spStack-dev/reference/simSpaceTime.md)
+for the code that generated the data. We use the first 200 space-time
+coordinates for the following analysis.
 
 ``` r
 
 library(spStack)
-data("sim_stvcPoisson")
-n_train <- 100
-dat <- sim_stvcPoisson[1:n_train, ]
-```
-
-The dataset consists of one covariate `x1`, response variable `y`,
-spatial locations given by `s1` and `s2`, a temporal coordinate
-`t_coords`, and the true spatially-temporally varying coefficients
-`z1_true` and `z2_true` associated with an intercept and `x1`,
-respectively. We elaborate below.
-
-``` r
-
+data("simSpaceTime")
+n_train <- 200
+dat <- simSpaceTime[1:n_train, ]
 head(dat)
 ```
 
-    ##          s1         s2   t_coords           x1  y    z1_true     z2_true
-    ## 1 0.8458822 0.43458448 0.51451148 -0.766742372 25  2.0451334  1.28806986
-    ## 2 0.7965761 0.20391526 0.47538393  0.128523505 12  0.3791130  0.06896414
-    ## 3 0.9182483 0.07049103 0.85633367  1.669250054 12  0.3188769  0.58753365
-    ## 4 0.8099342 0.99920483 0.51844637  0.988857940 12  1.8994169 -0.66931170
-    ## 5 0.7379233 0.70276900 0.54693172  1.233493103 28  0.9009137  0.90728556
-    ## 6 0.4131629 0.08673831 0.04680728  0.004780498  5 -0.6926862 -0.61172092
+    ##          s1        s2  t_coords          x1         x2    y_gauss y_pois
+    ## 1 0.2216173 0.9919157 0.8458822 -0.16471416  2.0451334  0.6247576     28
+    ## 2 0.5937945 0.3285576 0.7965761 -1.47214370 -1.1420950 -6.0580521      3
+    ## 3 0.5511327 0.1808101 0.9182483  0.53238120 -0.1035955  4.0516817      0
+    ## 4 0.2295121 0.7660980 0.8099342  1.64998720  1.3164616  8.8155560      7
+    ## 5 0.9524661 0.9817298 0.7379233 -0.03672285 -0.9846361  4.1997422     16
+    ## 6 0.6469231 0.4993637 0.4131629 -0.34204648 -1.0552852  2.0616680     19
+    ##      z1_true     z2_true
+    ## 1  0.7038331 -0.88391758
+    ## 2 -0.9563118  0.38028823
+    ## 3 -0.7412544 -0.40735390
+    ## 4  0.4840762 -0.08350197
+    ## 5  0.9752861 -0.67530256
+    ## 6  0.9947987 -0.26943332
 
 ### Formula for varying coefficients model
 
 We define the spatially-temporally varying coefficients model using a
 `formula`, similar to that in the widely used
 [`lm()`](https://rdrr.io/r/stats/lm.html) function in the `stats`
-package. Suppose $`\ell = (s, t)`$ refers to a space-time ccoordinate.
-See “Technical Overview for more details”. Then, given
-`family = "poisson"`, the formula `y ~ x1 + (x1)` corresponds to the
+package. Suppose $`\ell = (s, t)`$ refers to a space-time coordinate.
+See “Technical Overview” for more details. The formula
+`y_gauss ~ x1 + x2 + (x1)` corresponds to the spatial-temporal linear
+model
+``` math
+y(\ell) = \beta_0 + \beta_1 x_1(\ell) + \beta_2 x_2(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell) + \epsilon(\ell)\;,
+```
+where `y_gauss` corresponds to the response variable $`y(\ell)`$, which
+is regressed on the predictors `x1` and `x2` given by $`x_1(\ell)`$ and
+$`x_2(\ell)`$. The model variables specified outside the parentheses
+correspond to predictors with fixed effects, and the model inside the
+parentheses correspond to variables with spatial-temporal varying
+coefficients. The intercept is automatically considered within both the
+fixed and varying coefficient components of the model, and hence
+`y_gauss ~ x1 + x2 + (x1)` is functionally equivalent to
+`y_gauss ~ 1 + x1 + x2 + (1 + x1)`. For now, we only support the
+`cor.fn="gneiting-decay"` covariogram. To implement a model with just a
+spatial-temporal random effect, one may specify the formula
+`y_gauss ~ x1 + x2 + (1)`.
+
+## Bayesian Gaussian spatially-temporally varying coefficient models
+
+For a Gaussian response, the model is
+``` math
+y(\ell) = x(\ell)^{ \scriptstyle \top }\beta + \tilde{x}(\ell)^{ \scriptstyle \top }z(\ell) + \epsilon(\ell), \quad \epsilon(\ell) \sim \mathrm{N}(0, \sigma^2),
+```
+where each of the $`r`$ varying coefficients $`z_j`$ is an independent
+Gaussian process with variance $`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$
+and a Gneiting correlation function with decay parameters $`\phi_{s,j}`$
+and $`\phi_{t,j}`$. Given these and the noise-to-spatial variance ratios
+$`\delta^2_j`$, the joint posterior distribution is available in closed
+form and
+[`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
+samples from it exactly. With `process.type = "independent"`, each
+process has its own $`(\phi_s, \phi_t, \delta^2)`$, supplied as vectors
+of length $`r`$; with `process.type = "independent.shared"`, the
+processes share one.
+
+``` r
+
+mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
+                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                      time_coords = as.matrix(dat[, "t_coords"]),
+                      cor.fn = "gneiting-decay",
+                      process.type = "independent",
+                      sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                      noise_sp_ratio = c(0.5, 1),
+                      n.samples = 1000, loopd = TRUE, verbose = TRUE)
+```
+
+    ## ----------------------------------------
+    ##  Model description
+    ## ----------------------------------------
+    ## Model fit with 200 observations.
+    ## 
+    ## Number of covariates 3 (including intercept).
+    ## Number of covariates with spatial-temporally varying coefficients 2.
+    ## 
+    ## Using the gneiting-decay spatial-temporal correlation function.
+    ## Process type: independent.
+    ## 
+    ## Priors:
+    ##  beta flat.
+    ##  sigma.sq: flat, proportional to 1/sigma.sq.
+    ## 
+    ## Spatial-temporal process parameters:
+    ##  process 1: phi_s = 3.00, phi_t = 4.00, noise-to-spatial variance ratio = 0.50.
+    ##  process 2: phi_s = 6.00, phi_t = 2.00, noise-to-spatial variance ratio = 1.00.
+    ## 
+    ## Number of posterior samples = 1000.
+    ## 
+    ## LOO-PD calculation method = exact.
+    ## ----------------------------------------
+
+The fixed effects are summarized below; `y_gauss` was simulated with
+$`\beta = (2, 5, -1)^{ \scriptstyle \top }`$. The samples of the process
+variances are returned as `sigmaSq.z`.
+
+``` r
+
+summary_beta <- t(apply(mod_lm$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod_lm$X.names
+print(summary_beta)
+```
+
+    ##                  2.5%        50%      97.5%
+    ## (Intercept)  1.175300  1.8631698  2.5378232
+    ## x1           4.591073  4.9749871  5.3475258
+    ## x2          -1.032438 -0.9194189 -0.8102856
+
+Next, we stack candidate models built from candidate values of the
+process parameters and noise-to-spatial variance ratios. For
+`process.type = "independent"`, the candidate values are vectors of
+length $`r`$, supplied as [`list()`](https://rdrr.io/r/base/list.html)
+entries in
+[`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md).
+
+``` r
+
+mod.list.lm <- candidateModels(list(phi_s = list(c(3, 6), c(2, 4)),
+                                    phi_t = list(c(4, 2), c(1, 1)),
+                                    noise_sp_ratio = list(c(0.5, 1), c(1, 2))),
+                               "cartesian")
+
+mod_lm_stack <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
+                            sp_coords = as.matrix(dat[, c("s1", "s2")]),
+                            time_coords = as.matrix(dat[, "t_coords"]),
+                            cor.fn = "gneiting-decay",
+                            process.type = "independent",
+                            candidate.models = mod.list.lm,
+                            n.samples = 1000, verbose = TRUE)
+```
+
+    ## 
+    ## STACKING WEIGHTS:
+    ## 
+    ##           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |
+    ## +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
+    ## | Model 1 |         3|         6|         4|         2|                0.5|                  1| 0      |
+    ## | Model 2 |         2|         4|         4|         2|                0.5|                  1| 1      |
+    ## | Model 3 |         3|         6|         1|         1|                0.5|                  1| 0      |
+    ## | Model 4 |         2|         4|         1|         1|                0.5|                  1| 0      |
+    ## | Model 5 |         3|         6|         4|         2|                1.0|                  2| 0      |
+    ## | Model 6 |         2|         4|         4|         2|                1.0|                  2| 0      |
+    ## | Model 7 |         3|         6|         1|         1|                1.0|                  2| 0      |
+    ## | Model 8 |         2|         4|         1|         1|                1.0|                  2| 0      |
+    ## +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
+
+``` r
+
+post_lm <- stackedSampler(mod_lm_stack)
+```
+
+The samples of $`z`$ are stacked by process: rows $`1, \ldots, n`$ hold
+$`z_1`$ and rows $`n+1, \ldots, 2n`$ hold $`z_2`$. We compare their
+stacked posteriors with the true values.
+
+``` r
+
+post_z1_summ <- t(apply(post_lm$z[1:n_train, ], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+post_z2_summ <- t(apply(post_lm$z[n_train + 1:n_train, ], 1,
+                        function(x) quantile(x, c(0.025, 0.5, 0.975))))
+
+z1_combn <- data.frame(z = dat$z1_true, zL = post_z1_summ[, 1],
+                       zM = post_z1_summ[, 2], zU = post_z1_summ[, 3])
+z2_combn <- data.frame(z = dat$z2_true, zL = post_z2_summ[, 1],
+                       zM = post_z2_summ[, 2], zU = post_z2_summ[, 3])
+
+library(ggplot2)
+plot_z1_summ <- ggplot(data = z1_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z1") + ylab("Stacked posterior of z1") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
+  geom_errorbar(aes(ymin = zL, ymax = zU), alpha = 0.5, color = "skyblue") +
+  geom_point(aes(y = zM), size = 0.5, color = "darkblue", alpha = 0.5) +
+  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+  xlab("True z2") + ylab("Stacked posterior of z2") + theme_bw() +
+  theme(panel.grid = element_blank(), aspect.ratio = 1)
+
+plot_z1_summ + plot_z2_summ
+```
+
+![Stacked posterior of the varying coefficients against their true
+values.](spatial-temporal_files/figure-html/unnamed-chunk-4-1.png)
+
+## Bayesian non-Gaussian spatially-temporally varying coefficient models
+
+We now analyze the Poisson counts `y_pois`. Given `family = "poisson"`,
+the formula `y_pois ~ x1 + x2 + (x1)` corresponds to the
 spatial-temporal generalized linear model
 ``` math
-y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;,
+y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + \beta_2 x_2(\ell) + z_1(\ell) + x_1(\ell) z_2(\ell)\;.
 ```
-where the `y` corresponds to the response variable $`y(\ell)`$, which is
-regressed on the predictor `x1` given by $`x_1(\ell)`$. The model
-variables specified outside the parentheses corresponds to predictors
-with fixed effects, and the model inside the parentheses correspond to
-variables with spatial-temporal varying coefficient. The intercept is
-automatically considered within both the fixed and varying coefficient
-components of the model, and hence `y ~ x1 + (x1)` is functionally
-equivalent to `y ~ 1 + x1 + (1 + x1)`. The spatially-temporally varying
-coefficients
-$`z(\ell) = (z_1(\ell), z_2(\ell))^{{ \scriptstyle \top }}`$ is
+The spatially-temporally varying coefficients
+$`z(\ell) = (z_1(\ell), z_2(\ell))^{{ \scriptstyle \top }}`$ is a
 multivariate Gaussian process, and we pursue the following
 specifications for $`z(\ell)`$ - independent process, independent
-process with shared parameters, and a multivariate process. For now, we
-only support the `cor.fn="gneiting-decay"` covariogram. See “Technical
-Overview” for more details.
-
-To implement a model, with just a spatial-temporal random effect, one
-may specify the formula `y ~ x1 + (1)` which corresponds to the model
-``` math
-y(\ell) \sim \mathsf{Poisson}(\lambda(\ell)), \quad \log \lambda(\ell) = \beta_0 + \beta_1 x_1(\ell) + z_1(\ell)\;.
-```
+process with shared parameters, and a multivariate process. See
+“Technical Overview” for more details.
 
 ### Using fixed hyperparameters
 
@@ -105,13 +267,13 @@ dimension 2.
 
 ``` r
 
-mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "independent",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = c(1, 2), phi_t = c(1, 2)),
+                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -143,7 +305,7 @@ ggplot(post_scale_df, aes(x = value)) +
 ```
 
 ![Posterior distributions of the scale
-parameters.](spatial-temporal_files/figure-html/unnamed-chunk-6-1.png)
+parameters.](spatial-temporal_files/figure-html/unnamed-chunk-7-1.png)
 
 #### Independent shared processes
 
@@ -154,13 +316,13 @@ Here, the scale parameter $`\sigma = \sigma_z^2`$ is 1-dimensional.
 
 ``` r
 
-mod2 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod2 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "independent.shared",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 1, phi_t = 1),
+                     sptParams = list(phi_s = 4, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -191,7 +353,7 @@ ggplot(post_scale_df, aes(x = value)) +
 ```
 
 ![Posterior distributions of the scale
-parameters.](spatial-temporal_files/figure-html/unnamed-chunk-9-1.png)
+parameters.](spatial-temporal_files/figure-html/unnamed-chunk-10-1.png)
 
 #### Multivariate processes
 
@@ -207,13 +369,13 @@ parameter $`\sigma = \Sigma`$ is an $`2 \times 2`$ matrix.
 
 ``` r
 
-mod3 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod3 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 1, phi_t = 1),
+                     sptParams = list(phi_s = 4, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -273,7 +435,7 @@ final_plot
 ```
 
 ![Posterior distributions of elements of the scale
-matrix.](spatial-temporal_files/figure-html/unnamed-chunk-12-1.png)
+matrix.](spatial-temporal_files/figure-html/unnamed-chunk-13-1.png)
 
 Posterior distributions of elements of the scale matrix.
 
@@ -292,8 +454,8 @@ multivariate spatial-temporal process model.
 ``` r
 
 mod.list <- candidateModels(list(
-  phi_s = list(1, 2, 3),
-  phi_t = list(1, 2, 4),
+  phi_s = list(2, 4),
+  phi_t = list(1, 4),
   boundary = c(0.5, 0.75)), "cartesian")
 ```
 
@@ -302,7 +464,7 @@ mod.list <- candidateModels(list(
 
 ``` r
 
-mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
@@ -315,62 +477,20 @@ mod1 <- stvcGLMstack(y ~ x1 + (x1), data = dat, family = "poisson",
 
     ## Some priors were not supplied. Using defaults.
 
-    ## --------------------------------------------------
-
-    ## Solver diagnostics:
-
-    ## Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-
-    ## Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-
-    ## Solver search order: CLARABEL -> SCS
-
-    ## --------------------------------------------------
-
-    ## ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-
-    ## ℹ Problem: 1 variable, 2 constraints (DCP)
-
-    ## ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-
-    ## ℹ Compile time: 3.725s
-
-    ## ─────────────────────────────── Numerical solver ───────────────────────────────
-
-    ## ──────────────────────────────────── Summary ───────────────────────────────────
-
-    ## ✔ Status: optimal
-
-    ## ✔ Optimal value: -274.974
-
-    ## ℹ Compile time: 3.725s
-
-    ## ℹ Solver time: 0.014s
-
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##            | phi_s | phi_t | boundary | weight |
-    ## +----------+-------+-------+----------+--------+
-    ## | Model 1  |      1|      1|      0.50| 0.000  |
-    ## | Model 2  |      2|      1|      0.50| 0.000  |
-    ## | Model 3  |      3|      1|      0.50| 0.218  |
-    ## | Model 4  |      1|      2|      0.50| 0.000  |
-    ## | Model 5  |      2|      2|      0.50| 0.000  |
-    ## | Model 6  |      3|      2|      0.50| 0.000  |
-    ## | Model 7  |      1|      4|      0.50| 0.063  |
-    ## | Model 8  |      2|      4|      0.50| 0.000  |
-    ## | Model 9  |      3|      4|      0.50| 0.335  |
-    ## | Model 10 |      1|      1|      0.75| 0.000  |
-    ## | Model 11 |      2|      1|      0.75| 0.000  |
-    ## | Model 12 |      3|      1|      0.75| 0.085  |
-    ## | Model 13 |      1|      2|      0.75| 0.000  |
-    ## | Model 14 |      2|      2|      0.75| 0.000  |
-    ## | Model 15 |      3|      2|      0.75| 0.166  |
-    ## | Model 16 |      1|      4|      0.75| 0.000  |
-    ## | Model 17 |      2|      4|      0.75| 0.134  |
-    ## | Model 18 |      3|      4|      0.75| 0.000  |
-    ## +----------+-------+-------+----------+--------+
+    ##           | phi_s | phi_t | boundary | weight |
+    ## +---------+-------+-------+----------+--------+
+    ## | Model 1 |      2|      1|      0.50| 0.000  |
+    ## | Model 2 |      4|      1|      0.50| 0.000  |
+    ## | Model 3 |      2|      4|      0.50| 0.117  |
+    ## | Model 4 |      4|      4|      0.50| 0.308  |
+    ## | Model 5 |      2|      1|      0.75| 0.000  |
+    ## | Model 6 |      4|      1|      0.75| 0.000  |
+    ## | Model 7 |      2|      4|      0.75| 0.575  |
+    ## | Model 8 |      4|      4|      0.75| 0.000  |
+    ## +---------+-------+-------+----------+--------+
 
 **Step 3.** Recover posterior samples of the scale parameters.
 
@@ -420,7 +540,7 @@ plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
 plot_z1_summ + plot_z2_summ
 ```
 
-![](spatial-temporal_files/figure-html/unnamed-chunk-17-1.png)
+![](spatial-temporal_files/figure-html/unnamed-chunk-18-1.png)
 
 Next, we analyze the posterior distribution of the scale matrix that
 models the inter-process dependence structure.
@@ -459,7 +579,7 @@ final_plot
 
 ![Stacked posterior distribution of the elements of the inter-process
 covariance
-matrix.](spatial-temporal_files/figure-html/unnamed-chunk-18-1.png)
+matrix.](spatial-temporal_files/figure-html/unnamed-chunk-19-1.png)
 
 Stacked posterior distribution of the elements of the inter-process
 covariance matrix.

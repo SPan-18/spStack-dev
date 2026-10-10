@@ -160,10 +160,16 @@ tags -
 
   number of candidate models that are fit.
 
-- `candidate.models`:
+- `model.params`:
 
-  a matrix with `n_model` rows with each row containing details of the
-  model parameters and its optimal weight.
+  a list with one element per candidate model, each a named list of its
+  parameters: `phi`, `nu` (`NA` for the exponential correlation
+  function) and `boundary` (boundary adjustment parameter).
+
+- `stacking.summary`:
+
+  a matrix with one row per candidate model, containing its parameters
+  and its optimal stacking weight, for display.
 
 - `stacking.weights`:
 
@@ -174,9 +180,27 @@ tags -
 
   a `proc_time` object with runtime details.
 
-- `solver.status`:
+- `diagnostics`:
 
-  solver status as returned by the optimization routine.
+  a list of diagnostics. Element `numerical` is a data frame with one
+  row per candidate model and columns `min.pivot` (the smallest relative
+  Cholesky pivot of the \\n \times n\\ correlation matrix; values below
+  1e-8 indicate a nearly singular correlation matrix), `min.cor` and
+  `max.cor` (the correlations of the two farthest-apart and of the two
+  closest locations; values of `min.cor` above 0.95 suggest an effective
+  range far exceeding the extent of the data, values of `max.cor` below
+  0.05 nearly uncorrelated locations), obtained from quantities the fit
+  computes anyway. Element `solver` describes the optimization for the
+  stacking weights: the solver used (`used`) and its status (`status`),
+  the installed and requested solvers, the search order, the attempts
+  with their status, and whether the fallback
+  [`loo::stacking_weights()`](https://mc-stan.org/loo/reference/loo_model_weights.html)
+  was used. If `verbose = TRUE`, a "Diagnostics" section is printed if
+  there is an issue: numerical flags of candidate models with stacking
+  weight above 0.05 (extreme candidates with negligible weight are
+  expected in a stacking grid and are only counted), and solver problems
+  (a requested solver not installed, an inaccurate solution, or the
+  fallback).
 
 The return object might include additional data that is useful for
 subsequent prediction, model fit evaluation and other utilities.
@@ -223,89 +247,47 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ``` r
 # \donttest{
 set.seed(1234)
-data("simPoisson")
-dat <- simPoisson[1:100,]
-cand.mod <- candidateModels(list(phi = c(3, 7, 10), nu = c(0.25, 0.5, 1.5),
+data(simSpatial)
+dat <- simSpatial[1:100, ]
+cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1),
                                  boundary = c(0.5, 0.6)), "cartesian")
 
-mod1 <- spGLMstack(y ~ x1, data = dat, family = "poisson",
+mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
                    n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
                    parallel = TRUE, verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.032s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -158.057
-#> ℹ Compile time: 0.032s
-#> ℹ Solver time: 0.008s
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu   | boundary | weight |
-#> +----------+-----+------+----------+--------+
-#> | Model 1  |    3|  0.25|       0.5| 0.000  |
-#> | Model 2  |    7|  0.25|       0.5| 0.000  |
-#> | Model 3  |   10|  0.25|       0.5| 0.000  |
-#> | Model 4  |    3|  0.50|       0.5| 0.000  |
-#> | Model 5  |    7|  0.50|       0.5| 0.000  |
-#> | Model 6  |   10|  0.50|       0.5| 0.000  |
-#> | Model 7  |    3|  1.50|       0.5| 0.000  |
-#> | Model 8  |    7|  1.50|       0.5| 0.000  |
-#> | Model 9  |   10|  1.50|       0.5| 0.000  |
-#> | Model 10 |    3|  0.25|       0.6| 0.000  |
-#> | Model 11 |    7|  0.25|       0.6| 0.000  |
-#> | Model 12 |   10|  0.25|       0.6| 0.000  |
-#> | Model 13 |    3|  0.50|       0.6| 0.000  |
-#> | Model 14 |    7|  0.50|       0.6| 0.000  |
-#> | Model 15 |   10|  0.50|       0.6| 0.000  |
-#> | Model 16 |    3|  1.50|       0.6| 0.426  |
-#> | Model 17 |    7|  1.50|       0.6| 0.574  |
-#> | Model 18 |   10|  1.50|       0.6| 0.000  |
-#> +----------+-----+------+----------+--------+
+#>            | phi | nu  | boundary | weight |
+#> +----------+-----+-----+----------+--------+
+#> | Model 1  |    3|  0.5|       0.5| 0      |
+#> | Model 2  |    6|  0.5|       0.5| 0      |
+#> | Model 3  |   10|  0.5|       0.5| 0      |
+#> | Model 4  |    3|  1.0|       0.5| 0      |
+#> | Model 5  |    6|  1.0|       0.5| 0      |
+#> | Model 6  |   10|  1.0|       0.5| 0      |
+#> | Model 7  |    3|  0.5|       0.6| 0      |
+#> | Model 8  |    6|  0.5|       0.6| 0      |
+#> | Model 9  |   10|  0.5|       0.6| 0      |
+#> | Model 10 |    3|  1.0|       0.6| 0      |
+#> | Model 11 |    6|  1.0|       0.6| 0      |
+#> | Model 12 |   10|  1.0|       0.6| 1      |
+#> +----------+-----+-----+----------+--------+
 #> 
-
-# print(mod1$solver.status)
-# print(mod1$run.time)
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                   2.5%        50%     97.5%
-#> (Intercept) -0.7636588  2.0582568  4.304904
-#> x1          -0.7072396 -0.5637752 -0.422351
+#>                   2.5%        50%      97.5%
+#> (Intercept)  0.5963552  1.7859907  2.7538797
+#> x1          -0.7582803 -0.5239114 -0.3066513
+#> x2           0.1323709  0.4129337  0.7259990
 
-post_z <- post_samps$z
-post_z_summ <- t(apply(post_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-
-z_combn <- data.frame(z = dat$z_true,
-                      zL = post_z_summ[, 1],
-                      zM = post_z_summ[, 2],
-                      zU = post_z_summ[, 3])
-
-library(ggplot2)
-plot_z <- ggplot(data = z_combn, aes(x = z)) +
- geom_errorbar(aes(ymin = zL, ymax = zU),
-               width = 0.05, alpha = 0.15,
-               color = "skyblue") +
- geom_point(aes(y = zM), size = 0.25,
-            color = "darkblue", alpha = 0.5) +
- geom_abline(slope = 1, intercept = 0,
-             color = "red", linetype = "solid") +
- xlab("True z") + ylab("Posterior of z") +
- theme_bw() +
- theme(panel.background = element_blank(),
-       aspect.ratio = 1)
+# compare the posterior medians of the spatial effects with the truth
+cor(apply(post_samps$z, 1, median), dat$z_true)
+#> [1] 0.9179889
 # }
 ```

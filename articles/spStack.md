@@ -18,8 +18,11 @@ set.seed(1729)
 
 ## Bayesian Gaussian spatial regression models
 
-Here is a quick example using the lazyloaded synthetic data
-`simGaussian`.
+Here is a quick example using the Gaussian response `y_gauss` of the
+lazyloaded synthetic data `simSpatial`, observed at 500 locations in the
+unit square with two covariates `x1` and `x2` and a spatial effect
+`z_true` with a ripple pattern (see
+[`?simSpatial`](https://span-18.github.io/spStack-dev/reference/simSpatial.md)).
 
 **Step 1.** Load the library spStack and prepare the data. Here we split
 the data into `dat_train` and `dat_pred` - we train our model on
@@ -34,9 +37,9 @@ library(spStack)
 n_train <- 100
 n_pred <- 50
 
-data("simGaussian")
-dat_train <- simGaussian[1:n_train, ]
-dat_pred <- simGaussian[n_train + 1:n_pred, ]
+data("simSpatial")
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
 ```
 
 **Step 2.** Run the function
@@ -51,60 +54,110 @@ used to carry out the optimization routine to get stacking weights.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(1.5, 3, 5),
-                                 nu = c(0.75, 1.25),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10),
+                                 nu = c(0.5, 1),
                                  noise_sp_ratio = c(0.5, 1, 2)),
                             "cartesian")
 
-mod1 <- spLMstack(y ~ x1, data = dat_train,
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 3.799s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -60.5492
-#> ℹ Compile time: 3.799s
-#> ℹ Solver time: 0.009s
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu   | noise_sp_ratio | weight |
-#> +----------+-----+------+----------------+--------+
-#> | Model 1  |  1.5|  0.75|             0.5| 0.000  |
-#> | Model 2  |  3.0|  0.75|             0.5| 0.743  |
-#> | Model 3  |  5.0|  0.75|             0.5| 0.055  |
-#> | Model 4  |  1.5|  1.25|             0.5| 0.202  |
-#> | Model 5  |  3.0|  1.25|             0.5| 0.000  |
-#> | Model 6  |  5.0|  1.25|             0.5| 0.000  |
-#> | Model 7  |  1.5|  0.75|             1.0| 0.000  |
-#> | Model 8  |  3.0|  0.75|             1.0| 0.000  |
-#> | Model 9  |  5.0|  0.75|             1.0| 0.000  |
-#> | Model 10 |  1.5|  1.25|             1.0| 0.000  |
-#> | Model 11 |  3.0|  1.25|             1.0| 0.000  |
-#> | Model 12 |  5.0|  1.25|             1.0| 0.000  |
-#> | Model 13 |  1.5|  0.75|             2.0| 0.000  |
-#> | Model 14 |  3.0|  0.75|             2.0| 0.000  |
-#> | Model 15 |  5.0|  0.75|             2.0| 0.000  |
-#> | Model 16 |  1.5|  1.25|             2.0| 0.000  |
-#> | Model 17 |  3.0|  1.25|             2.0| 0.000  |
-#> | Model 18 |  5.0|  1.25|             2.0| 0.000  |
-#> +----------+-----+------+----------------+--------+
-#> Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6
-#> candidate model(s); PSIS estimates of the corresponding leave-one-out
-#> predictive densities may be unreliable. Consider loopd.method = 'exact'.
+#>            | phi | nu  | noise_sp_ratio | weight |
+#> +----------+-----+-----+----------------+--------+
+#> | Model 1  |    3|  0.5|             0.5| 0      |
+#> | Model 2  |    6|  0.5|             0.5| 0      |
+#> | Model 3  |   10|  0.5|             0.5| 0      |
+#> | Model 4  |    3|  1.0|             0.5| 0      |
+#> | Model 5  |    6|  1.0|             0.5| 0      |
+#> | Model 6  |   10|  1.0|             0.5| 1      |
+#> | Model 7  |    3|  0.5|             1.0| 0      |
+#> | Model 8  |    6|  0.5|             1.0| 0      |
+#> | Model 9  |   10|  0.5|             1.0| 0      |
+#> | Model 10 |    3|  1.0|             1.0| 0      |
+#> | Model 11 |    6|  1.0|             1.0| 0      |
+#> | Model 12 |   10|  1.0|             1.0| 0      |
+#> | Model 13 |    3|  0.5|             2.0| 0      |
+#> | Model 14 |    6|  0.5|             2.0| 0      |
+#> | Model 15 |   10|  0.5|             2.0| 0      |
+#> | Model 16 |    3|  1.0|             2.0| 0      |
+#> | Model 17 |    6|  1.0|             2.0| 0      |
+#> | Model 18 |   10|  1.0|             2.0| 0      |
+#> +----------+-----+-----+----------------+--------+
+#> 
+#> ----------------------------------------
+#>  Diagnostics
+#> ----------------------------------------
+#> Model 1 (stacking weight 0):
+#>   - 8 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 2 (stacking weight 0):
+#>   - 16 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 3 (stacking weight 0):
+#>   - 29 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 4 (stacking weight 0):
+#>   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 5 (stacking weight 0):
+#>   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 6 (stacking weight 1):
+#>   - 19 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 7 (stacking weight 0):
+#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 8 (stacking weight 0):
+#>   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 9 (stacking weight 0):
+#>   - 11 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 10 (stacking weight 0):
+#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 11 (stacking weight 0):
+#>   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 12 (stacking weight 0):
+#>   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 14 (stacking weight 0):
+#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 15 (stacking weight 0):
+#>   - 3 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 17 (stacking weight 0):
+#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 18 (stacking weight 0):
+#>   - 2 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> ----------------------------------------
 ```
 
 **Step 3.** Use the helper function
@@ -126,9 +179,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                 2.5%      50%    97.5%
-#> (Intercept) 1.165301 2.324636 3.196070
-#> x1          4.857643 4.974654 5.106086
+#>                  2.5%       50%     97.5%
+#> (Intercept)  1.565441  2.002206  2.458732
+#> x1           4.733082  4.861075  4.988097
+#> x2          -1.140405 -1.002560 -0.861761
 ```
 
 > **Note:** The following optional steps are only required if interested
@@ -142,7 +196,7 @@ these new locations are given by `X_new`.
 ``` r
 
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 ```
 
 **(Optional) Step 5.** Pass the output obtained by running
@@ -176,7 +230,7 @@ posterior predictive summaries against their corresponding true values.
 
 postpred_y <- postpred_samps$y.pred
 post_y_summ <- t(apply(postpred_y, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-y_combn <- data.frame(y = dat_pred$y, yL = post_y_summ[, 1],
+y_combn <- data.frame(y = dat_pred$y_gauss, yL = post_y_summ[, 1],
                       yM = post_y_summ[, 2], yU = post_y_summ[, 3])
 library(ggplot2)
 ggplot(data = y_combn, aes(x = y)) +
@@ -195,7 +249,8 @@ Models” and “Posterior Predictive Inference”.
 ## Bayesian non-Gaussian spatial regression models
 
 The workflow for the spatial generalized linear models are similar. Here
-is a quick example using the lazyloaded synthetic data `simPoisson`.
+is a quick example using the Poisson response `y_pois` of the same data
+`simSpatial`.
 
 **Step 1.** Prepare data by splitting into train and test sets.
 
@@ -205,10 +260,8 @@ is a quick example using the lazyloaded synthetic data `simPoisson`.
 n_train <- 100
 n_pred <- 50
 
-# load spatial Poisson data
-data("simPoisson")
-dat_train <- simPoisson[1:n_train, ]
-dat_pred <- simPoisson[n_train + 1:n_pred, ]
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
 ```
 
 **Step 2.** Run the function
@@ -224,10 +277,10 @@ samples for calculating each predictive density.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(3, 4, 5), nu = c(0.5, 1.0),
+cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.0),
                                  boundary = c(0.5)), "cartesian")
 
-mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
+mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
                    priors = list(nu.beta = 5, nu.z = 5),
@@ -235,33 +288,17 @@ mod1 <- spGLMstack(y ~ x1, data = dat_train, family = "poisson",
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                    verbose = TRUE)
 #> Some priors were not supplied. Using defaults.
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.887s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -148.776
-#> ℹ Compile time: 0.887s
-#> ℹ Solver time: 0.043s
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>           | phi | nu  | boundary | weight |
 #> +---------+-----+-----+----------+--------+
 #> | Model 1 |    3|  0.5|       0.5| 0      |
-#> | Model 2 |    4|  0.5|       0.5| 0      |
-#> | Model 3 |    5|  0.5|       0.5| 0      |
+#> | Model 2 |    6|  0.5|       0.5| 0      |
+#> | Model 3 |   10|  0.5|       0.5| 0      |
 #> | Model 4 |    3|  1.0|       0.5| 0      |
-#> | Model 5 |    4|  1.0|       0.5| 1      |
-#> | Model 6 |    5|  1.0|       0.5| 0      |
+#> | Model 5 |    6|  1.0|       0.5| 0      |
+#> | Model 6 |   10|  1.0|       0.5| 1      |
 #> +---------+-----+-----+----------+--------+
 ```
 
@@ -278,9 +315,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                   2.5%        50%     97.5%
-#> (Intercept)  0.6982427  2.0558630  3.319770
-#> x1          -0.6860426 -0.5708112 -0.465655
+#>                   2.5%        50%      97.5%
+#> (Intercept)  1.0386174  1.7320419  2.4407602
+#> x1          -0.7649680 -0.5416002 -0.3693263
+#> x2           0.2099681  0.4461940  0.7626159
 ```
 
 > **Note:** The following optional steps are only required if interested
@@ -292,7 +330,7 @@ inference.
 ``` r
 
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 ```
 
 **(Optional) Step 5.** Finally, pass the model output through the

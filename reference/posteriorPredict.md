@@ -20,18 +20,24 @@ posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
   [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
   [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
   [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
+  [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
   or
-  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md).
+  [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md).
 
 - coords_new:
 
-  a list of new spatial or spatial-temporal coordinates at which the
+  new spatial coordinates (an \\n\_{new} \times 2\\ matrix) or, for the
+  spatial-temporal models, a list with tags `sp` (an \\n\_{new} \times
+  2\\ matrix) and `time` (a vector or one-column matrix) at which the
   latent process, the mean, and the response is to be predicted.
 
 - covars_new:
 
-  a list of new covariates at the new spatial or spatial-temporal
-  coordinates. See examples for the structure of this list.
+  new covariates at the new coordinates: a matrix or, for the
+  spatial-temporal models, a list with tags `fixed` (covariates with
+  fixed effects) and `vc` (covariates with spatially-temporally varying
+  coefficients). See examples for the structure of this list.
 
 - joint:
 
@@ -63,7 +69,9 @@ and whether the joint posterior predictive samples were requested.
 [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
 [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
-[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
+[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
+[`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),
+[`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
 
 ## Author
 
@@ -79,68 +87,67 @@ n_train <- 100
 n_pred <- 10
 
 # Example 1: Spatial linear model
-# load and split data into training and prediction sets
-data(simGaussian)
-dat <- simGaussian
-dat_train <- dat[1:n_train, ]
-dat_pred <- dat[n_train + 1:n_pred, ]
+# split the data into training and prediction sets
+data(simSpatial)
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
-cand.mod <- candidateModels(list(phi = c(1.5, 3, 5), nu = c(0.75, 1.25),
-                                 noise_sp_ratio = c(0.5, 1, 2)), "cartesian")
-
-mod1 <- spLMstack(y ~ x1, data = dat_train,
+cand.mod <- candidateModels(list(phi = c(3, 6), nu = c(0.5, 1),
+                                 noise_sp_ratio = c(0.5, 1)), "cartesian")
+mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
                   n.samples = 1000, loopd.method = "psis",
                   parallel = FALSE, verbose = TRUE)
-#> --------------------------------------------------
-#> Solver diagnostics:
-#> Installed solvers: CLARABEL, SCS, OSQP, HIGHS
-#> Requested solver: DEFAULT (CLARABEL -> ECOS -> SCS)
-#> Solver search order: CLARABEL -> SCS
-#> --------------------------------------------------
-#> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
-#> ℹ Problem: 1 variable, 2 constraints (DCP)
-#> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.033s
-#> ─────────────────────────────── Numerical solver ───────────────────────────────
-#> ──────────────────────────────────── Summary ───────────────────────────────────
-#> ✔ Status: optimal
-#> ✔ Optimal value: -61.1673
-#> ℹ Compile time: 0.033s
-#> ℹ Solver time: 0.007s
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu   | noise_sp_ratio | weight |
-#> +----------+-----+------+----------------+--------+
-#> | Model 1  |  1.5|  0.75|             0.5| 0.000  |
-#> | Model 2  |  3.0|  0.75|             0.5| 0.499  |
-#> | Model 3  |  5.0|  0.75|             0.5| 0.022  |
-#> | Model 4  |  1.5|  1.25|             0.5| 0.000  |
-#> | Model 5  |  3.0|  1.25|             0.5| 0.000  |
-#> | Model 6  |  5.0|  1.25|             0.5| 0.000  |
-#> | Model 7  |  1.5|  0.75|             1.0| 0.000  |
-#> | Model 8  |  3.0|  0.75|             1.0| 0.479  |
-#> | Model 9  |  5.0|  0.75|             1.0| 0.000  |
-#> | Model 10 |  1.5|  1.25|             1.0| 0.000  |
-#> | Model 11 |  3.0|  1.25|             1.0| 0.000  |
-#> | Model 12 |  5.0|  1.25|             1.0| 0.000  |
-#> | Model 13 |  1.5|  0.75|             2.0| 0.000  |
-#> | Model 14 |  3.0|  0.75|             2.0| 0.000  |
-#> | Model 15 |  5.0|  0.75|             2.0| 0.000  |
-#> | Model 16 |  1.5|  1.25|             2.0| 0.000  |
-#> | Model 17 |  3.0|  1.25|             2.0| 0.000  |
-#> | Model 18 |  5.0|  1.25|             2.0| 0.000  |
-#> +----------+-----+------+----------------+--------+
+#>           | phi | nu  | noise_sp_ratio | weight |
+#> +---------+-----+-----+----------------+--------+
+#> | Model 1 |    3|  0.5|             0.5| 0.000  |
+#> | Model 2 |    6|  0.5|             0.5| 0.113  |
+#> | Model 3 |    3|  1.0|             0.5| 0.000  |
+#> | Model 4 |    6|  1.0|             0.5| 0.887  |
+#> | Model 5 |    3|  0.5|             1.0| 0.000  |
+#> | Model 6 |    6|  0.5|             1.0| 0.000  |
+#> | Model 7 |    3|  1.0|             1.0| 0.000  |
+#> | Model 8 |    6|  1.0|             1.0| 0.000  |
+#> +---------+-----+-----+----------------+--------+
 #> 
-#> Warning: Pareto k diagnostic values exceed 0.67 for some observations in 6 candidate model(s); PSIS estimates of the corresponding leave-one-out predictive densities may be unreliable. Consider loopd.method = 'exact'.
+#> ----------------------------------------
+#>  Diagnostics
+#> ----------------------------------------
+#> Model 1 (stacking weight 0):
+#>   - 6 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 2 (stacking weight 0.113):
+#>   - 20 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 4 (stacking weight 0.887):
+#>   - 8 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 6 (stacking weight 0):
+#>   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 7 (stacking weight 0):
+#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> Model 8 (stacking weight 0):
+#>   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
+#>     the corresponding leave-one-out predictive densities may be unreliable;
+#>     consider loopd.method = 'exact'.
+#> ----------------------------------------
 
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
-X_new <- as.matrix(cbind(rep(1, n_pred), dat_pred$x1))
+X_new <- cbind(1, dat_pred$x1, dat_pred$x2)
 
 # carry out posterior prediction
 mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new,
@@ -149,16 +156,8 @@ mod.pred <- posteriorPredict(mod1, coords_new = sp_pred, covars_new = X_new,
 # sample from the stacked posterior and posterior predictive distribution
 post_samps <- stackedSampler(mod.pred)
 
-# analyze posterior samples
-postpred_z <- post_samps$z.pred
-post_z_summ <- t(apply(postpred_z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-z_combn <- data.frame(z = dat_pred$z_true, zL = post_z_summ[, 1],
-                      zM = post_z_summ[, 2], zU = post_z_summ[, 3])
-library(ggplot2)
-ggplot(data = z_combn, aes(x = z)) +
-  geom_errorbar(aes(ymin = zL, ymax = zU), width = 0.05, alpha = 0.15, color = "skyblue") +
-  geom_point(aes(y = zM), size = 0.25, color = "darkblue", alpha = 0.5) +
-  geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
-  xlab("True z1") + ylab("Posterior of z1") + theme_bw() +
-  theme(panel.background = element_blank(), aspect.ratio = 1)
+# compare the predicted spatial effects with the truth
+z_pred <- apply(post_samps$z.pred, 1, median)
+cor(z_pred, dat_pred$z_true)
+#> [1] 0.973664
 ```

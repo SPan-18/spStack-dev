@@ -212,6 +212,20 @@ densities.</p></dd>
 <dd><p>Values of the fixed parameters that includes <code>phi_s</code>
 (spatial decay), <code>phi_t</code> (temporal smoothness).</p></dd>
 
+<dt>diagnostics</dt>
+<dd><p>a list of diagnostics. Element <code>numerical</code> is a
+data frame with one row (one row per process, with columns <code>model</code>
+and <code>process</code>, if <code>process.type = 'independent'</code>) and columns
+<code>min.pivot</code> (the smallest relative Cholesky pivot of the \(n
+\times n\) spatial-temporal correlation matrix; values below 1e-8
+indicate a nearly singular correlation matrix), <code>min.cor</code> and
+<code>max.cor</code> (the correlations of the two farthest-apart and of the two
+closest space-time locations; values of <code>min.cor</code> above 0.95 suggest
+an effective range far exceeding the extent of the data, values of
+<code>max.cor</code> below 0.05 nearly uncorrelated space-time locations),
+obtained from quantities the fit computes anyway. If <code>verbose =
+TRUE</code>, a "Diagnostics" section is printed when any threshold is crossed.</p></dd>
+
 
 </dl><p>The return object might include additional data that can be used for
 subsequent prediction and/or model fit evaluation.</p>
@@ -312,17 +326,24 @@ Evaluation Using Leave-One-out Cross-Validation and WAIC."
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="st">"sim_stvcPoisson"</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">sim_stvcPoisson</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpaceTime</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpaceTime</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># Fit a spatial-temporal varying coefficient Poisson GLM</span></span></span>
-<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu">stvcGLMexact</span><span class="op">(</span><span class="va">y</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="op">(</span><span class="va">x1</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
+<span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu">stvcGLMexact</span><span class="op">(</span><span class="va">y_pois</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span> <span class="op">+</span> <span class="op">(</span><span class="va">x1</span><span class="op">)</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
 <span class="r-in"><span>                     sp_coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                     time_coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="st">"t_coords"</span><span class="op">]</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                     cor.fn <span class="op">=</span> <span class="st">"gneiting-decay"</span>,</span></span>
-<span class="r-in"><span>                     process.type <span class="op">=</span> <span class="st">"multivariate"</span>,</span></span>
-<span class="r-in"><span>                     sptParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi_s <span class="op">=</span> <span class="fl">1</span>, phi_t <span class="op">=</span> <span class="fl">1</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                     process.type <span class="op">=</span> <span class="st">"independent"</span>,</span></span>
+<span class="r-in"><span>                     sptParams <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi_s <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span><span class="op">)</span>, phi_t <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">4</span>, <span class="fl">2</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>                     verbose <span class="op">=</span> <span class="cn">FALSE</span>, n.samples <span class="op">=</span> <span class="fl">100</span><span class="op">)</span></span></span>
+<span class="r-in"><span></span></span>
+<span class="r-in"><span><span class="co"># rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the</span></span></span>
+<span class="r-in"><span><span class="co"># varying slope of x1</span></span></span>
+<span class="r-in"><span><span class="va">n</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">dat</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">z_hat</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">mod1</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">z</span>, <span class="fl">1</span>, <span class="va">median</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="va">z_hat</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="va">n</span><span class="op">]</span>, <span class="va">dat</span><span class="op">$</span><span class="va">z1_true</span><span class="op">)</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.7709149</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

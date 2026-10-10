@@ -165,6 +165,21 @@ tags -
   Values of the fixed parameters that includes `phi_s` (spatial decay),
   `phi_t` (temporal smoothness).
 
+- diagnostics:
+
+  a list of diagnostics. Element `numerical` is a data frame with one
+  row (one row per process, with columns `model` and `process`, if
+  `process.type = 'independent'`) and columns `min.pivot` (the smallest
+  relative Cholesky pivot of the \\n \times n\\ spatial-temporal
+  correlation matrix; values below 1e-8 indicate a nearly singular
+  correlation matrix), `min.cor` and `max.cor` (the correlations of the
+  two farthest-apart and of the two closest space-time locations; values
+  of `min.cor` above 0.95 suggest an effective range far exceeding the
+  extent of the data, values of `max.cor` below 0.05 nearly uncorrelated
+  space-time locations), obtained from quantities the fit computes
+  anyway. If `verbose = TRUE`, a "Diagnostics" section is printed when
+  any threshold is crossed.
+
 The return object might include additional data that can be used for
 subsequent prediction and/or model fit evaluation.
 
@@ -262,15 +277,22 @@ Soumyakanti Pan <span18@ucla.edu>
 ## Examples
 
 ``` r
-data("sim_stvcPoisson")
-dat <- sim_stvcPoisson[1:100, ]
+data(simSpaceTime)
+dat <- simSpaceTime[1:100, ]
 
 # Fit a spatial-temporal varying coefficient Poisson GLM
-mod1 <- stvcGLMexact(y ~ x1 + (x1), data = dat, family = "poisson",
+mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      sp_coords = as.matrix(dat[, c("s1", "s2")]),
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
-                     process.type = "multivariate",
-                     sptParams = list(phi_s = 1, phi_t = 1),
+                     process.type = "independent",
+                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
                      verbose = FALSE, n.samples = 100)
+
+# rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the
+# varying slope of x1
+n <- nrow(dat)
+z_hat <- apply(mod1$samples$z, 1, median)
+cor(z_hat[1:n], dat$z1_true)
+#> [1] 0.7709149
 ```

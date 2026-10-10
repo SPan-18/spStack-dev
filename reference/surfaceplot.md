@@ -32,7 +32,8 @@ surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
 - col.pal:
 
   Optional; color palette, preferably divergent, use `colorRampPalette`
-  function from `grDevices`. Default is 'RdYlBu'.
+  function from `grDevices`. Default is the colorblind-friendly
+  diverging palette 'RdBu' from ColorBrewer.
 
 - mark_points:
 
@@ -50,16 +51,20 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ## Examples
 
 ``` r
-data(simGaussian)
-plot1 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
+data(simSpatial)
+plot1 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
                      var_name = "z_true")
+#> Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
+#> ℹ Please use tidy evaluation idioms with `aes()`.
+#> ℹ See also `vignette("ggplot2-in-packages")` for more information.
+#> ℹ The deprecated feature was likely used in the spStack package.
+#>   Please report the issue at <https://github.com/SPan-18/spStack-dev/issues>.
 plot1
 
 
 # try your favourite color palette
-col.br <- colorRampPalette(c("blue", "white", "red"))
-col.br.pal <- col.br(100)
-plot2 <- surfaceplot(simGaussian, coords_name = c("s1", "s2"),
-                     var_name = "z_true", col.pal = col.br.pal)
+plot2 <- surfaceplot(simSpatial, coords_name = c("s1", "s2"),
+                     var_name = "z_true",
+                     col.pal = hcl.colors(100, "PuOr", rev = TRUE))
 plot2
 ```
