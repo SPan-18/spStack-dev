@@ -1,7 +1,7 @@
 # Synthetic point-referenced spatial data
 
 Dataset of size 500 with spatial coordinates sampled uniformly from the
-unit square, two covariates, a spatial effect with a ripple pattern and
+unit square, two covariates, a spatial effect with a ring pattern and
 one response for each of the Gaussian, Poisson, binomial and binary
 families, plus a Gaussian response with a spatially varying slope. All
 the responses share the covariates and the spatial effect, so that every
@@ -56,9 +56,9 @@ a `data.frame` object with 500 rows and columns
 
 ## Details
 
-The spatial effect is the ripple \$\$ z(s) = 1.5 \sin(4 \pi \lVert s -
-(0.5, 0.5) \rVert), \$\$ a deterministic surface that is not a draw from
-a Gaussian process, and the responses are generated as \$\$
+The spatial effect is the ring \$\$ z(s) = 1.5 \sin(2 \pi \lVert s -
+(0.5, 0.5) \rVert + \pi / 4), \$\$ a deterministic surface that is not a
+draw from a Gaussian process, and the responses are generated as \$\$
 \begin{aligned} y\_{\mathrm{gauss}}(s) &\sim N(2 + 5 x_1(s) - x_2(s) +
 z(s), 0.5^2),\\ y\_{\mathrm{pois}}(s) &\sim \mathrm{Poisson}(\exp\\2 -
 0.5 x_1(s) + 0.3 x_2(s) + z(s)\\),\\ y\_{\mathrm{binom}}(s) &\sim
@@ -86,7 +86,7 @@ s1 <- runif(n)
 s2 <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z <- 1.5 * sin(4 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2))
+z <- 1.5 * sin(2 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2) + pi / 4)
 n_trials <- sample(5:20, n, replace = TRUE)
 dat <- data.frame(
   s1 = s1, s2 = s2, x1 = x1, x2 = x2,

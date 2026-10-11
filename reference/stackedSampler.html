@@ -117,9 +117,9 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
     <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpatial</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">2.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu"><a href="spLMstack.html">spLMstack</a></span><span class="op">(</span><span class="va">y_gauss</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>,</span></span>
 <span class="r-in"><span>                  coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>,</span></span>
@@ -132,10 +132,12 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>           | phi | nu  | noise_sp_ratio | weight |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------------+--------+</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1 |    3|  0.5|               1| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2 |    6|  0.5|               1| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3 |    3|  1.0|               1| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4 |    6|  1.0|               1| 1      |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1 |    2|  1.5|             0.1| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2 |    3|  1.5|             0.1| 0.125  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3 |    4|  1.5|             0.1| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4 |    2|  2.5|             0.1| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 5 |    3|  2.5|             0.1| 0.875  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 6 |    4|  2.5|             0.1| 0.000  |</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------------+--------+</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod1</span><span class="op">$</span><span class="va">diagnostics</span><span class="op">$</span><span class="va">solver</span><span class="op">$</span><span class="va">used</span><span class="op">)</span></span></span>
@@ -144,15 +146,15 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 <span class="r-out co"><span class="r-pr">#&gt;</span> [1] "optimal"</span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod1</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>    user  system elapsed </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   0.126   0.146   0.068 </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>   0.124   0.197   0.081 </span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">post_samps</span> <span class="op">&lt;-</span> <span class="fu">stackedSampler</span><span class="op">(</span><span class="va">mod1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">beta</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                  2.5%        50%      97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  1.569006  2.1343789  2.7549228</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1           4.687072  4.8254741  4.9725931</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x2          -1.157402 -0.9892891 -0.8086417</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept) -2.924841 -0.8767365  1.2710509</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1           4.834333  4.9259611  5.0177941</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x2          -1.061339 -0.9661342 -0.8608566</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

@@ -44,23 +44,23 @@ to the Gaussian response `y_gauss` of `simSpatial`.
 ``` r
 
 # training and test data sizes
-n_train <- 150
+n_train <- 200
 n_pred <- 50
 
 data("simSpatial")
 dat_train <- simSpatial[1:n_train, ]
 dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
-cand.mod <- candidateModels(list(phi = c(3, 6, 10),
-                                 nu = c(0.5, 1),
-                                 noise_sp_ratio = c(0.5, 1, 2)),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
+                                 nu = c(0.5, 1.5, 2.5),
+                                 noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
-                  n.samples = 1000, loopd.method = "psis",
+                  n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 ```
 
@@ -69,82 +69,31 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
     ## 
     ##            | phi | nu  | noise_sp_ratio | weight |
     ## +----------+-----+-----+----------------+--------+
-    ## | Model 1  |    3|  0.5|             0.5| 0      |
-    ## | Model 2  |    6|  0.5|             0.5| 0      |
-    ## | Model 3  |   10|  0.5|             0.5| 0      |
-    ## | Model 4  |    3|  1.0|             0.5| 0      |
-    ## | Model 5  |    6|  1.0|             0.5| 0      |
-    ## | Model 6  |   10|  1.0|             0.5| 1      |
-    ## | Model 7  |    3|  0.5|             1.0| 0      |
-    ## | Model 8  |    6|  0.5|             1.0| 0      |
-    ## | Model 9  |   10|  0.5|             1.0| 0      |
-    ## | Model 10 |    3|  1.0|             1.0| 0      |
-    ## | Model 11 |    6|  1.0|             1.0| 0      |
-    ## | Model 12 |   10|  1.0|             1.0| 0      |
-    ## | Model 13 |    3|  0.5|             2.0| 0      |
-    ## | Model 14 |    6|  0.5|             2.0| 0      |
-    ## | Model 15 |   10|  0.5|             2.0| 0      |
-    ## | Model 16 |    3|  1.0|             2.0| 0      |
-    ## | Model 17 |    6|  1.0|             2.0| 0      |
-    ## | Model 18 |   10|  1.0|             2.0| 0      |
+    ## | Model 1  |    2|  0.5|             0.1| 0.000  |
+    ## | Model 2  |    4|  0.5|             0.1| 0.000  |
+    ## | Model 3  |    6|  0.5|             0.1| 0.000  |
+    ## | Model 4  |    8|  0.5|             0.1| 0.000  |
+    ## | Model 5  |    2|  1.5|             0.1| 0.000  |
+    ## | Model 6  |    4|  1.5|             0.1| 0.000  |
+    ## | Model 7  |    6|  1.5|             0.1| 0.000  |
+    ## | Model 8  |    8|  1.5|             0.1| 0.000  |
+    ## | Model 9  |    2|  2.5|             0.1| 0.411  |
+    ## | Model 10 |    4|  2.5|             0.1| 0.491  |
+    ## | Model 11 |    6|  2.5|             0.1| 0.000  |
+    ## | Model 12 |    8|  2.5|             0.1| 0.000  |
+    ## | Model 13 |    2|  0.5|             0.5| 0.000  |
+    ## | Model 14 |    4|  0.5|             0.5| 0.000  |
+    ## | Model 15 |    6|  0.5|             0.5| 0.000  |
+    ## | Model 16 |    8|  0.5|             0.5| 0.000  |
+    ## | Model 17 |    2|  1.5|             0.5| 0.000  |
+    ## | Model 18 |    4|  1.5|             0.5| 0.000  |
+    ## | Model 19 |    6|  1.5|             0.5| 0.000  |
+    ## | Model 20 |    8|  1.5|             0.5| 0.000  |
+    ## | Model 21 |    2|  2.5|             0.5| 0.000  |
+    ## | Model 22 |    4|  2.5|             0.5| 0.097  |
+    ## | Model 23 |    6|  2.5|             0.5| 0.000  |
+    ## | Model 24 |    8|  2.5|             0.5| 0.000  |
     ## +----------+-----+-----+----------------+--------+
-    ## 
-    ## ----------------------------------------
-    ##  Diagnostics
-    ## ----------------------------------------
-    ## Model 1 (stacking weight 0):
-    ##   - 10 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 2 (stacking weight 0):
-    ##   - 21 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 3 (stacking weight 0):
-    ##   - 50 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 4 (stacking weight 0):
-    ##   - 1 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 5 (stacking weight 0):
-    ##   - 10 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 6 (stacking weight 1):
-    ##   - 18 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 7 (stacking weight 0):
-    ##   - 2 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 8 (stacking weight 0):
-    ##   - 6 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 9 (stacking weight 0):
-    ##   - 16 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 11 (stacking weight 0):
-    ##   - 2 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 12 (stacking weight 0):
-    ##   - 4 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 14 (stacking weight 0):
-    ##   - 3 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## Model 15 (stacking weight 0):
-    ##   - 1 of 150 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-    ##     the corresponding leave-one-out predictive densities may be unreliable;
-    ##     consider loopd.method = 'exact'.
-    ## ----------------------------------------
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),
@@ -201,38 +150,73 @@ We use the Poisson counts `y_pois` of `simSpatial` for this example.
 ``` r
 
 # training and test data sizes
-n_train <- 150
+n_train <- 200
 n_pred <- 50
 
 dat_train <- simSpatial[1:n_train, ]
 dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
-cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.0),
-                                 boundary = c(0.5)), "cartesian")
+cand.mod <- candidateModels(list(phi = c(1, 2, 4, 8),
+                                 nu = c(0.5, 1, 1.5, 2.5),
+                                 boundary = c(0.5, 0.75)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
-                   priors = list(nu.beta = 5, nu.z = 5),
                    n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                    verbose = TRUE)
 ```
 
-    ## Some priors were not supplied. Using defaults.
-
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##           | phi | nu  | boundary | weight |
-    ## +---------+-----+-----+----------+--------+
-    ## | Model 1 |    3|  0.5|       0.5| 0      |
-    ## | Model 2 |    6|  0.5|       0.5| 0      |
-    ## | Model 3 |   10|  0.5|       0.5| 0      |
-    ## | Model 4 |    3|  1.0|       0.5| 0      |
-    ## | Model 5 |    6|  1.0|       0.5| 0      |
-    ## | Model 6 |   10|  1.0|       0.5| 1      |
-    ## +---------+-----+-----+----------+--------+
+    ##            | phi | nu  | boundary | weight |
+    ## +----------+-----+-----+----------+--------+
+    ## | Model 1  |    1|  0.5|      0.50| 0.000  |
+    ## | Model 2  |    2|  0.5|      0.50| 0.000  |
+    ## | Model 3  |    4|  0.5|      0.50| 0.000  |
+    ## | Model 4  |    8|  0.5|      0.50| 0.000  |
+    ## | Model 5  |    1|  1.0|      0.50| 0.000  |
+    ## | Model 6  |    2|  1.0|      0.50| 0.000  |
+    ## | Model 7  |    4|  1.0|      0.50| 0.000  |
+    ## | Model 8  |    8|  1.0|      0.50| 0.000  |
+    ## | Model 9  |    1|  1.5|      0.50| 0.000  |
+    ## | Model 10 |    2|  1.5|      0.50| 0.000  |
+    ## | Model 11 |    4|  1.5|      0.50| 0.000  |
+    ## | Model 12 |    8|  1.5|      0.50| 0.000  |
+    ## | Model 13 |    1|  2.5|      0.50| 0.000  |
+    ## | Model 14 |    2|  2.5|      0.50| 0.000  |
+    ## | Model 15 |    4|  2.5|      0.50| 0.000  |
+    ## | Model 16 |    8|  2.5|      0.50| 0.401  |
+    ## | Model 17 |    1|  0.5|      0.75| 0.000  |
+    ## | Model 18 |    2|  0.5|      0.75| 0.000  |
+    ## | Model 19 |    4|  0.5|      0.75| 0.000  |
+    ## | Model 20 |    8|  0.5|      0.75| 0.000  |
+    ## | Model 21 |    1|  1.0|      0.75| 0.000  |
+    ## | Model 22 |    2|  1.0|      0.75| 0.000  |
+    ## | Model 23 |    4|  1.0|      0.75| 0.000  |
+    ## | Model 24 |    8|  1.0|      0.75| 0.000  |
+    ## | Model 25 |    1|  1.5|      0.75| 0.000  |
+    ## | Model 26 |    2|  1.5|      0.75| 0.000  |
+    ## | Model 27 |    4|  1.5|      0.75| 0.000  |
+    ## | Model 28 |    8|  1.5|      0.75| 0.000  |
+    ## | Model 29 |    1|  2.5|      0.75| 0.000  |
+    ## | Model 30 |    2|  2.5|      0.75| 0.000  |
+    ## | Model 31 |    4|  2.5|      0.75| 0.471  |
+    ## | Model 32 |    8|  2.5|      0.75| 0.128  |
+    ## +----------+-----+-----+----------+--------+
+    ## 
+    ## ----------------------------------------
+    ##  Diagnostics
+    ## ----------------------------------------
+    ## Model 31 (stacking weight 0.471):
+    ##   - smallest relative Cholesky pivot is 8.4e-09: the covariance matrix is
+    ##     nearly singular and results may lose accuracy (nearly coincident
+    ##     locations, or a very small decay parameter).
+    ## 5 other candidate model(s) with stacking weight at most 0.05 have numerical
+    ## flags; see the 'diagnostics' element.
+    ## ----------------------------------------
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),
@@ -300,8 +284,8 @@ dat_train <- simSpaceTime[1:n_train, ]
 dat_pred <- simSpaceTime[n_train + 1:n_pred, ]
 
 # create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(2, 4),
-                                  phi_t = list(1, 4),
+mod.list2 <- candidateModels(list(phi_s = list(2, 3, 4),
+                                  phi_t = list(2, 4, 8),
                                   boundary = c(0.5, 0.75)), "cartesian")
 
 # fit a spatial-temporal varying coefficient model using predictive stacking
@@ -318,17 +302,27 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat_train, family = "poisso
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##           | phi_s | phi_t | boundary | weight |
-    ## +---------+-------+-------+----------+--------+
-    ## | Model 1 |      2|      1|      0.50| 0.000  |
-    ## | Model 2 |      4|      1|      0.50| 0.000  |
-    ## | Model 3 |      2|      4|      0.50| 0.031  |
-    ## | Model 4 |      4|      4|      0.50| 0.000  |
-    ## | Model 5 |      2|      1|      0.75| 0.000  |
-    ## | Model 6 |      4|      1|      0.75| 0.000  |
-    ## | Model 7 |      2|      4|      0.75| 0.969  |
-    ## | Model 8 |      4|      4|      0.75| 0.000  |
-    ## +---------+-------+-------+----------+--------+
+    ##            | phi_s | phi_t | boundary | weight |
+    ## +----------+-------+-------+----------+--------+
+    ## | Model 1  |      2|      2|      0.50| 0.000  |
+    ## | Model 2  |      3|      2|      0.50| 0.000  |
+    ## | Model 3  |      4|      2|      0.50| 0.000  |
+    ## | Model 4  |      2|      4|      0.50| 0.000  |
+    ## | Model 5  |      3|      4|      0.50| 0.085  |
+    ## | Model 6  |      4|      4|      0.50| 0.000  |
+    ## | Model 7  |      2|      8|      0.50| 0.000  |
+    ## | Model 8  |      3|      8|      0.50| 0.000  |
+    ## | Model 9  |      4|      8|      0.50| 0.000  |
+    ## | Model 10 |      2|      2|      0.75| 0.000  |
+    ## | Model 11 |      3|      2|      0.75| 0.000  |
+    ## | Model 12 |      4|      2|      0.75| 0.000  |
+    ## | Model 13 |      2|      4|      0.75| 0.000  |
+    ## | Model 14 |      3|      4|      0.75| 0.340  |
+    ## | Model 15 |      4|      4|      0.75| 0.000  |
+    ## | Model 16 |      2|      8|      0.75| 0.542  |
+    ## | Model 17 |      3|      8|      0.75| 0.000  |
+    ## | Model 18 |      4|      8|      0.75| 0.032  |
+    ## +----------+-------+-------+----------+--------+
 
 Define the new coordinates, run
 [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md),

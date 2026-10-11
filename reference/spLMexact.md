@@ -197,8 +197,8 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  spParams = list(phi = 6, nu = 0.5),
-                  noise_sp_ratio = 0.5,
+                  spParams = list(phi = 3, nu = 2.5),
+                  noise_sp_ratio = 0.1,
                   n.samples = 100,
                   loopd = TRUE, loopd.method = "exact")
 #> ----------------------------------------
@@ -222,8 +222,8 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 #>  shape = 2.00, scale = 0.10.
 #> 
 #> Spatial process parameters:
-#>  phi = 6.00, and, nu = 0.50.
-#> Noise-to-spatial variance ratio = 0.50.
+#>  phi = 3.00, and, nu = 2.50.
+#> Noise-to-spatial variance ratio = 0.10.
 #> 
 #> Number of posterior samples = 100.
 #> 
@@ -232,12 +232,12 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>           2.5%       50%      97.5%
-#> [1,]  1.614160  2.001286  2.5524403
-#> [2,]  4.722533  4.843061  4.9485778
-#> [3,] -1.113002 -1.003259 -0.8567504
+#>           2.5%        50%      97.5%
+#> [1,] -2.583328 -0.7730652  1.0750162
+#> [2,]  4.839166  4.9218083  5.0096227
+#> [3,] -1.063699 -0.9594979 -0.8605124
 
 # compare the posterior medians of the spatial effects with the truth
 cor(apply(mod1$samples$z, 1, median), dat$z_true)
-#> [1] 0.9520644
+#> [1] 0.9836106
 ```

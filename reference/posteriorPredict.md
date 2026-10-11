@@ -93,57 +93,33 @@ dat_train <- simSpatial[1:n_train, ]
 dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
-cand.mod <- candidateModels(list(phi = c(3, 6), nu = c(0.5, 1),
-                                 noise_sp_ratio = c(0.5, 1)), "cartesian")
+cand.mod <- candidateModels(list(phi = c(2, 3, 4), nu = c(1.5, 2.5),
+                                 noise_sp_ratio = c(0.1, 0.25)), "cartesian")
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
-                  n.samples = 1000, loopd.method = "psis",
+                  n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | noise_sp_ratio | weight |
-#> +---------+-----+-----+----------------+--------+
-#> | Model 1 |    3|  0.5|             0.5| 0.000  |
-#> | Model 2 |    6|  0.5|             0.5| 0.113  |
-#> | Model 3 |    3|  1.0|             0.5| 0.000  |
-#> | Model 4 |    6|  1.0|             0.5| 0.887  |
-#> | Model 5 |    3|  0.5|             1.0| 0.000  |
-#> | Model 6 |    6|  0.5|             1.0| 0.000  |
-#> | Model 7 |    3|  1.0|             1.0| 0.000  |
-#> | Model 8 |    6|  1.0|             1.0| 0.000  |
-#> +---------+-----+-----+----------------+--------+
+#>            | phi | nu  | noise_sp_ratio | weight |
+#> +----------+-----+-----+----------------+--------+
+#> | Model 1  |    2|  1.5|            0.10| 0.000  |
+#> | Model 2  |    3|  1.5|            0.10| 0.125  |
+#> | Model 3  |    4|  1.5|            0.10| 0.000  |
+#> | Model 4  |    2|  2.5|            0.10| 0.000  |
+#> | Model 5  |    3|  2.5|            0.10| 0.875  |
+#> | Model 6  |    4|  2.5|            0.10| 0.000  |
+#> | Model 7  |    2|  1.5|            0.25| 0.000  |
+#> | Model 8  |    3|  1.5|            0.25| 0.000  |
+#> | Model 9  |    4|  1.5|            0.25| 0.000  |
+#> | Model 10 |    2|  2.5|            0.25| 0.000  |
+#> | Model 11 |    3|  2.5|            0.25| 0.000  |
+#> | Model 12 |    4|  2.5|            0.25| 0.000  |
+#> +----------+-----+-----+----------------+--------+
 #> 
-#> ----------------------------------------
-#>  Diagnostics
-#> ----------------------------------------
-#> Model 1 (stacking weight 0):
-#>   - 6 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> Model 2 (stacking weight 0.113):
-#>   - 20 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> Model 4 (stacking weight 0.887):
-#>   - 8 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> Model 6 (stacking weight 0):
-#>   - 7 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> Model 7 (stacking weight 0):
-#>   - 1 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> Model 8 (stacking weight 0):
-#>   - 4 of 100 Pareto k diagnostic values exceed 0.67: the PSIS estimates of
-#>     the corresponding leave-one-out predictive densities may be unreliable;
-#>     consider loopd.method = 'exact'.
-#> ----------------------------------------
 
 # prepare new coordinates and covariates for prediction
 sp_pred <- as.matrix(dat_pred[, c("s1", "s2")])
@@ -159,5 +135,5 @@ post_samps <- stackedSampler(mod.pred)
 # compare the predicted spatial effects with the truth
 z_pred <- apply(post_samps$z.pred, 1, median)
 cor(z_pred, dat_pred$z_true)
-#> [1] 0.973664
+#> [1] 0.9934722
 ```

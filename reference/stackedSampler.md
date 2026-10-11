@@ -77,9 +77,9 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:100, ]
-cand.mod <- candidateModels(list(phi = c(3, 6),
-                                 nu = c(0.5, 1),
-                                 noise_sp_ratio = c(1)), "cartesian")
+cand.mod <- candidateModels(list(phi = c(2, 3, 4),
+                                 nu = c(1.5, 2.5),
+                                 noise_sp_ratio = c(0.1)), "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
@@ -92,10 +92,12 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #>           | phi | nu  | noise_sp_ratio | weight |
 #> +---------+-----+-----+----------------+--------+
-#> | Model 1 |    3|  0.5|               1| 0      |
-#> | Model 2 |    6|  0.5|               1| 0      |
-#> | Model 3 |    3|  1.0|               1| 0      |
-#> | Model 4 |    6|  1.0|               1| 1      |
+#> | Model 1 |    2|  1.5|             0.1| 0.000  |
+#> | Model 2 |    3|  1.5|             0.1| 0.125  |
+#> | Model 3 |    4|  1.5|             0.1| 0.000  |
+#> | Model 4 |    2|  2.5|             0.1| 0.000  |
+#> | Model 5 |    3|  2.5|             0.1| 0.875  |
+#> | Model 6 |    4|  2.5|             0.1| 0.000  |
 #> +---------+-----+-----+----------------+--------+
 #> 
 print(mod1$diagnostics$solver$used)
@@ -104,13 +106,13 @@ print(mod1$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.126   0.146   0.068 
+#>   0.124   0.197   0.081 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                  2.5%        50%      97.5%
-#> (Intercept)  1.569006  2.1343789  2.7549228
-#> x1           4.687072  4.8254741  4.9725931
-#> x2          -1.157402 -0.9892891 -0.8086417
+#> (Intercept) -2.924841 -0.8767365  1.2710509
+#> x1           4.834333  4.9259611  5.0177941
+#> x2          -1.061339 -0.9661342 -0.8608566
 ```

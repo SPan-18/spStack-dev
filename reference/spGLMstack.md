@@ -245,49 +245,48 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ## Examples
 
 ``` r
-# \donttest{
 set.seed(1234)
 data(simSpatial)
-dat <- simSpatial[1:100, ]
-cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1),
-                                 boundary = c(0.5, 0.6)), "cartesian")
+dat <- simSpatial[1:150, ]
+cand.mod <- candidateModels(list(phi = c(2, 4, 8),
+                                 nu = c(1.5, 2.5),
+                                 boundary = c(0.75)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
-                   n.samples = 1000,
-                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-                   parallel = TRUE, verbose = TRUE)
+                   n.samples = 500,
+                   loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
+                   parallel = FALSE, verbose = TRUE)
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu  | boundary | weight |
-#> +----------+-----+-----+----------+--------+
-#> | Model 1  |    3|  0.5|       0.5| 0      |
-#> | Model 2  |    6|  0.5|       0.5| 0      |
-#> | Model 3  |   10|  0.5|       0.5| 0      |
-#> | Model 4  |    3|  1.0|       0.5| 0      |
-#> | Model 5  |    6|  1.0|       0.5| 0      |
-#> | Model 6  |   10|  1.0|       0.5| 0      |
-#> | Model 7  |    3|  0.5|       0.6| 0      |
-#> | Model 8  |    6|  0.5|       0.6| 0      |
-#> | Model 9  |   10|  0.5|       0.6| 0      |
-#> | Model 10 |    3|  1.0|       0.6| 0      |
-#> | Model 11 |    6|  1.0|       0.6| 0      |
-#> | Model 12 |   10|  1.0|       0.6| 1      |
-#> +----------+-----+-----+----------+--------+
+#>           | phi | nu  | boundary | weight |
+#> +---------+-----+-----+----------+--------+
+#> | Model 1 |    2|  1.5|      0.75| 0.000  |
+#> | Model 2 |    4|  1.5|      0.75| 0.543  |
+#> | Model 3 |    8|  1.5|      0.75| 0.000  |
+#> | Model 4 |    2|  2.5|      0.75| 0.000  |
+#> | Model 5 |    4|  2.5|      0.75| 0.066  |
+#> | Model 6 |    8|  2.5|      0.75| 0.391  |
+#> +---------+-----+-----+----------+--------+
 #> 
+#> ----------------------------------------
+#>  Diagnostics
+#> ----------------------------------------
+#> 1 other candidate model(s) with stacking weight at most 0.05 have numerical
+#> flags; see the 'diagnostics' element.
+#> ----------------------------------------
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                   2.5%        50%      97.5%
-#> (Intercept)  0.5963552  1.7859907  2.7538797
-#> x1          -0.7582803 -0.5239114 -0.3066513
-#> x2           0.1323709  0.4129337  0.7259990
+#> (Intercept) -1.8358002  0.7327142  3.1755265
+#> x1          -0.6379026 -0.5211744 -0.4272032
+#> x2           0.1827068  0.2952151  0.4062696
 
 # compare the posterior medians of the spatial effects with the truth
 cor(apply(post_samps$z, 1, median), dat$z_true)
-#> [1] 0.9179889
-# }
+#> [1] 0.9881036
 ```

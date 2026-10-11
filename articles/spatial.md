@@ -34,9 +34,9 @@ library(patchwork)
 
 The package lazy-loads the synthetic dataset `simSpatial`, observed at
 500 locations in the unit square. It has two covariates `x1` and `x2`, a
-spatial effect `z_true` with a ripple pattern,
-$`z(s) = 1.5 \sin(4\pi \lVert s - (0.5, 0.5) \rVert)`$, and one response
-for each family: Gaussian `y_gauss`, Poisson `y_pois`, binomial
+spatial effect `z_true` with a ring pattern,
+$`z(s) = 1.5 \sin(2\pi \lVert s - (0.5, 0.5) \rVert + \pi/4)`$, and one
+response for each family: Gaussian `y_gauss`, Poisson `y_pois`, binomial
 `y_binom` (out of `n_trials` trials) and binary `y_bin`. All the
 responses share the covariates and the spatial effect, so we apply every
 function in this article to the same data. The spatial effect is a
@@ -80,9 +80,9 @@ muBeta <- c(0, 0, 0)
 VBeta <- diag(1E4, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 2
-phi0 <- 6
-nu0 <- 0.5
-noise_sp_ratio <- 0.8
+phi0 <- 3
+nu0 <- 2.5
+noise_sp_ratio <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 nSamples <- 1000
@@ -107,7 +107,13 @@ exponential covariogram is specified by the hyperparameter $`\phi`$ and
 the Matern covariogram is specified by the hyperparameters $`\phi`$ and
 $`\nu`$. Fixed values of these hyperparameters are supplied through the
 argument `spParams`. In addition, the noise-to-spatial variance ration
-is also fixed through the argument `noise_sp_ratio`.
+is also fixed through the argument `noise_sp_ratio`. Note that $`\phi`$
+and $`\nu`$ act together: the effective range, the distance at which the
+correlation drops to 0.05, is $`3/\phi`$ for $`\nu = 0.5`$
+(exponential), about $`4.7/\phi`$ for $`\nu = 1.5`$, and about
+$`5.9/\phi`$ for $`\nu = 2.5`$. For example, $`\phi = 3`$ with
+$`\nu = 2.5`$ corresponds to an effective range of about 2 on the unit
+square.
 
 If interested in calculation of leave-one-out predictive densities
 (LOO-PD), `loopd` must be set `TRUE` (the default is `FALSE`). Method of
@@ -154,8 +160,8 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 #>  shape = 2.00, scale = 2.00.
 #> 
 #> Spatial process parameters:
-#>  phi = 6.00, and, nu = 0.50.
-#> Noise-to-spatial variance ratio = 0.80.
+#>  phi = 3.00, and, nu = 2.50.
+#> Noise-to-spatial variance ratio = 0.10.
 #> 
 #> Number of posterior samples = 1000.
 #> 
@@ -172,10 +178,10 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                  2.5%       50%      97.5%
-#> (Intercept)  1.655699  2.112780  2.5303184
-#> x1           4.815622  4.914532  5.0015428
-#> x2          -1.119396 -1.022034 -0.9191784
+#>                  2.5%        50%      97.5%
+#> (Intercept) -3.005440 -0.7329878  1.3449257
+#> x1           4.880717  4.9503308  5.0136549
+#> x2          -1.046894 -0.9778391 -0.9048877
 ```
 
 ### Leave-one-out predictive densities using PSIS
@@ -222,12 +228,18 @@ Next, we move on to the Bayesian spatial stacking algorithm for Gaussian
 data. We supply the same prior list and provide candidate models
 constructed using
 [`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md).
+The candidate values should bracket the plausible values of the
+parameters. Stacking combines the predictive distributions of the
+candidate models, so it typically places its weight on a few candidates
+near the best values, mixing neighbouring candidates when the best
+values lie between grid points; candidates that predict poorly get zero
+weight.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(3, 6, 10),
-                                 nu = c(0.5, 1, 1.5),
-                                 noise_sp_ratio = c(0.5, 1.5)),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
+                                 nu = c(0.5, 1.5, 2.5),
+                                 noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
 
 mod3 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
@@ -242,24 +254,30 @@ mod3 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #>            | phi | nu  | noise_sp_ratio | weight |
 #> +----------+-----+-----+----------------+--------+
-#> | Model 1  |    3|  0.5|             0.5| 0      |
-#> | Model 2  |    6|  0.5|             0.5| 0      |
-#> | Model 3  |   10|  0.5|             0.5| 0      |
-#> | Model 4  |    3|  1.0|             0.5| 0      |
-#> | Model 5  |    6|  1.0|             0.5| 0      |
-#> | Model 6  |   10|  1.0|             0.5| 0      |
-#> | Model 7  |    3|  1.5|             0.5| 0      |
-#> | Model 8  |    6|  1.5|             0.5| 0      |
-#> | Model 9  |   10|  1.5|             0.5| 1      |
-#> | Model 10 |    3|  0.5|             1.5| 0      |
-#> | Model 11 |    6|  0.5|             1.5| 0      |
-#> | Model 12 |   10|  0.5|             1.5| 0      |
-#> | Model 13 |    3|  1.0|             1.5| 0      |
-#> | Model 14 |    6|  1.0|             1.5| 0      |
-#> | Model 15 |   10|  1.0|             1.5| 0      |
-#> | Model 16 |    3|  1.5|             1.5| 0      |
-#> | Model 17 |    6|  1.5|             1.5| 0      |
-#> | Model 18 |   10|  1.5|             1.5| 0      |
+#> | Model 1  |    2|  0.5|             0.1| 0.000  |
+#> | Model 2  |    4|  0.5|             0.1| 0.000  |
+#> | Model 3  |    6|  0.5|             0.1| 0.000  |
+#> | Model 4  |    8|  0.5|             0.1| 0.000  |
+#> | Model 5  |    2|  1.5|             0.1| 0.000  |
+#> | Model 6  |    4|  1.5|             0.1| 0.000  |
+#> | Model 7  |    6|  1.5|             0.1| 0.000  |
+#> | Model 8  |    8|  1.5|             0.1| 0.000  |
+#> | Model 9  |    2|  2.5|             0.1| 0.422  |
+#> | Model 10 |    4|  2.5|             0.1| 0.578  |
+#> | Model 11 |    6|  2.5|             0.1| 0.000  |
+#> | Model 12 |    8|  2.5|             0.1| 0.000  |
+#> | Model 13 |    2|  0.5|             0.5| 0.000  |
+#> | Model 14 |    4|  0.5|             0.5| 0.000  |
+#> | Model 15 |    6|  0.5|             0.5| 0.000  |
+#> | Model 16 |    8|  0.5|             0.5| 0.000  |
+#> | Model 17 |    2|  1.5|             0.5| 0.000  |
+#> | Model 18 |    4|  1.5|             0.5| 0.000  |
+#> | Model 19 |    6|  1.5|             0.5| 0.000  |
+#> | Model 20 |    8|  1.5|             0.5| 0.000  |
+#> | Model 21 |    2|  2.5|             0.5| 0.000  |
+#> | Model 22 |    4|  2.5|             0.5| 0.000  |
+#> | Model 23 |    6|  2.5|             0.5| 0.000  |
+#> | Model 24 |    8|  2.5|             0.5| 0.000  |
 #> +----------+-----+-----+----------------+--------+
 ```
 
@@ -275,7 +293,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.780   1.011   4.662
+#>   4.852   1.596   4.806
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -301,9 +319,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
 #>                  2.5%        50%      97.5%
-#> (Intercept)  1.754538  2.2839113  2.8156588
-#> x1           4.847576  4.9266023  5.0132719
-#> x2          -1.095611 -0.9989271 -0.9018224
+#> (Intercept) -4.841887 -0.7621149  1.6691578
+#> x1           4.885629  4.9512482  5.0161448
+#> x2          -1.057355 -0.9775518 -0.8977422
 ```
 
 The response `y_gauss` was simulated using the true value
@@ -415,15 +433,19 @@ The response `y_svc` of `simSpatial` was simulated from
 ``` math
 y(s) = 2 + \{5 + z(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, 0.5^2)\;,
 ```
-so that the ripple $`z(s)`$ is now the spatially varying part of the
-slope of $`x_1`$. In the `formula`, the variables in parentheses receive
+so that the ring $`z(s)`$ is now the spatially varying part of the slope
+of $`x_1`$. In the `formula`, the variables in parentheses receive
 varying coefficients: `y_svc ~ x1 + x2 + (x1)` has fixed effects for the
 intercept, `x1` and `x2`, and varying coefficients for the intercept and
 `x1` (the intercept is included in both parts by default). With
 `process.type = "independent.shared"`, the processes share the decay
 parameters and the noise-to-spatial variance ratio; with
 `process.type = "independent"`, each process has its own, supplied as
-vectors of length $`r`$. We supply a constant time coordinate.
+vectors of length $`r`$. Here the true varying intercept is zero, so we
+let each process have its own parameters: a large noise-to-spatial
+variance ratio for the intercept process ($`\delta^2_1 = 10`$, a small
+process variance) and a smaller one for the slope process
+($`\delta^2_2 = 0.25`$). We supply a constant time coordinate.
 
 ``` r
 
@@ -432,9 +454,9 @@ mod4 <- stvcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = matrix(0, n, 1),
                     cor.fn = "gneiting-decay",
-                    process.type = "independent.shared",
-                    sptParams = list(phi_s = 3, phi_t = 1),
-                    noise_sp_ratio = 0.2,
+                    process.type = "independent",
+                    sptParams = list(phi_s = c(1, 1), phi_t = c(1, 1)),
+                    noise_sp_ratio = c(10, 0.25),
                     n.samples = 1000, loopd = TRUE, verbose = TRUE)
 #> ----------------------------------------
 #>  Model description
@@ -445,14 +467,15 @@ mod4 <- stvcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
 #> Number of covariates with spatial-temporally varying coefficients 2.
 #> 
 #> Using the gneiting-decay spatial-temporal correlation function.
-#> Process type: independent.shared.
+#> Process type: independent.
 #> 
 #> Priors:
 #>  beta flat.
 #>  sigma.sq: flat, proportional to 1/sigma.sq.
 #> 
 #> Spatial-temporal process parameters:
-#>  phi_s = 3.00, phi_t = 1.00, noise-to-spatial variance ratio = 0.20.
+#>  process 1: phi_s = 1.00, phi_t = 1.00, noise-to-spatial variance ratio = 10.00.
+#>  process 2: phi_s = 1.00, phi_t = 1.00, noise-to-spatial variance ratio = 0.25.
 #> 
 #> Number of posterior samples = 1000.
 #> 
@@ -461,8 +484,8 @@ mod4 <- stvcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
 ```
 
 The posterior samples of the fixed effects, the noise variance
-$`\sigma^2`$, and the process variance
-$`\sigma^2_z = \sigma^2/\delta^2`$ are summarized below.
+$`\sigma^2`$, and the process variances
+$`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$ are summarized below.
 
 ``` r
 
@@ -470,15 +493,16 @@ summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0
 rownames(summary_beta) <- mod4$X.names
 print(summary_beta)
 #>                  2.5%        50%      97.5%
-#> (Intercept)  1.110277  1.8003137  2.6336979
-#> x1           4.390510  5.2376403  6.1163574
-#> x2          -1.053326 -0.9570283 -0.8581367
+#> (Intercept)  1.812532  2.0478871  2.2863100
+#> x1           1.823957  3.2136302  4.6462558
+#> x2          -1.055058 -0.9685194 -0.8931108
 print(quantile(mod4$samples$sigmaSq, c(0.025, 0.5, 0.975)))
 #>      2.5%       50%     97.5% 
-#> 0.1230092 0.1481532 0.1805734
-print(quantile(mod4$samples$sigmaSq.z, c(0.025, 0.5, 0.975)))
-#>      2.5%       50%     97.5% 
-#> 0.6150462 0.7407659 0.9028670
+#> 0.1980492 0.2401353 0.2933603
+print(t(apply(mod4$samples$sigmaSq.z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#>            2.5%        50%      97.5%
+#> [1,] 0.01980492 0.02401353 0.02933603
+#> [2,] 0.79219671 0.96054114 1.17344124
 ```
 
 Next, we use predictive stacking over candidate values of $`\phi_s`$ and
@@ -489,28 +513,30 @@ is a vector of length $`r`$, supplied as
 
 ``` r
 
-cand.svc <- candidateModels(list(phi_s = c(3, 6, 10), phi_t = 1,
-                                 noise_sp_ratio = c(0.1, 0.5)), "cartesian")
+cand.svc <- candidateModels(list(phi_s = list(c(1, 1), c(2, 1), c(1, 2)),
+                                 phi_t = list(c(1, 1)),
+                                 noise_sp_ratio = list(c(1, 0.25), c(10, 0.25))),
+                            "cartesian")
 
 mod5 <- stvcLMstack(y_svc ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = matrix(0, n, 1),
                     cor.fn = "gneiting-decay",
-                    process.type = "independent.shared",
+                    process.type = "independent",
                     candidate.models = cand.svc,
                     n.samples = 1000, verbose = TRUE)
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi_s | phi_t | noise_sp_ratio | weight |
-#> +---------+-------+-------+----------------+--------+
-#> | Model 1 |      3|      1|             0.1| 1      |
-#> | Model 2 |      6|      1|             0.1| 0      |
-#> | Model 3 |     10|      1|             0.1| 0      |
-#> | Model 4 |      3|      1|             0.5| 0      |
-#> | Model 5 |      6|      1|             0.5| 0      |
-#> | Model 6 |     10|      1|             0.5| 0      |
-#> +---------+-------+-------+----------------+--------+
+#>           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |
+#> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
+#> | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.117  |
+#> | Model 2 |         2|         1|         1|         1|                  1|               0.25| 0.000  |
+#> | Model 3 |         1|         2|         1|         1|                  1|               0.25| 0.000  |
+#> | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.883  |
+#> | Model 5 |         2|         1|         1|         1|                 10|               0.25| 0.000  |
+#> | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.000  |
+#> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
 post_svc <- stackedSampler(mod5)
 ```
 
@@ -633,9 +659,16 @@ mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #>  Boundary adjustment parameter = 0.50.
 #> 
 #> Spatial process parameters:
-#>  phi = 6.00, and, nu = 0.50.
+#>  phi = 3.00, and, nu = 2.50.
 #> 
 #> Number of posterior samples = 1000.
+#> ----------------------------------------
+#> ----------------------------------------
+#>  Diagnostics
+#> ----------------------------------------
+#>   - smallest relative Cholesky pivot is 2e-09: the covariance matrix is
+#>     nearly singular and results may lose accuracy (nearly coincident
+#>     locations, or a very small decay parameter).
 #> ----------------------------------------
 ```
 
@@ -651,9 +684,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  1.0417457  1.8960708  2.6386789
-#> x1          -0.6959086 -0.5673243 -0.4299894
-#> x2           0.2420365  0.3903401  0.5637156
+#> (Intercept) -2.7739870 -0.9633030  0.9431077
+#> x1          -0.6307785 -0.5280100 -0.4461939
+#> x2           0.2138936  0.3086033  0.4057884
 ```
 
 #### Posterior recovery of scale parameters
@@ -702,34 +735,69 @@ Monte Carlo samples to be used to find the LOO-PD.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.5),
-                                 boundary = c(0.5, 0.6)), "cartesian")
+cand.mod <- candidateModels(list(phi = c(1, 2, 4, 8),
+                                 nu = c(0.5, 1, 1.5, 2.5),
+                                 boundary = c(0.5, 0.75)), "cartesian")
 
 mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
-                   n.samples = 1000, priors = list(mu.beta = 5, nu.z = 5),
+                   n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
                    parallel = FALSE, verbose = TRUE)
-#> Some priors were not supplied. Using defaults.
 #> 
 #> STACKING WEIGHTS:
 #> 
 #>            | phi | nu  | boundary | weight |
 #> +----------+-----+-----+----------+--------+
-#> | Model 1  |    3|  0.5|       0.5| 0      |
-#> | Model 2  |    6|  0.5|       0.5| 0      |
-#> | Model 3  |   10|  0.5|       0.5| 0      |
-#> | Model 4  |    3|  1.5|       0.5| 0      |
-#> | Model 5  |    6|  1.5|       0.5| 0      |
-#> | Model 6  |   10|  1.5|       0.5| 0      |
-#> | Model 7  |    3|  0.5|       0.6| 0      |
-#> | Model 8  |    6|  0.5|       0.6| 0      |
-#> | Model 9  |   10|  0.5|       0.6| 0      |
-#> | Model 10 |    3|  1.5|       0.6| 0      |
-#> | Model 11 |    6|  1.5|       0.6| 0      |
-#> | Model 12 |   10|  1.5|       0.6| 1      |
+#> | Model 1  |    1|  0.5|      0.50| 0.000  |
+#> | Model 2  |    2|  0.5|      0.50| 0.000  |
+#> | Model 3  |    4|  0.5|      0.50| 0.000  |
+#> | Model 4  |    8|  0.5|      0.50| 0.000  |
+#> | Model 5  |    1|  1.0|      0.50| 0.000  |
+#> | Model 6  |    2|  1.0|      0.50| 0.000  |
+#> | Model 7  |    4|  1.0|      0.50| 0.000  |
+#> | Model 8  |    8|  1.0|      0.50| 0.000  |
+#> | Model 9  |    1|  1.5|      0.50| 0.000  |
+#> | Model 10 |    2|  1.5|      0.50| 0.000  |
+#> | Model 11 |    4|  1.5|      0.50| 0.000  |
+#> | Model 12 |    8|  1.5|      0.50| 0.000  |
+#> | Model 13 |    1|  2.5|      0.50| 0.000  |
+#> | Model 14 |    2|  2.5|      0.50| 0.000  |
+#> | Model 15 |    4|  2.5|      0.50| 0.213  |
+#> | Model 16 |    8|  2.5|      0.50| 0.000  |
+#> | Model 17 |    1|  0.5|      0.75| 0.000  |
+#> | Model 18 |    2|  0.5|      0.75| 0.000  |
+#> | Model 19 |    4|  0.5|      0.75| 0.000  |
+#> | Model 20 |    8|  0.5|      0.75| 0.000  |
+#> | Model 21 |    1|  1.0|      0.75| 0.000  |
+#> | Model 22 |    2|  1.0|      0.75| 0.000  |
+#> | Model 23 |    4|  1.0|      0.75| 0.000  |
+#> | Model 24 |    8|  1.0|      0.75| 0.000  |
+#> | Model 25 |    1|  1.5|      0.75| 0.000  |
+#> | Model 26 |    2|  1.5|      0.75| 0.000  |
+#> | Model 27 |    4|  1.5|      0.75| 0.000  |
+#> | Model 28 |    8|  1.5|      0.75| 0.000  |
+#> | Model 29 |    1|  2.5|      0.75| 0.000  |
+#> | Model 30 |    2|  2.5|      0.75| 0.000  |
+#> | Model 31 |    4|  2.5|      0.75| 0.110  |
+#> | Model 32 |    8|  2.5|      0.75| 0.677  |
 #> +----------+-----+-----+----------+--------+
+#> 
+#> ----------------------------------------
+#>  Diagnostics
+#> ----------------------------------------
+#> Model 15 (stacking weight 0.213):
+#>   - smallest relative Cholesky pivot is 8.4e-09: the covariance matrix is
+#>     nearly singular and results may lose accuracy (nearly coincident
+#>     locations, or a very small decay parameter).
+#> Model 31 (stacking weight 0.11):
+#>   - smallest relative Cholesky pivot is 8.4e-09: the covariance matrix is
+#>     nearly singular and results may lose accuracy (nearly coincident
+#>     locations, or a very small decay parameter).
+#> 4 other candidate model(s) with stacking weight at most 0.05 have numerical
+#> flags; see the 'diagnostics' element.
+#> ----------------------------------------
 ```
 
 We can extract information on the solver used for the stacking weights,
@@ -743,7 +811,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  13.632  12.294   6.508
+#>  30.825  39.366  18.010
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -776,9 +844,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod2$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  1.1743712  2.0113448  2.8888607
-#> x1          -0.6378201 -0.5380431 -0.4448439
-#> x2           0.2576741  0.3736553  0.5172820
+#> (Intercept) -2.0524262  0.7058867  2.5680621
+#> x1          -0.6035992 -0.5060201 -0.4182094
+#> x2           0.2118373  0.3012322  0.3925622
 ```
 
 The response `y_pois` was simulated using
@@ -858,8 +926,8 @@ function for brevity.
 
 mod1 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 0.5),
-                   boundary = 0.5, n.samples = 1000, verbose = FALSE)
+                   spParams = list(phi = 6, nu = 2.5),
+                   boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 
 Similarly, we collect the posterior samples of the fixed effects and
@@ -873,9 +941,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -0.6658653  0.6054029  1.6420895
-#> x1          -0.7315876 -0.5374720 -0.3613133
-#> x2           0.3627856  0.5421969  0.7697432
+#> (Intercept) -2.7325594 -0.6040518  1.4612925
+#> x1          -0.5654955 -0.4440810 -0.3294696
+#> x2           0.4153752  0.5248559  0.6641004
 ```
 
 ### Spatial binary data
@@ -890,8 +958,8 @@ of in the case of spatial Poisson data.
 
 mod1 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 0.5),
-                   boundary = 0.5, n.samples = 1000, verbose = FALSE)
+                   spParams = list(phi = 6, nu = 2.5),
+                   boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 
 Similarly, we collect the posterior samples of the fixed effects and
@@ -905,9 +973,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                    2.5%        50%      97.5%
-#> (Intercept) -1.07964097  0.2652031  1.6271219
-#> x1          -0.82263346 -0.4623830 -0.1296387
-#> x2          -0.07176782  0.3125584  0.6996470
+#> (Intercept) -2.51147722 -0.1999283 2.19069168
+#> x1          -0.39524576 -0.1592075 0.08523591
+#> x2           0.04937453  0.3254142 0.60915788
 ```
 
 ## References

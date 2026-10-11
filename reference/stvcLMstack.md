@@ -239,14 +239,13 @@ Sudipto Banerjee <sudipto@ucla.edu>
 ## Examples
 
 ``` r
-# \donttest{
 set.seed(1234)
 data(simSpaceTime)
 dat <- simSpaceTime[1:100, ]
 
 # processes sharing (phi_s, phi_t, noise_sp_ratio): scalar candidates
-mod.list <- candidateModels(list(phi_s = c(2, 4), phi_t = c(1, 4),
-                                 noise_sp_ratio = c(0.5, 1)), "cartesian")
+mod.list <- candidateModels(list(phi_s = c(1, 2, 3), phi_t = c(2, 4, 8),
+                                 noise_sp_ratio = c(0.1, 0.25)), "cartesian")
 mod1 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = as.matrix(dat[, "t_coords"]),
@@ -257,27 +256,37 @@ mod1 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi_s | phi_t | noise_sp_ratio | weight |
-#> +---------+-------+-------+----------------+--------+
-#> | Model 1 |      2|      1|             0.5| 0      |
-#> | Model 2 |      4|      1|             0.5| 0      |
-#> | Model 3 |      2|      4|             0.5| 1      |
-#> | Model 4 |      4|      4|             0.5| 0      |
-#> | Model 5 |      2|      1|             1.0| 0      |
-#> | Model 6 |      4|      1|             1.0| 0      |
-#> | Model 7 |      2|      4|             1.0| 0      |
-#> | Model 8 |      4|      4|             1.0| 0      |
-#> +---------+-------+-------+----------------+--------+
+#>            | phi_s | phi_t | noise_sp_ratio | weight |
+#> +----------+-------+-------+----------------+--------+
+#> | Model 1  |      1|      2|            0.10| 0.000  |
+#> | Model 2  |      2|      2|            0.10| 0.000  |
+#> | Model 3  |      3|      2|            0.10| 0.000  |
+#> | Model 4  |      1|      4|            0.10| 0.000  |
+#> | Model 5  |      2|      4|            0.10| 0.541  |
+#> | Model 6  |      3|      4|            0.10| 0.000  |
+#> | Model 7  |      1|      8|            0.10| 0.000  |
+#> | Model 8  |      2|      8|            0.10| 0.000  |
+#> | Model 9  |      3|      8|            0.10| 0.000  |
+#> | Model 10 |      1|      2|            0.25| 0.000  |
+#> | Model 11 |      2|      2|            0.25| 0.000  |
+#> | Model 12 |      3|      2|            0.25| 0.000  |
+#> | Model 13 |      1|      4|            0.25| 0.000  |
+#> | Model 14 |      2|      4|            0.25| 0.204  |
+#> | Model 15 |      3|      4|            0.25| 0.000  |
+#> | Model 16 |      1|      8|            0.25| 0.000  |
+#> | Model 17 |      2|      8|            0.25| 0.254  |
+#> | Model 18 |      3|      8|            0.25| 0.000  |
+#> +----------+-------+-------+----------------+--------+
 #> 
 post_samps <- stackedSampler(mod1)
 n <- nrow(dat)
 cor(apply(post_samps$z[1:n, ], 1, median), dat$z1_true)
-#> [1] 0.828777
+#> [1] 0.9084215
 
 # independent processes (r = 2): vector-valued candidates via list()
-mod.list2 <- candidateModels(list(phi_s = list(c(3, 6), c(2, 2)),
-                                  phi_t = list(c(4, 2)),
-                                  noise_sp_ratio = list(c(0.5, 1), c(1, 1))),
+mod.list2 <- candidateModels(list(phi_s = list(c(2, 2), c(3, 3)),
+                                  phi_t = list(c(4, 4), c(8, 8)),
+                                  noise_sp_ratio = list(c(0.1, 0.25), c(0.25, 0.5))),
                              "cartesian")
 mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
@@ -286,5 +295,4 @@ mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     process.type = "independent",
                     candidate.models = mod.list2,
                     n.samples = 500, verbose = FALSE)
-# }
 ```

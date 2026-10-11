@@ -24,7 +24,7 @@ The package lazy-loads the synthetic dataset `simSpaceTime`, observed at
 500 space-time coordinates $`\ell = (s, t)`$ with $`s`$ in the unit
 square and $`t`$ in the unit interval. It has two covariates `x1` and
 `x2`, a varying intercept `z1_true` that is a wave travelling across
-space over time, $`z_1(\ell) = \sin\{2\pi(s_1 - t)\}`$, and a varying
+space over time, $`z_1(\ell) = \sin(2\pi s_1 - \pi t)`$, and a varying
 slope of `x1`, `z2_true`, $`z_2(\ell) = \cos(2\pi s_2) \cos(\pi t)`$.
 The Gaussian response `y_gauss` and the Poisson response `y_pois` share
 them. Both surfaces are deterministic, not draws from Gaussian
@@ -42,20 +42,20 @@ dat <- simSpaceTime[1:n_train, ]
 head(dat)
 ```
 
-    ##          s1        s2  t_coords          x1         x2    y_gauss y_pois
-    ## 1 0.2216173 0.9919157 0.8458822 -0.16471416  2.0451334  0.6247576     28
-    ## 2 0.5937945 0.3285576 0.7965761 -1.47214370 -1.1420950 -6.0580521      3
-    ## 3 0.5511327 0.1808101 0.9182483  0.53238120 -0.1035955  4.0516817      0
-    ## 4 0.2295121 0.7660980 0.8099342  1.64998720  1.3164616  8.8155560      7
-    ## 5 0.9524661 0.9817298 0.7379233 -0.03672285 -0.9846361  4.1997422     16
-    ## 6 0.6469231 0.4993637 0.4131629 -0.34204648 -1.0552852  2.0616680     19
+    ##          s1        s2  t_coords          x1         x2   y_gauss y_pois
+    ## 1 0.2216173 0.9919157 0.8458822 -0.16471416  2.0451334 -1.032669      4
+    ## 2 0.5937945 0.3285576 0.7965761 -1.47214370 -1.1420950 -4.159786     24
+    ## 3 0.5511327 0.1808101 0.9182483  0.53238120 -0.1035955  5.339375      9
+    ## 4 0.2295121 0.7660980 0.8099342  1.64998720  1.3164616  7.439179      0
+    ## 5 0.9524661 0.9817298 0.7379233 -0.03672285 -0.9846361  2.723525      3
+    ## 6 0.6469231 0.4993637 0.4131629 -0.34204648 -1.0552852  1.432997     11
     ##      z1_true     z2_true
-    ## 1  0.7038331 -0.88391758
-    ## 2 -0.9563118  0.38028823
-    ## 3 -0.7412544 -0.40735390
-    ## 4  0.4840762 -0.08350197
-    ## 5  0.9752861 -0.67530256
-    ## 6  0.9947987 -0.26943332
+    ## 1 -0.9535938 -0.88391758
+    ## 2  0.9419539  0.38028823
+    ## 3  0.5464392 -0.40735390
+    ## 4 -0.8923008 -0.08350197
+    ## 5 -0.5009308 -0.67530256
+    ## 6  0.3661277 -0.26943332
 
 ### Formula for varying coefficients model
 
@@ -107,8 +107,8 @@ mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
                       time_coords = as.matrix(dat[, "t_coords"]),
                       cor.fn = "gneiting-decay",
                       process.type = "independent",
-                      sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
-                      noise_sp_ratio = c(0.5, 1),
+                      sptParams = list(phi_s = c(2, 2), phi_t = c(4, 4)),
+                      noise_sp_ratio = c(0.25, 0.5),
                       n.samples = 1000, loopd = TRUE, verbose = TRUE)
 ```
 
@@ -128,8 +128,8 @@ mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
     ##  sigma.sq: flat, proportional to 1/sigma.sq.
     ## 
     ## Spatial-temporal process parameters:
-    ##  process 1: phi_s = 3.00, phi_t = 4.00, noise-to-spatial variance ratio = 0.50.
-    ##  process 2: phi_s = 6.00, phi_t = 2.00, noise-to-spatial variance ratio = 1.00.
+    ##  process 1: phi_s = 2.00, phi_t = 4.00, noise-to-spatial variance ratio = 0.25.
+    ##  process 2: phi_s = 2.00, phi_t = 4.00, noise-to-spatial variance ratio = 0.50.
     ## 
     ## Number of posterior samples = 1000.
     ## 
@@ -147,10 +147,10 @@ rownames(summary_beta) <- mod_lm$X.names
 print(summary_beta)
 ```
 
-    ##                  2.5%        50%      97.5%
-    ## (Intercept)  1.175300  1.8631698  2.5378232
-    ## x1           4.591073  4.9749871  5.3475258
-    ## x2          -1.032438 -0.9194189 -0.8102856
+    ##                   2.5%        50%      97.5%
+    ## (Intercept)  0.6587955  1.5608960  2.4468595
+    ## x1           4.2039317  4.8940221  5.5610880
+    ## x2          -1.0515911 -0.9563878 -0.8644576
 
 Next, we stack candidate models built from candidate values of the
 process parameters and noise-to-spatial variance ratios. For
@@ -161,9 +161,9 @@ entries in
 
 ``` r
 
-mod.list.lm <- candidateModels(list(phi_s = list(c(3, 6), c(2, 4)),
-                                    phi_t = list(c(4, 2), c(1, 1)),
-                                    noise_sp_ratio = list(c(0.5, 1), c(1, 2))),
+mod.list.lm <- candidateModels(list(phi_s = list(c(2, 2), c(3, 3)),
+                                    phi_t = list(c(4, 4), c(8, 8)),
+                                    noise_sp_ratio = list(c(0.25, 0.5), c(0.5, 1))),
                                "cartesian")
 
 mod_lm_stack <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
@@ -180,14 +180,14 @@ mod_lm_stack <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
     ## 
     ##           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |
     ## +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
-    ## | Model 1 |         3|         6|         4|         2|                0.5|                  1| 0      |
-    ## | Model 2 |         2|         4|         4|         2|                0.5|                  1| 1      |
-    ## | Model 3 |         3|         6|         1|         1|                0.5|                  1| 0      |
-    ## | Model 4 |         2|         4|         1|         1|                0.5|                  1| 0      |
-    ## | Model 5 |         3|         6|         4|         2|                1.0|                  2| 0      |
-    ## | Model 6 |         2|         4|         4|         2|                1.0|                  2| 0      |
-    ## | Model 7 |         3|         6|         1|         1|                1.0|                  2| 0      |
-    ## | Model 8 |         2|         4|         1|         1|                1.0|                  2| 0      |
+    ## | Model 1 |         2|         2|         4|         4|               0.25|                0.5| 0.567  |
+    ## | Model 2 |         3|         3|         4|         4|               0.25|                0.5| 0.000  |
+    ## | Model 3 |         2|         2|         8|         8|               0.25|                0.5| 0.116  |
+    ## | Model 4 |         3|         3|         8|         8|               0.25|                0.5| 0.000  |
+    ## | Model 5 |         2|         2|         4|         4|               0.50|                1.0| 0.317  |
+    ## | Model 6 |         3|         3|         4|         4|               0.50|                1.0| 0.000  |
+    ## | Model 7 |         2|         2|         8|         8|               0.50|                1.0| 0.000  |
+    ## | Model 8 |         3|         3|         8|         8|               0.50|                1.0| 0.000  |
     ## +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
 
 ``` r
@@ -273,7 +273,7 @@ mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "independent",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                     sptParams = list(phi_s = c(3, 3), phi_t = c(4, 4)),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -322,7 +322,7 @@ mod2 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "independent.shared",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 4, phi_t = 4),
+                     sptParams = list(phi_s = 3, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -375,7 +375,7 @@ mod3 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 4, phi_t = 4),
+                     sptParams = list(phi_s = 3, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -454,8 +454,8 @@ multivariate spatial-temporal process model.
 ``` r
 
 mod.list <- candidateModels(list(
-  phi_s = list(2, 4),
-  phi_t = list(1, 4),
+  phi_s = list(2, 3, 4),
+  phi_t = list(2, 4, 8),
   boundary = c(0.5, 0.75)), "cartesian")
 ```
 
@@ -469,28 +469,35 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
-                     priors = list(nu.beta = 5, nu.z = 5),
                      candidate.models = mod.list,
                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                      n.samples = 1000)
 ```
 
-    ## Some priors were not supplied. Using defaults.
-
     ## 
     ## STACKING WEIGHTS:
     ## 
-    ##           | phi_s | phi_t | boundary | weight |
-    ## +---------+-------+-------+----------+--------+
-    ## | Model 1 |      2|      1|      0.50| 0.000  |
-    ## | Model 2 |      4|      1|      0.50| 0.000  |
-    ## | Model 3 |      2|      4|      0.50| 0.117  |
-    ## | Model 4 |      4|      4|      0.50| 0.308  |
-    ## | Model 5 |      2|      1|      0.75| 0.000  |
-    ## | Model 6 |      4|      1|      0.75| 0.000  |
-    ## | Model 7 |      2|      4|      0.75| 0.575  |
-    ## | Model 8 |      4|      4|      0.75| 0.000  |
-    ## +---------+-------+-------+----------+--------+
+    ##            | phi_s | phi_t | boundary | weight |
+    ## +----------+-------+-------+----------+--------+
+    ## | Model 1  |      2|      2|      0.50| 0.000  |
+    ## | Model 2  |      3|      2|      0.50| 0.000  |
+    ## | Model 3  |      4|      2|      0.50| 0.000  |
+    ## | Model 4  |      2|      4|      0.50| 0.000  |
+    ## | Model 5  |      3|      4|      0.50| 0.000  |
+    ## | Model 6  |      4|      4|      0.50| 0.000  |
+    ## | Model 7  |      2|      8|      0.50| 0.000  |
+    ## | Model 8  |      3|      8|      0.50| 0.000  |
+    ## | Model 9  |      4|      8|      0.50| 0.015  |
+    ## | Model 10 |      2|      2|      0.75| 0.000  |
+    ## | Model 11 |      3|      2|      0.75| 0.000  |
+    ## | Model 12 |      4|      2|      0.75| 0.000  |
+    ## | Model 13 |      2|      4|      0.75| 0.000  |
+    ## | Model 14 |      3|      4|      0.75| 0.597  |
+    ## | Model 15 |      4|      4|      0.75| 0.000  |
+    ## | Model 16 |      2|      8|      0.75| 0.000  |
+    ## | Model 17 |      3|      8|      0.75| 0.388  |
+    ## | Model 18 |      4|      8|      0.75| 0.000  |
+    ## +----------+-------+-------+----------+--------+
 
 **Step 3.** Recover posterior samples of the scale parameters.
 

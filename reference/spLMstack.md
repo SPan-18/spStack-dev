@@ -222,9 +222,9 @@ set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:100, ]
 
-cand.mod <- candidateModels(list(phi = c(3, 6),
-                                 nu = c(0.5, 1),
-                                 noise_sp_ratio = c(0.5, 1)),
+cand.mod <- candidateModels(list(phi = c(2, 3, 4),
+                                 nu = c(1.5, 2.5),
+                                 noise_sp_ratio = c(0.1, 0.25)),
                             "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
@@ -236,28 +236,32 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | noise_sp_ratio | weight |
-#> +---------+-----+-----+----------------+--------+
-#> | Model 1 |    3|  0.5|             0.5| 0      |
-#> | Model 2 |    6|  0.5|             0.5| 0      |
-#> | Model 3 |    3|  1.0|             0.5| 0      |
-#> | Model 4 |    6|  1.0|             0.5| 1      |
-#> | Model 5 |    3|  0.5|             1.0| 0      |
-#> | Model 6 |    6|  0.5|             1.0| 0      |
-#> | Model 7 |    3|  1.0|             1.0| 0      |
-#> | Model 8 |    6|  1.0|             1.0| 0      |
-#> +---------+-----+-----+----------------+--------+
+#>            | phi | nu  | noise_sp_ratio | weight |
+#> +----------+-----+-----+----------------+--------+
+#> | Model 1  |    2|  1.5|            0.10| 0.000  |
+#> | Model 2  |    3|  1.5|            0.10| 0.125  |
+#> | Model 3  |    4|  1.5|            0.10| 0.000  |
+#> | Model 4  |    2|  2.5|            0.10| 0.000  |
+#> | Model 5  |    3|  2.5|            0.10| 0.875  |
+#> | Model 6  |    4|  2.5|            0.10| 0.000  |
+#> | Model 7  |    2|  1.5|            0.25| 0.000  |
+#> | Model 8  |    3|  1.5|            0.25| 0.000  |
+#> | Model 9  |    4|  1.5|            0.25| 0.000  |
+#> | Model 10 |    2|  2.5|            0.25| 0.000  |
+#> | Model 11 |    3|  2.5|            0.25| 0.000  |
+#> | Model 12 |    4|  2.5|            0.25| 0.000  |
+#> +----------+-----+-----+----------------+--------+
 #> 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                  2.5%        50%      97.5%
-#> (Intercept)  1.528014  2.2337693  2.9973924
-#> x1           4.729069  4.8543561  4.9913745
-#> x2          -1.130784 -0.9844785 -0.8387339
+#> (Intercept) -2.988956 -0.7433501  1.2885201
+#> x1           4.840751  4.9294868  5.0123874
+#> x2          -1.066940 -0.9683156 -0.8696126
 
 # compare the posterior medians of the spatial effects with the truth
 cor(apply(post_samps$z, 1, median), dat$z_true)
-#> [1] 0.9574472
+#> [1] 0.9862038
 ```

@@ -47,7 +47,7 @@ a `data.frame` object with 500 rows and columns
 
 With \\\ell = (s, t)\\, the varying intercept is a wave travelling
 across space over time and the varying slope of \\x_1\\ changes with
-\\s_2\\ and \\t\\, \$\$ z_1(\ell) = \sin\\2 \pi (s_1 - t)\\, \quad
+\\s_2\\ and \\t\\, \$\$ z_1(\ell) = \sin(2 \pi s_1 - \pi t), \quad
 z_2(\ell) = \cos(2 \pi s_2) \cos(\pi t), \$\$ deterministic surfaces
 that are not draws from Gaussian processes. The responses are generated
 as \$\$ \begin{aligned} y\_{\mathrm{gauss}}(\ell) &\sim N(2 + 5
@@ -75,7 +75,7 @@ s2 <- runif(n)
 t_coords <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z1 <- sin(2 * pi * (s1 - t_coords))
+z1 <- sin(2 * pi * s1 - pi * t_coords)
 z2 <- cos(2 * pi * s2) * cos(pi * t_coords)
 dat <- data.frame(
   s1 = s1, s2 = s2, t_coords = t_coords, x1 = x1, x2 = x2,

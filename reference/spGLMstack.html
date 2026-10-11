@@ -283,51 +283,50 @@ Sudipto Banerjee <a href="mailto:sudipto@ucla.edu">sudipto@ucla.edu</a></p>
 
     <div class="section level2">
     <h2 id="ref-examples">Examples<a class="anchor" aria-label="anchor" href="#ref-examples"></a></h2>
-    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="co"># \donttest{</span></span></span>
-<span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span></span>
+    <div class="sourceCode"><pre class="sourceCode r"><code><span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">1234</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/utils/data.html" class="external-link">data</a></span><span class="op">(</span><span class="va">simSpatial</span><span class="op">)</span></span></span>
-<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">100</span>, <span class="op">]</span></span></span>
-<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">3</span>, <span class="fl">6</span>, <span class="fl">10</span><span class="op">)</span>, nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                                 boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">0.6</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="va">dat</span> <span class="op">&lt;-</span> <span class="va">simSpatial</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">150</span>, <span class="op">]</span></span></span>
+<span class="r-in"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">8</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1.5</span>, <span class="fl">2.5</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                                 boundary <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.75</span><span class="op">)</span><span class="op">)</span>, <span class="st">"cartesian"</span><span class="op">)</span></span></span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">mod1</span> <span class="op">&lt;-</span> <span class="fu">spGLMstack</span><span class="op">(</span><span class="va">y_pois</span> <span class="op">~</span> <span class="va">x1</span> <span class="op">+</span> <span class="va">x2</span>, data <span class="op">=</span> <span class="va">dat</span>, family <span class="op">=</span> <span class="st">"poisson"</span>,</span></span>
 <span class="r-in"><span>                   coords <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/matrix.html" class="external-link">as.matrix</a></span><span class="op">(</span><span class="va">dat</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"s1"</span>, <span class="st">"s2"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span>, cor.fn <span class="op">=</span> <span class="st">"matern"</span>,</span></span>
 <span class="r-in"><span>                   candidate.models <span class="op">=</span> <span class="va">cand.mod</span>,</span></span>
-<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">1000</span>,</span></span>
-<span class="r-in"><span>                   loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">1000</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>                   parallel <span class="op">=</span> <span class="cn">TRUE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span>                   n.samples <span class="op">=</span> <span class="fl">500</span>,</span></span>
+<span class="r-in"><span>                   loopd.controls <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>method <span class="op">=</span> <span class="st">"CV"</span>, CV.K <span class="op">=</span> <span class="fl">10</span>, nMC <span class="op">=</span> <span class="fl">500</span><span class="op">)</span>,</span></span>
+<span class="r-in"><span>                   parallel <span class="op">=</span> <span class="cn">FALSE</span>, verbose <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> STACKING WEIGHTS:</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>            | phi | nu  | boundary | weight |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> +----------+-----+-----+----------+--------+</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1  |    3|  0.5|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2  |    6|  0.5|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3  |   10|  0.5|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4  |    3|  1.0|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 5  |    6|  1.0|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 6  |   10|  1.0|       0.5| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 7  |    3|  0.5|       0.6| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 8  |    6|  0.5|       0.6| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 9  |   10|  0.5|       0.6| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 10 |    3|  1.0|       0.6| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 11 |    6|  1.0|       0.6| 0      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 12 |   10|  1.0|       0.6| 1      |</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> +----------+-----+-----+----------+--------+</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span>           | phi | nu  | boundary | weight |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------+--------+</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 1 |    2|  1.5|      0.75| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 2 |    4|  1.5|      0.75| 0.543  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 3 |    8|  1.5|      0.75| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 4 |    2|  2.5|      0.75| 0.000  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 5 |    4|  2.5|      0.75| 0.066  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> | Model 6 |    8|  2.5|      0.75| 0.391  |</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> +---------+-----+-----+----------+--------+</span>
 <span class="r-out co"><span class="r-pr">#&gt;</span> </span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 	Diagnostics</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> 1 other candidate model(s) with stacking weight at most 0.05 have numerical</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> flags; see the 'diagnostics' element.</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> ----------------------------------------</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="va">post_samps</span> <span class="op">&lt;-</span> <span class="fu"><a href="stackedSampler.html">stackedSampler</a></span><span class="op">(</span><span class="va">mod1</span><span class="op">)</span></span></span>
 <span class="r-in"><span><span class="va">post_beta</span> <span class="op">&lt;-</span> <span class="va">post_samps</span><span class="op">$</span><span class="va">beta</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span></span>
 <span class="r-out co"><span class="r-pr">#&gt;</span>                   2.5%        50%      97.5%</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept)  0.5963552  1.7859907  2.7538797</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.7582803 -0.5239114 -0.3066513</span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> x2           0.1323709  0.4129337  0.7259990</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> (Intercept) -1.8358002  0.7327142  3.1755265</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x1          -0.6379026 -0.5211744 -0.4272032</span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> x2           0.1827068  0.2952151  0.4062696</span>
 <span class="r-in"><span></span></span>
 <span class="r-in"><span><span class="co"># compare the posterior medians of the spatial effects with the truth</span></span></span>
 <span class="r-in"><span><span class="fu"><a href="https://rdrr.io/r/stats/cor.html" class="external-link">cor</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_samps</span><span class="op">$</span><span class="va">z</span>, <span class="fl">1</span>, <span class="va">median</span><span class="op">)</span>, <span class="va">dat</span><span class="op">$</span><span class="va">z_true</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.9179889</span>
-<span class="r-in"><span><span class="co"># }</span></span></span>
+<span class="r-out co"><span class="r-pr">#&gt;</span> [1] 0.9881036</span>
 </code></pre></div>
     </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

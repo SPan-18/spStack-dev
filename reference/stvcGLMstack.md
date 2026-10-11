@@ -224,15 +224,14 @@ new locations or times using the function
 ## Examples
 
 ``` r
-# \donttest{
 set.seed(1234)
 data(simSpaceTime)
 dat <- simSpaceTime[1:100, ]
 
 # create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(2, 4),
-                                  phi_t = list(1, 4),
-                                  boundary = c(0.5, 0.75)), "cartesian")
+mod.list2 <- candidateModels(list(phi_s = list(2, 3, 4),
+                                  phi_t = list(4, 8),
+                                  boundary = c(0.75)), "cartesian")
 
 # fit a spatial-temporal varying coefficient model using predictive stacking
 mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
@@ -248,16 +247,13 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
 #> 
 #>           | phi_s | phi_t | boundary | weight |
 #> +---------+-------+-------+----------+--------+
-#> | Model 1 |      2|      1|      0.50| 0.000  |
-#> | Model 2 |      4|      1|      0.50| 0.000  |
-#> | Model 3 |      2|      4|      0.50| 0.000  |
-#> | Model 4 |      4|      4|      0.50| 0.317  |
-#> | Model 5 |      2|      1|      0.75| 0.000  |
-#> | Model 6 |      4|      1|      0.75| 0.000  |
-#> | Model 7 |      2|      4|      0.75| 0.598  |
-#> | Model 8 |      4|      4|      0.75| 0.085  |
+#> | Model 1 |      2|      4|      0.75| 0.000  |
+#> | Model 2 |      3|      4|      0.75| 0.000  |
+#> | Model 3 |      4|      4|      0.75| 0.000  |
+#> | Model 4 |      2|      8|      0.75| 0.416  |
+#> | Model 5 |      3|      8|      0.75| 0.000  |
+#> | Model 6 |      4|      8|      0.75| 0.584  |
 #> +---------+-------+-------+----------+--------+
 #> 
 post_samps <- stackedSampler(mod1)
-# }
 ```
