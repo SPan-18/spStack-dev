@@ -16,6 +16,14 @@
   longer draw plots. The code that generates the data is in `data-raw/`
   and in the examples of the dataset help pages. Code that loads the old
   datasets must be updated.
+- [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
+  [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md):
+  a warning is given when a Matern smoothness `nu` of 2 or more is
+  supplied; such smooth correlation functions give nearly singular
+  correlation matrices (notably in the GLMs, whose latent correlation
+  matrix has no nugget). Examples and vignettes use `nu` up to 1.75.
 - [`surfaceplot()`](https://span-18.github.io/spStack-dev/reference/surfaceplot.md),
   [`surfaceplot2()`](https://span-18.github.io/spStack-dev/reference/surfaceplot2.md):
   the default palette is now the colorblind-friendly diverging

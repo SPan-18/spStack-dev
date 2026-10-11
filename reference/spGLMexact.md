@@ -246,7 +246,7 @@ coords <- as.matrix(dat[, c("s1", "s2")])
 # Example 1: spatial Poisson count data
 mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    n.samples = 100, verbose = TRUE)
 #> ----------------------------------------
 #>  Model description
@@ -274,26 +274,26 @@ mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #>  Boundary adjustment parameter = 0.50.
 #> 
 #> Spatial process parameters:
-#>  phi = 6.00, and, nu = 2.50.
+#>  phi = 4.00, and, nu = 1.75.
 #> 
 #> Number of posterior samples = 100.
 #> ----------------------------------------
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>            2.5%        50%      97.5%
-#> [1,] -2.3868337  0.4142544  3.4959078
-#> [2,] -0.6622091 -0.5243213 -0.3385844
-#> [3,]  0.2343159  0.3546739  0.4722679
+#> [1,] -2.6022931  0.1486756  3.7268650
+#> [2,] -0.6532769 -0.5121407 -0.3243450
+#> [3,]  0.2354689  0.3580199  0.4760015
 
 # Example 2: spatial binomial count data
 mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,
                    family = "binomial", coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    n.samples = 100, verbose = FALSE)
 
 # Example 3: spatial binary data
 mod3 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    n.samples = 100, verbose = FALSE)
 ```

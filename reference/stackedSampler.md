@@ -78,7 +78,7 @@ set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:100, ]
 cand.mod <- candidateModels(list(phi = c(2, 3, 4),
-                                 nu = c(1.5, 2.5),
+                                 nu = c(1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1)), "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
@@ -90,15 +90,18 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | noise_sp_ratio | weight |
-#> +---------+-----+-----+----------------+--------+
-#> | Model 1 |    2|  1.5|             0.1| 0.000  |
-#> | Model 2 |    3|  1.5|             0.1| 0.125  |
-#> | Model 3 |    4|  1.5|             0.1| 0.000  |
-#> | Model 4 |    2|  2.5|             0.1| 0.000  |
-#> | Model 5 |    3|  2.5|             0.1| 0.875  |
-#> | Model 6 |    4|  2.5|             0.1| 0.000  |
-#> +---------+-----+-----+----------------+--------+
+#>           | phi | nu   | noise_sp_ratio | weight |
+#> +---------+-----+------+----------------+--------+
+#> | Model 1 |    2|  1.00|             0.1| 0.000  |
+#> | Model 2 |    3|  1.00|             0.1| 0.000  |
+#> | Model 3 |    4|  1.00|             0.1| 0.000  |
+#> | Model 4 |    2|  1.50|             0.1| 0.899  |
+#> | Model 5 |    3|  1.50|             0.1| 0.000  |
+#> | Model 6 |    4|  1.50|             0.1| 0.000  |
+#> | Model 7 |    2|  1.75|             0.1| 0.101  |
+#> | Model 8 |    3|  1.75|             0.1| 0.000  |
+#> | Model 9 |    4|  1.75|             0.1| 0.000  |
+#> +---------+-----+------+----------------+--------+
 #> 
 print(mod1$diagnostics$solver$used)
 #> [1] "CVXR:CLARABEL"
@@ -106,13 +109,13 @@ print(mod1$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.124   0.197   0.081 
+#>   0.122   0.212   0.085 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                  2.5%        50%      97.5%
-#> (Intercept) -2.924841 -0.8767365  1.2710509
-#> x1           4.834333  4.9259611  5.0177941
-#> x2          -1.061339 -0.9661342 -0.8608566
+#>                  2.5%        50%     97.5%
+#> (Intercept) -2.856983 -0.7873647  1.459112
+#> x1           4.839181  4.9271953  5.023467
+#> x2          -1.074046 -0.9731702 -0.860392
 ```

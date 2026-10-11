@@ -249,7 +249,7 @@ set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:150, ]
 cand.mod <- candidateModels(list(phi = c(2, 4, 8),
-                                 nu = c(1.5, 2.5),
+                                 nu = c(1.5, 1.75),
                                  boundary = c(0.75)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
@@ -261,32 +261,26 @@ mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | boundary | weight |
-#> +---------+-----+-----+----------+--------+
-#> | Model 1 |    2|  1.5|      0.75| 0.000  |
-#> | Model 2 |    4|  1.5|      0.75| 0.543  |
-#> | Model 3 |    8|  1.5|      0.75| 0.000  |
-#> | Model 4 |    2|  2.5|      0.75| 0.000  |
-#> | Model 5 |    4|  2.5|      0.75| 0.066  |
-#> | Model 6 |    8|  2.5|      0.75| 0.391  |
-#> +---------+-----+-----+----------+--------+
+#>           | phi | nu   | boundary | weight |
+#> +---------+-----+------+----------+--------+
+#> | Model 1 |    2|  1.50|      0.75| 0      |
+#> | Model 2 |    4|  1.50|      0.75| 0      |
+#> | Model 3 |    8|  1.50|      0.75| 0      |
+#> | Model 4 |    2|  1.75|      0.75| 0      |
+#> | Model 5 |    4|  1.75|      0.75| 1      |
+#> | Model 6 |    8|  1.75|      0.75| 0      |
+#> +---------+-----+------+----------+--------+
 #> 
-#> ----------------------------------------
-#>  Diagnostics
-#> ----------------------------------------
-#> 1 other candidate model(s) with stacking weight at most 0.05 have numerical
-#> flags; see the 'diagnostics' element.
-#> ----------------------------------------
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.8358002  0.7327142  3.1755265
-#> x1          -0.6379026 -0.5211744 -0.4272032
-#> x2           0.1827068  0.2952151  0.4062696
+#> (Intercept) -1.7424934  0.3380438  2.5206201
+#> x1          -0.6212466 -0.5196680 -0.4311229
+#> x2           0.2024747  0.2962013  0.4007540
 
 # compare the posterior medians of the spatial effects with the truth
 cor(apply(post_samps$z, 1, median), dat$z_true)
-#> [1] 0.9881036
+#> [1] 0.9872694
 ```

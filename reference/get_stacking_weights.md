@@ -91,7 +91,7 @@ data(simSpatial)
 dat <- simSpatial[1:100, ]
 
 cand.mod <- candidateModels(list(phi = c(2, 3, 4),
-                                 nu = c(1.5, 2.5),
+                                 nu = c(1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1)), "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
@@ -103,15 +103,18 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | noise_sp_ratio | weight |
-#> +---------+-----+-----+----------------+--------+
-#> | Model 1 |    2|  1.5|             0.1| 0.000  |
-#> | Model 2 |    3|  1.5|             0.1| 0.125  |
-#> | Model 3 |    4|  1.5|             0.1| 0.000  |
-#> | Model 4 |    2|  2.5|             0.1| 0.000  |
-#> | Model 5 |    3|  2.5|             0.1| 0.875  |
-#> | Model 6 |    4|  2.5|             0.1| 0.000  |
-#> +---------+-----+-----+----------------+--------+
+#>           | phi | nu   | noise_sp_ratio | weight |
+#> +---------+-----+------+----------------+--------+
+#> | Model 1 |    2|  1.00|             0.1| 0.000  |
+#> | Model 2 |    3|  1.00|             0.1| 0.000  |
+#> | Model 3 |    4|  1.00|             0.1| 0.000  |
+#> | Model 4 |    2|  1.50|             0.1| 0.899  |
+#> | Model 5 |    3|  1.50|             0.1| 0.000  |
+#> | Model 6 |    4|  1.50|             0.1| 0.000  |
+#> | Model 7 |    2|  1.75|             0.1| 0.101  |
+#> | Model 8 |    3|  1.75|             0.1| 0.000  |
+#> | Model 9 |    4|  1.75|             0.1| 0.000  |
+#> +---------+-----+------+----------------+--------+
 #> 
 
 loopd_mat <- do.call('cbind', mod1$loopd)
@@ -125,15 +128,15 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.88s
+#> ℹ Compile time: 0.213s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -55.8295
-#> ℹ Compile time: 0.88s
-#> ℹ Solver time: 0.044s
+#> ✔ Optimal value: -60.0724
+#> ℹ Compile time: 0.213s
+#> ℹ Solver time: 0.056s
 print(round(w_hat$weights, 4))
-#> [1] 0.0000 0.1253 0.0000 0.0000 0.8747 0.0000
+#> [1] 0.0000 0.0000 0.0000 0.8992 0.0000 0.0000 0.1008 0.0000 0.0000
 print(w_hat$solver)
 #> [1] "CVXR:CLARABEL"
 print(w_hat$status)

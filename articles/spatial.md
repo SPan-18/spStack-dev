@@ -80,8 +80,8 @@ muBeta <- c(0, 0, 0)
 VBeta <- diag(1E4, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 2
-phi0 <- 3
-nu0 <- 2.5
+phi0 <- 2
+nu0 <- 1.75
 noise_sp_ratio <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
@@ -110,10 +110,12 @@ argument `spParams`. In addition, the noise-to-spatial variance ration
 is also fixed through the argument `noise_sp_ratio`. Note that $`\phi`$
 and $`\nu`$ act together: the effective range, the distance at which the
 correlation drops to 0.05, is $`3/\phi`$ for $`\nu = 0.5`$
-(exponential), about $`4.7/\phi`$ for $`\nu = 1.5`$, and about
-$`5.9/\phi`$ for $`\nu = 2.5`$. For example, $`\phi = 3`$ with
-$`\nu = 2.5`$ corresponds to an effective range of about 2 on the unit
-square.
+(exponential), $`4/\phi`$ for $`\nu = 1`$, about $`4.7/\phi`$ for
+$`\nu = 1.5`$, and about $`5.1/\phi`$ for $`\nu = 1.75`$. For example,
+$`\phi = 2`$ with $`\nu = 1.75`$ corresponds to an effective range of
+about 2.5 on the unit square. Values $`\nu \geq 2`$ give very smooth
+surfaces whose correlation matrices are nearly singular, and are rarely
+needed.
 
 If interested in calculation of leave-one-out predictive densities
 (LOO-PD), `loopd` must be set `TRUE` (the default is `FALSE`). Method of
@@ -160,7 +162,7 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 #>  shape = 2.00, scale = 2.00.
 #> 
 #> Spatial process parameters:
-#>  phi = 3.00, and, nu = 2.50.
+#>  phi = 2.00, and, nu = 1.75.
 #> Noise-to-spatial variance ratio = 0.10.
 #> 
 #> Number of posterior samples = 1000.
@@ -179,9 +181,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                  2.5%        50%      97.5%
-#> (Intercept) -3.005440 -0.7329878  1.3449257
-#> x1           4.880717  4.9503308  5.0136549
-#> x2          -1.046894 -0.9778391 -0.9048877
+#> (Intercept) -3.514002 -1.0438240  1.2218260
+#> x1           4.881059  4.9516414  5.0156597
+#> x2          -1.047992 -0.9779704 -0.9039985
 ```
 
 ### Leave-one-out predictive densities using PSIS
@@ -237,8 +239,8 @@ weight.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
-                                 nu = c(0.5, 1.5, 2.5),
+cand.mod <- candidateModels(list(phi = c(1, 2, 3, 4),
+                                 nu = c(0.5, 1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
 
@@ -252,33 +254,41 @@ mod3 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu  | noise_sp_ratio | weight |
-#> +----------+-----+-----+----------------+--------+
-#> | Model 1  |    2|  0.5|             0.1| 0.000  |
-#> | Model 2  |    4|  0.5|             0.1| 0.000  |
-#> | Model 3  |    6|  0.5|             0.1| 0.000  |
-#> | Model 4  |    8|  0.5|             0.1| 0.000  |
-#> | Model 5  |    2|  1.5|             0.1| 0.000  |
-#> | Model 6  |    4|  1.5|             0.1| 0.000  |
-#> | Model 7  |    6|  1.5|             0.1| 0.000  |
-#> | Model 8  |    8|  1.5|             0.1| 0.000  |
-#> | Model 9  |    2|  2.5|             0.1| 0.422  |
-#> | Model 10 |    4|  2.5|             0.1| 0.578  |
-#> | Model 11 |    6|  2.5|             0.1| 0.000  |
-#> | Model 12 |    8|  2.5|             0.1| 0.000  |
-#> | Model 13 |    2|  0.5|             0.5| 0.000  |
-#> | Model 14 |    4|  0.5|             0.5| 0.000  |
-#> | Model 15 |    6|  0.5|             0.5| 0.000  |
-#> | Model 16 |    8|  0.5|             0.5| 0.000  |
-#> | Model 17 |    2|  1.5|             0.5| 0.000  |
-#> | Model 18 |    4|  1.5|             0.5| 0.000  |
-#> | Model 19 |    6|  1.5|             0.5| 0.000  |
-#> | Model 20 |    8|  1.5|             0.5| 0.000  |
-#> | Model 21 |    2|  2.5|             0.5| 0.000  |
-#> | Model 22 |    4|  2.5|             0.5| 0.000  |
-#> | Model 23 |    6|  2.5|             0.5| 0.000  |
-#> | Model 24 |    8|  2.5|             0.5| 0.000  |
-#> +----------+-----+-----+----------------+--------+
+#>            | phi | nu   | noise_sp_ratio | weight |
+#> +----------+-----+------+----------------+--------+
+#> | Model 1  |    1|  0.50|             0.1| 0      |
+#> | Model 2  |    2|  0.50|             0.1| 0      |
+#> | Model 3  |    3|  0.50|             0.1| 0      |
+#> | Model 4  |    4|  0.50|             0.1| 0      |
+#> | Model 5  |    1|  1.00|             0.1| 0      |
+#> | Model 6  |    2|  1.00|             0.1| 0      |
+#> | Model 7  |    3|  1.00|             0.1| 0      |
+#> | Model 8  |    4|  1.00|             0.1| 0      |
+#> | Model 9  |    1|  1.50|             0.1| 0      |
+#> | Model 10 |    2|  1.50|             0.1| 0      |
+#> | Model 11 |    3|  1.50|             0.1| 0      |
+#> | Model 12 |    4|  1.50|             0.1| 0      |
+#> | Model 13 |    1|  1.75|             0.1| 0      |
+#> | Model 14 |    2|  1.75|             0.1| 1      |
+#> | Model 15 |    3|  1.75|             0.1| 0      |
+#> | Model 16 |    4|  1.75|             0.1| 0      |
+#> | Model 17 |    1|  0.50|             0.5| 0      |
+#> | Model 18 |    2|  0.50|             0.5| 0      |
+#> | Model 19 |    3|  0.50|             0.5| 0      |
+#> | Model 20 |    4|  0.50|             0.5| 0      |
+#> | Model 21 |    1|  1.00|             0.5| 0      |
+#> | Model 22 |    2|  1.00|             0.5| 0      |
+#> | Model 23 |    3|  1.00|             0.5| 0      |
+#> | Model 24 |    4|  1.00|             0.5| 0      |
+#> | Model 25 |    1|  1.50|             0.5| 0      |
+#> | Model 26 |    2|  1.50|             0.5| 0      |
+#> | Model 27 |    3|  1.50|             0.5| 0      |
+#> | Model 28 |    4|  1.50|             0.5| 0      |
+#> | Model 29 |    1|  1.75|             0.5| 0      |
+#> | Model 30 |    2|  1.75|             0.5| 0      |
+#> | Model 31 |    3|  1.75|             0.5| 0      |
+#> | Model 32 |    4|  1.75|             0.5| 0      |
+#> +----------+-----+------+----------------+--------+
 ```
 
 The user can check the solver used for the stacking weights, its status,
@@ -293,7 +303,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.852   1.596   4.806
+#>   4.948   1.691   4.862
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -319,9 +329,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
 #>                  2.5%        50%      97.5%
-#> (Intercept) -4.841887 -0.7621149  1.6691578
-#> x1           4.885629  4.9512482  5.0161448
-#> x2          -1.057355 -0.9775518 -0.8977422
+#> (Intercept) -3.556916 -1.1934571  1.2341361
+#> x1           4.888126  4.9517837  5.0151449
+#> x2          -1.049969 -0.9795415 -0.9067872
 ```
 
 The response `y_gauss` was simulated using the true value
@@ -493,16 +503,16 @@ summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0
 rownames(summary_beta) <- mod4$X.names
 print(summary_beta)
 #>                  2.5%        50%      97.5%
-#> (Intercept)  1.812532  2.0478871  2.2863100
-#> x1           1.823957  3.2136302  4.6462558
-#> x2          -1.055058 -0.9685194 -0.8931108
+#> (Intercept)  1.785428  2.0374472  2.2858943
+#> x1           1.717683  3.1906673  4.6435601
+#> x2          -1.053642 -0.9727139 -0.8904492
 print(quantile(mod4$samples$sigmaSq, c(0.025, 0.5, 0.975)))
 #>      2.5%       50%     97.5% 
-#> 0.1980492 0.2401353 0.2933603
+#> 0.1985160 0.2387306 0.2954121
 print(t(apply(mod4$samples$sigmaSq.z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>            2.5%        50%      97.5%
-#> [1,] 0.01980492 0.02401353 0.02933603
-#> [2,] 0.79219671 0.96054114 1.17344124
+#>           2.5%        50%      97.5%
+#> [1,] 0.0198516 0.02387306 0.02954121
+#> [2,] 0.7940641 0.95492227 1.18164847
 ```
 
 Next, we use predictive stacking over candidate values of $`\phi_s`$ and
@@ -659,16 +669,9 @@ mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #>  Boundary adjustment parameter = 0.50.
 #> 
 #> Spatial process parameters:
-#>  phi = 3.00, and, nu = 2.50.
+#>  phi = 2.00, and, nu = 1.75.
 #> 
 #> Number of posterior samples = 1000.
-#> ----------------------------------------
-#> ----------------------------------------
-#>  Diagnostics
-#> ----------------------------------------
-#>   - smallest relative Cholesky pivot is 2e-09: the covariance matrix is
-#>     nearly singular and results may lose accuracy (nearly coincident
-#>     locations, or a very small decay parameter).
 #> ----------------------------------------
 ```
 
@@ -684,9 +687,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -2.7739870 -0.9633030  0.9431077
-#> x1          -0.6307785 -0.5280100 -0.4461939
-#> x2           0.2138936  0.3086033  0.4057884
+#> (Intercept) -2.9904772 -0.9792525  0.9246436
+#> x1          -0.6235185 -0.5220600 -0.4330682
+#> x2           0.2178655  0.3089373  0.4007939
 ```
 
 #### Posterior recovery of scale parameters
@@ -735,8 +738,8 @@ Monte Carlo samples to be used to find the LOO-PD.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(1, 2, 4, 8),
-                                 nu = c(0.5, 1, 1.5, 2.5),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
+                                 nu = c(0.5, 1, 1.5, 1.75),
                                  boundary = c(0.5, 0.75)), "cartesian")
 
 mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
@@ -748,56 +751,41 @@ mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>            | phi | nu  | boundary | weight |
-#> +----------+-----+-----+----------+--------+
-#> | Model 1  |    1|  0.5|      0.50| 0.000  |
-#> | Model 2  |    2|  0.5|      0.50| 0.000  |
-#> | Model 3  |    4|  0.5|      0.50| 0.000  |
-#> | Model 4  |    8|  0.5|      0.50| 0.000  |
-#> | Model 5  |    1|  1.0|      0.50| 0.000  |
-#> | Model 6  |    2|  1.0|      0.50| 0.000  |
-#> | Model 7  |    4|  1.0|      0.50| 0.000  |
-#> | Model 8  |    8|  1.0|      0.50| 0.000  |
-#> | Model 9  |    1|  1.5|      0.50| 0.000  |
-#> | Model 10 |    2|  1.5|      0.50| 0.000  |
-#> | Model 11 |    4|  1.5|      0.50| 0.000  |
-#> | Model 12 |    8|  1.5|      0.50| 0.000  |
-#> | Model 13 |    1|  2.5|      0.50| 0.000  |
-#> | Model 14 |    2|  2.5|      0.50| 0.000  |
-#> | Model 15 |    4|  2.5|      0.50| 0.213  |
-#> | Model 16 |    8|  2.5|      0.50| 0.000  |
-#> | Model 17 |    1|  0.5|      0.75| 0.000  |
-#> | Model 18 |    2|  0.5|      0.75| 0.000  |
-#> | Model 19 |    4|  0.5|      0.75| 0.000  |
-#> | Model 20 |    8|  0.5|      0.75| 0.000  |
-#> | Model 21 |    1|  1.0|      0.75| 0.000  |
-#> | Model 22 |    2|  1.0|      0.75| 0.000  |
-#> | Model 23 |    4|  1.0|      0.75| 0.000  |
-#> | Model 24 |    8|  1.0|      0.75| 0.000  |
-#> | Model 25 |    1|  1.5|      0.75| 0.000  |
-#> | Model 26 |    2|  1.5|      0.75| 0.000  |
-#> | Model 27 |    4|  1.5|      0.75| 0.000  |
-#> | Model 28 |    8|  1.5|      0.75| 0.000  |
-#> | Model 29 |    1|  2.5|      0.75| 0.000  |
-#> | Model 30 |    2|  2.5|      0.75| 0.000  |
-#> | Model 31 |    4|  2.5|      0.75| 0.110  |
-#> | Model 32 |    8|  2.5|      0.75| 0.677  |
-#> +----------+-----+-----+----------+--------+
-#> 
-#> ----------------------------------------
-#>  Diagnostics
-#> ----------------------------------------
-#> Model 15 (stacking weight 0.213):
-#>   - smallest relative Cholesky pivot is 8.4e-09: the covariance matrix is
-#>     nearly singular and results may lose accuracy (nearly coincident
-#>     locations, or a very small decay parameter).
-#> Model 31 (stacking weight 0.11):
-#>   - smallest relative Cholesky pivot is 8.4e-09: the covariance matrix is
-#>     nearly singular and results may lose accuracy (nearly coincident
-#>     locations, or a very small decay parameter).
-#> 4 other candidate model(s) with stacking weight at most 0.05 have numerical
-#> flags; see the 'diagnostics' element.
-#> ----------------------------------------
+#>            | phi | nu   | boundary | weight |
+#> +----------+-----+------+----------+--------+
+#> | Model 1  |    2|  0.50|      0.50| 0.000  |
+#> | Model 2  |    4|  0.50|      0.50| 0.000  |
+#> | Model 3  |    6|  0.50|      0.50| 0.000  |
+#> | Model 4  |    8|  0.50|      0.50| 0.000  |
+#> | Model 5  |    2|  1.00|      0.50| 0.000  |
+#> | Model 6  |    4|  1.00|      0.50| 0.000  |
+#> | Model 7  |    6|  1.00|      0.50| 0.000  |
+#> | Model 8  |    8|  1.00|      0.50| 0.000  |
+#> | Model 9  |    2|  1.50|      0.50| 0.000  |
+#> | Model 10 |    4|  1.50|      0.50| 0.000  |
+#> | Model 11 |    6|  1.50|      0.50| 0.000  |
+#> | Model 12 |    8|  1.50|      0.50| 0.000  |
+#> | Model 13 |    2|  1.75|      0.50| 0.000  |
+#> | Model 14 |    4|  1.75|      0.50| 0.262  |
+#> | Model 15 |    6|  1.75|      0.50| 0.000  |
+#> | Model 16 |    8|  1.75|      0.50| 0.000  |
+#> | Model 17 |    2|  0.50|      0.75| 0.000  |
+#> | Model 18 |    4|  0.50|      0.75| 0.000  |
+#> | Model 19 |    6|  0.50|      0.75| 0.000  |
+#> | Model 20 |    8|  0.50|      0.75| 0.000  |
+#> | Model 21 |    2|  1.00|      0.75| 0.000  |
+#> | Model 22 |    4|  1.00|      0.75| 0.000  |
+#> | Model 23 |    6|  1.00|      0.75| 0.000  |
+#> | Model 24 |    8|  1.00|      0.75| 0.000  |
+#> | Model 25 |    2|  1.50|      0.75| 0.000  |
+#> | Model 26 |    4|  1.50|      0.75| 0.000  |
+#> | Model 27 |    6|  1.50|      0.75| 0.000  |
+#> | Model 28 |    8|  1.50|      0.75| 0.000  |
+#> | Model 29 |    2|  1.75|      0.75| 0.000  |
+#> | Model 30 |    4|  1.75|      0.75| 0.738  |
+#> | Model 31 |    6|  1.75|      0.75| 0.000  |
+#> | Model 32 |    8|  1.75|      0.75| 0.000  |
+#> +----------+-----+------+----------+--------+
 ```
 
 We can extract information on the solver used for the stacking weights,
@@ -811,7 +799,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  30.825  39.366  18.010
+#>  26.770  31.563  15.224
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -843,10 +831,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod2$X.names
 print(summary_beta)
-#>                   2.5%        50%      97.5%
-#> (Intercept) -2.0524262  0.7058867  2.5680621
-#> x1          -0.6035992 -0.5060201 -0.4182094
-#> x2           0.2118373  0.3012322  0.3925622
+#>                   2.5%        50%     97.5%
+#> (Intercept) -2.8309555  0.3350982  2.605713
+#> x1          -0.6220852 -0.5062168 -0.412155
+#> x2           0.2122008  0.2997407  0.402143
 ```
 
 The response `y_pois` was simulated using
@@ -926,7 +914,7 @@ function for brevity.
 
 mod1 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 
@@ -941,9 +929,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -2.7325594 -0.6040518  1.4612925
-#> x1          -0.5654955 -0.4440810 -0.3294696
-#> x2           0.4153752  0.5248559  0.6641004
+#> (Intercept) -3.1714292 -0.8541721  1.8883124
+#> x1          -0.5586969 -0.4438227 -0.3326945
+#> x2           0.4039936  0.5239761  0.6586266
 ```
 
 ### Spatial binary data
@@ -958,7 +946,7 @@ of in the case of spatial Poisson data.
 
 mod1 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 
@@ -972,10 +960,10 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                    2.5%        50%      97.5%
-#> (Intercept) -2.51147722 -0.1999283 2.19069168
-#> x1          -0.39524576 -0.1592075 0.08523591
-#> x2           0.04937453  0.3254142 0.60915788
+#>                   2.5%        50%      97.5%
+#> (Intercept) -3.5723868 -0.3191362 2.14476965
+#> x1          -0.3957679 -0.1522770 0.09531947
+#> x2           0.0524947  0.3192074 0.59232711
 ```
 
 ## References

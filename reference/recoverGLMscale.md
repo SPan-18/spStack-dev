@@ -47,7 +47,7 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:100, ]
-cand.mod <- candidateModels(list(phi = c(2, 4, 8), nu = c(1.5, 2.5),
+cand.mod <- candidateModels(list(phi = c(2, 4, 8), nu = c(1.5, 1.75),
                                  boundary = c(0.5)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
@@ -59,22 +59,16 @@ mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> 
 #> STACKING WEIGHTS:
 #> 
-#>           | phi | nu  | boundary | weight |
-#> +---------+-----+-----+----------+--------+
-#> | Model 1 |    2|  1.5|       0.5| 0.000  |
-#> | Model 2 |    4|  1.5|       0.5| 0.000  |
-#> | Model 3 |    8|  1.5|       0.5| 0.000  |
-#> | Model 4 |    2|  2.5|       0.5| 0.000  |
-#> | Model 5 |    4|  2.5|       0.5| 0.037  |
-#> | Model 6 |    8|  2.5|       0.5| 0.963  |
-#> +---------+-----+-----+----------+--------+
+#>           | phi | nu   | boundary | weight |
+#> +---------+-----+------+----------+--------+
+#> | Model 1 |    2|  1.50|       0.5| 0      |
+#> | Model 2 |    4|  1.50|       0.5| 0      |
+#> | Model 3 |    8|  1.50|       0.5| 0      |
+#> | Model 4 |    2|  1.75|       0.5| 0      |
+#> | Model 5 |    4|  1.75|       0.5| 1      |
+#> | Model 6 |    8|  1.75|       0.5| 0      |
+#> +---------+-----+------+----------+--------+
 #> 
-#> ----------------------------------------
-#>  Diagnostics
-#> ----------------------------------------
-#> 1 other candidate model(s) with stacking weight at most 0.05 have numerical
-#> flags; see the 'diagnostics' element.
-#> ----------------------------------------
 
 # Recover posterior samples of scale parameters
 mod1.1 <- recoverGLMscale(mod1)

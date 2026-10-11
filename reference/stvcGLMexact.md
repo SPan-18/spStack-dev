@@ -294,5 +294,5 @@ mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
 n <- nrow(dat)
 z_hat <- apply(mod1$samples$z, 1, median)
 cor(z_hat[1:n], dat$z1_true)
-#> [1] 0.8996008
+#> [1] 0.9023384
 ```
