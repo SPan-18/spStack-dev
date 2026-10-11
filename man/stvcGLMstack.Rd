@@ -162,15 +162,14 @@ by the user and subsequently combines inference by stacking predictive
 densities. See Pan, Zhang, Bradley, and Banerjee (2025) for more details.
 }
 \examples{
-\donttest{
 set.seed(1234)
 data(simSpaceTime)
 dat <- simSpaceTime[1:100, ]
 
 # create list of candidate models (multivariate)
-mod.list2 <- candidateModels(list(phi_s = list(2, 4),
-                                  phi_t = list(1, 4),
-                                  boundary = c(0.5, 0.75)), "cartesian")
+mod.list2 <- candidateModels(list(phi_s = list(2, 3, 4),
+                                  phi_t = list(4, 8),
+                                  boundary = c(0.75)), "cartesian")
 
 # fit a spatial-temporal varying coefficient model using predictive stacking
 mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
@@ -182,5 +181,4 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                      n.samples = 500)
 post_samps <- stackedSampler(mod1)
-}
 }

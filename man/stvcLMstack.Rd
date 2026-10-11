@@ -158,14 +158,13 @@ are fitted together, building and factorizing the spatial-temporal
 correlation matrices only once.
 }
 \examples{
-\donttest{
 set.seed(1234)
 data(simSpaceTime)
 dat <- simSpaceTime[1:100, ]
 
 # processes sharing (phi_s, phi_t, noise_sp_ratio): scalar candidates
-mod.list <- candidateModels(list(phi_s = c(2, 4), phi_t = c(1, 4),
-                                 noise_sp_ratio = c(0.5, 1)), "cartesian")
+mod.list <- candidateModels(list(phi_s = c(1, 2, 3), phi_t = c(2, 4, 8),
+                                 noise_sp_ratio = c(0.1, 0.25)), "cartesian")
 mod1 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
                     time_coords = as.matrix(dat[, "t_coords"]),
@@ -178,9 +177,9 @@ n <- nrow(dat)
 cor(apply(post_samps$z[1:n, ], 1, median), dat$z1_true)
 
 # independent processes (r = 2): vector-valued candidates via list()
-mod.list2 <- candidateModels(list(phi_s = list(c(3, 6), c(2, 2)),
-                                  phi_t = list(c(4, 2)),
-                                  noise_sp_ratio = list(c(0.5, 1), c(1, 1))),
+mod.list2 <- candidateModels(list(phi_s = list(c(2, 2), c(3, 3)),
+                                  phi_t = list(c(4, 4), c(8, 8)),
+                                  noise_sp_ratio = list(c(0.1, 0.25), c(0.25, 0.5))),
                              "cartesian")
 mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     sp_coords = as.matrix(dat[, c("s1", "s2")]),
@@ -189,7 +188,6 @@ mod2 <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
                     process.type = "independent",
                     candidate.models = mod.list2,
                     n.samples = 500, verbose = FALSE)
-}
 }
 \references{
 Vehtari A, Simpson D, Gelman A, Yao Y, Gabry J (2024). "Pareto

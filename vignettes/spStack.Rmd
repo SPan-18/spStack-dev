@@ -31,14 +31,14 @@ set.seed(1729)
 ```
 
 ## Bayesian Gaussian spatial regression models
-Here is a quick example using the Gaussian response `y_gauss` of the lazyloaded synthetic data `simSpatial`, observed at 500 locations in the unit square with two covariates `x1` and `x2` and a spatial effect `z_true` with a ripple pattern (see `?simSpatial`).
+Here is a quick example using the Gaussian response `y_gauss` of the lazyloaded synthetic data `simSpatial`, observed at 500 locations in the unit square with two covariates `x1` and `x2` and a spatial effect `z_true` with a ring pattern (see `?simSpatial`).
 
 **Step 1.** Load the library spStack and prepare the data. Here we split the data into `dat_train` and `dat_pred` - we train our model on `dat_train` and subsequently carry out posterior predictive inference at the locations in `dat_pred`.
 ```{r}
 library(spStack)
 
 # training and test data sizes
-n_train <- 100
+n_train <- 200
 n_pred <- 50
 
 data("simSpatial")
@@ -48,16 +48,16 @@ dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 **Step 2.** Run the function `spLMstack()` - define the model with a formula, input the spatial coordinates as a matrix, specify the correlation function, and accordingly provide candidate models through `candidate.models`. The argument `loopd.method` can be used to specify the method used for calculation of leave-one-out predictive densities, existing parallelization plan can be used if `parallel` is set `TRUE`, and `solver` argument specifies the solver used to carry out the optimization routine to get stacking weights.
 ```{r}
-cand.mod <- candidateModels(list(phi = c(3, 6, 10),
-                                 nu = c(0.5, 1),
-                                 noise_sp_ratio = c(0.5, 1, 2)),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
+                                 nu = c(0.5, 1.5, 2.5),
+                                 noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
 
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
                   cor.fn = "matern",
                   candidate.models = cand.mod,
-                  n.samples = 1000, loopd.method = "psis",
+                  n.samples = 1000, loopd.method = "exact",
                   parallel = FALSE, verbose = TRUE)
 ```
 
@@ -118,7 +118,7 @@ The workflow for the spatial generalized linear models are similar. Here is a qu
 **Step 1.** Prepare data by splitting into train and test sets.
 ```{r}
 # training and test data sizes
-n_train <- 100
+n_train <- 200
 n_pred <- 50
 
 dat_train <- simSpatial[1:n_train, ]
@@ -127,13 +127,13 @@ dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 **Step 2.** Run the function `spGLMstack()` after specifying the `family`, and providing candidate models constructed using `candidateModels()`. The `loopd.controls` option can be used to specify the method and parameters used for calculation of leave-one-out predictive densities. The input `list(method = "CV", CV.K = 10, nMC = 500)` corresponds to $K$-fold cross-validation with $K = 10$ and using 500 Monte Carlo samples for calculating each predictive density.
 ```{r}
-cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1.0),
-                                 boundary = c(0.5)), "cartesian")
+cand.mod <- candidateModels(list(phi = c(1, 2, 4, 8),
+                                 nu = c(0.5, 1, 1.5, 2.5),
+                                 boundary = c(0.5, 0.75)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
                    coords = as.matrix(dat_train[, c("s1", "s2")]), cor.fn = "matern",
                    candidate.models = cand.mod,
-                   priors = list(nu.beta = 5, nu.z = 5),
                    n.samples = 1000,
                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                    verbose = TRUE)

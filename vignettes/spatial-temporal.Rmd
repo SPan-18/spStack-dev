@@ -38,7 +38,7 @@ set.seed(1729)
 
 ## Data
 
-The package lazy-loads the synthetic dataset `simSpaceTime`, observed at 500 space-time coordinates $\ell = (s, t)$ with $s$ in the unit square and $t$ in the unit interval. It has two covariates `x1` and `x2`, a varying intercept `z1_true` that is a wave travelling across space over time, $z_1(\ell) = \sin\{2\pi(s_1 - t)\}$, and a varying slope of `x1`, `z2_true`, $z_2(\ell) = \cos(2\pi s_2) \cos(\pi t)$. The Gaussian response `y_gauss` and the Poisson response `y_pois` share them. Both surfaces are deterministic, not draws from Gaussian processes. See `?simSpaceTime` for the code that generated the data. We use the first 200 space-time coordinates for the following analysis.
+The package lazy-loads the synthetic dataset `simSpaceTime`, observed at 500 space-time coordinates $\ell = (s, t)$ with $s$ in the unit square and $t$ in the unit interval. It has two covariates `x1` and `x2`, a varying intercept `z1_true` that is a wave travelling across space over time, $z_1(\ell) = \sin(2\pi s_1 - \pi t)$, and a varying slope of `x1`, `z2_true`, $z_2(\ell) = \cos(2\pi s_2) \cos(\pi t)$. The Gaussian response `y_gauss` and the Poisson response `y_pois` share them. Both surfaces are deterministic, not draws from Gaussian processes. See `?simSpaceTime` for the code that generated the data. We use the first 200 space-time coordinates for the following analysis.
 ```{r}
 library(spStack)
 data("simSpaceTime")
@@ -62,8 +62,8 @@ mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
                       time_coords = as.matrix(dat[, "t_coords"]),
                       cor.fn = "gneiting-decay",
                       process.type = "independent",
-                      sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
-                      noise_sp_ratio = c(0.5, 1),
+                      sptParams = list(phi_s = c(2, 2), phi_t = c(4, 4)),
+                      noise_sp_ratio = c(0.25, 0.5),
                       n.samples = 1000, loopd = TRUE, verbose = TRUE)
 ```
 
@@ -76,9 +76,9 @@ print(summary_beta)
 
 Next, we stack candidate models built from candidate values of the process parameters and noise-to-spatial variance ratios. For `process.type = "independent"`, the candidate values are vectors of length $r$, supplied as `list()` entries in `candidateModels()`.
 ```{r stvcLMstack}
-mod.list.lm <- candidateModels(list(phi_s = list(c(3, 6), c(2, 4)),
-                                    phi_t = list(c(4, 2), c(1, 1)),
-                                    noise_sp_ratio = list(c(0.5, 1), c(1, 2))),
+mod.list.lm <- candidateModels(list(phi_s = list(c(2, 2), c(3, 3)),
+                                    phi_t = list(c(4, 4), c(8, 8)),
+                                    noise_sp_ratio = list(c(0.25, 0.5), c(0.5, 1))),
                                "cartesian")
 
 mod_lm_stack <- stvcLMstack(y_gauss ~ x1 + x2 + (x1), data = dat,
@@ -139,7 +139,7 @@ mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "independent",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                     sptParams = list(phi_s = c(3, 3), phi_t = c(4, 4)),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -172,7 +172,7 @@ mod2 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "independent.shared",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 4, phi_t = 4),
+                     sptParams = list(phi_s = 3, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -204,7 +204,7 @@ mod3 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
                      priors = list(nu.beta = 5, nu.z = 5),
-                     sptParams = list(phi_s = 4, phi_t = 4),
+                     sptParams = list(phi_s = 3, phi_t = 4),
                      verbose = FALSE, n.samples = 500)
 ```
 
@@ -262,8 +262,8 @@ For implementing predictive stacking for spatially-temporally varying models, we
 **Step 1.** Create candidate models.
 ```{r}
 mod.list <- candidateModels(list(
-  phi_s = list(2, 4),
-  phi_t = list(1, 4),
+  phi_s = list(2, 3, 4),
+  phi_t = list(2, 4, 8),
   boundary = c(0.5, 0.75)), "cartesian")
 ```
 
@@ -274,7 +274,6 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "multivariate",
-                     priors = list(nu.beta = 5, nu.z = 5),
                      candidate.models = mod.list,
                      loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
                      n.samples = 1000)

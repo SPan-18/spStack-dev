@@ -205,7 +205,7 @@ mod1 <- stvcGLMexact(y_pois ~ x1 + x2 + (x1), data = dat, family = "poisson",
                      time_coords = as.matrix(dat[, "t_coords"]),
                      cor.fn = "gneiting-decay",
                      process.type = "independent",
-                     sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
+                     sptParams = list(phi_s = c(3, 3), phi_t = c(4, 4)),
                      verbose = FALSE, n.samples = 100)
 
 # rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the

@@ -9,7 +9,7 @@ s1 <- runif(n)
 s2 <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z <- 1.5 * sin(4 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2))     # ripple
+z <- 1.5 * sin(2 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2) + pi / 4)   # ring
 n_trials <- sample(5:20, n, replace = TRUE)
 simSpatial <- data.frame(
   s1 = s1, s2 = s2, x1 = x1, x2 = x2,
@@ -31,7 +31,7 @@ s2 <- runif(n)
 t_coords <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z1 <- sin(2 * pi * (s1 - t_coords))                              # varying intercept
+z1 <- sin(2 * pi * s1 - pi * t_coords)                           # varying intercept
 z2 <- cos(2 * pi * s2) * cos(pi * t_coords)                # varying slope of x1
 simSpaceTime <- data.frame(
   s1 = s1, s2 = s2, t_coords = t_coords, x1 = x1, x2 = x2,

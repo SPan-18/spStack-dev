@@ -46,13 +46,13 @@
 #' dat_pred <- simSpatial[n_train + 1:n_pred, ]
 #'
 #' # fit a spatial linear model using predictive stacking
-#' cand.mod <- candidateModels(list(phi = c(3, 6), nu = c(0.5, 1),
-#'                                  noise_sp_ratio = c(0.5, 1)), "cartesian")
+#' cand.mod <- candidateModels(list(phi = c(2, 3, 4), nu = c(1.5, 2.5),
+#'                                  noise_sp_ratio = c(0.1, 0.25)), "cartesian")
 #' mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
 #'                   coords = as.matrix(dat_train[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   candidate.models = cand.mod,
-#'                   n.samples = 1000, loopd.method = "psis",
+#'                   n.samples = 1000, loopd.method = "exact",
 #'                   parallel = FALSE, verbose = TRUE)
 #'
 #' # prepare new coordinates and covariates for prediction

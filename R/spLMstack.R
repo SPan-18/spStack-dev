@@ -124,9 +124,9 @@
 #' data(simSpatial)
 #' dat <- simSpatial[1:100, ]
 #'
-#' cand.mod <- candidateModels(list(phi = c(3, 6),
-#'                                  nu = c(0.5, 1),
-#'                                  noise_sp_ratio = c(0.5, 1)),
+#' cand.mod <- candidateModels(list(phi = c(2, 3, 4),
+#'                                  nu = c(1.5, 2.5),
+#'                                  noise_sp_ratio = c(0.1, 0.25)),
 #'                             "cartesian")
 #'
 #' mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,

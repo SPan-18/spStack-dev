@@ -171,7 +171,7 @@ coords <- as.matrix(dat[, c("s1", "s2")])
 # Example 1: spatial Poisson count data
 mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
                    coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 0.5),
+                   spParams = list(phi = 6, nu = 2.5),
                    n.samples = 100, verbose = TRUE)
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
@@ -179,13 +179,13 @@ print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 # Example 2: spatial binomial count data
 mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,
                    family = "binomial", coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 0.5),
+                   spParams = list(phi = 6, nu = 2.5),
                    n.samples = 100, verbose = FALSE)
 
 # Example 3: spatial binary data
 mod3 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = coords, cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 0.5),
+                   spParams = list(phi = 6, nu = 2.5),
                    n.samples = 100, verbose = FALSE)
 }
 \references{

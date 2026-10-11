@@ -138,19 +138,19 @@
 #' @importFrom future nbrOfWorkers plan
 #' @importFrom future.apply future_lapply
 #' @examples
-#' \donttest{
 #' set.seed(1234)
 #' data(simSpatial)
-#' dat <- simSpatial[1:100, ]
-#' cand.mod <- candidateModels(list(phi = c(3, 6, 10), nu = c(0.5, 1),
-#'                                  boundary = c(0.5, 0.6)), "cartesian")
+#' dat <- simSpatial[1:150, ]
+#' cand.mod <- candidateModels(list(phi = c(2, 4, 8),
+#'                                  nu = c(1.5, 2.5),
+#'                                  boundary = c(0.75)), "cartesian")
 #'
 #' mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #'                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
 #'                    candidate.models = cand.mod,
-#'                    n.samples = 1000,
-#'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 1000),
-#'                    parallel = TRUE, verbose = TRUE)
+#'                    n.samples = 500,
+#'                    loopd.controls = list(method = "CV", CV.K = 10, nMC = 500),
+#'                    parallel = FALSE, verbose = TRUE)
 #'
 #' post_samps <- stackedSampler(mod1)
 #' post_beta <- post_samps$beta
@@ -158,7 +158,6 @@
 #'
 #' # compare the posterior medians of the spatial effects with the truth
 #' cor(apply(post_samps$z, 1, median), dat$z_true)
-#' }
 #' @export
 spGLMstack <- function(formula, data = parent.frame(), family,
                        coords, cor.fn, priors,

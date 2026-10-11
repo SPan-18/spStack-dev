@@ -181,8 +181,8 @@ mod1 <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
                     time_coords = as.matrix(dat[, "t_coords"]),
                     cor.fn = "gneiting-decay",
                     process.type = "independent",
-                    sptParams = list(phi_s = c(3, 6), phi_t = c(4, 2)),
-                    noise_sp_ratio = c(0.5, 1),
+                    sptParams = list(phi_s = c(2, 2), phi_t = c(4, 4)),
+                    noise_sp_ratio = c(0.1, 0.25),
                     n.samples = 500, loopd = TRUE, verbose = FALSE)
 
 # rows 1, ..., n of z hold the varying intercept, rows n+1, ..., 2n the
