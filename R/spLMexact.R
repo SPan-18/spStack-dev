@@ -118,7 +118,7 @@
 #'                   coords = as.matrix(dat[, c("s1", "s2")]),
 #'                   cor.fn = "matern",
 #'                   priors = prior_list,
-#'                   spParams = list(phi = 3, nu = 2.5),
+#'                   spParams = list(phi = 4, nu = 1.75),
 #'                   noise_sp_ratio = 0.1,
 #'                   n.samples = 100,
 #'                   loopd = TRUE, loopd.method = "exact")
@@ -290,6 +290,7 @@ spLMexact <- function(formula, data = parent.frame(), coords, cor.fn,
     if (nu <= 0) {
       stop("nu (smoothness parameter) must be a positive real number.")
     }
+    warn_large_nu(nu)
 
   }
 

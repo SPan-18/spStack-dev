@@ -69,15 +69,15 @@ muBeta <- c(0, 0, 0)
 VBeta <- diag(1E4, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 2
-phi0 <- 3
-nu0 <- 2.5
+phi0 <- 2
+nu0 <- 1.75
 noise_sp_ratio <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
                    sigma.sq.ig = c(sigmaSqIGa, sigmaSqIGb))
 nSamples <- 1000
 ```
 
-We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y_gauss ~ x1 + x2` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + \beta_2 x_2(s) + z(s) + \epsilon(s)\;,$$ where `y_gauss` corresponds to the response variable $y(s)$, which is regressed on the predictors `x1` and `x2` given by $x_1(s)$ and $x_2(s)$. The intercept is automatically considered within the model, and hence `y_gauss ~ x1 + x2` is functionally equivalent to `y_gauss ~ 1 + x1 + x2`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`. Note that $\phi$ and $\nu$ act together: the effective range, the distance at which the correlation drops to 0.05, is $3/\phi$ for $\nu = 0.5$ (exponential), about $4.7/\phi$ for $\nu = 1.5$, and about $5.9/\phi$ for $\nu = 2.5$. For example, $\phi = 3$ with $\nu = 2.5$ corresponds to an effective range of about 2 on the unit square.
+We define the spatial model using a `formula`, similar to that in the widely used `lm()` function in the `stats` package. Here, the formula `y_gauss ~ x1 + x2` corresponds to the spatial linear model $$y(s) = \beta_0 + \beta_1 x_1(s) + \beta_2 x_2(s) + z(s) + \epsilon(s)\;,$$ where `y_gauss` corresponds to the response variable $y(s)$, which is regressed on the predictors `x1` and `x2` given by $x_1(s)$ and $x_2(s)$. The intercept is automatically considered within the model, and hence `y_gauss ~ x1 + x2` is functionally equivalent to `y_gauss ~ 1 + x1 + x2`. Moreover, a spatial random effect is inherent in the model, where the spatial correlation matrix is governed by the spatial correlation function specified by the argument `cor.fn`. Supported correlation functions are `"exponential"` and `"matern"`. The exponential covariogram is specified by the hyperparameter $\phi$ and the Matern covariogram is specified by the hyperparameters $\phi$ and $\nu$. Fixed values of these hyperparameters are supplied through the argument `spParams`. In addition, the noise-to-spatial variance ration is also fixed through the argument `noise_sp_ratio`. Note that $\phi$ and $\nu$ act together: the effective range, the distance at which the correlation drops to 0.05, is $3/\phi$ for $\nu = 0.5$ (exponential), $4/\phi$ for $\nu = 1$, about $4.7/\phi$ for $\nu = 1.5$, and about $5.1/\phi$ for $\nu = 1.75$. For example, $\phi = 2$ with $\nu = 1.75$ corresponds to an effective range of about 2.5 on the unit square. Values $\nu \geq 2$ give very smooth surfaces whose correlation matrices are nearly singular, and are rarely needed.
 
 If interested in calculation of leave-one-out predictive densities (LOO-PD), `loopd`  must be set `TRUE` (the default is `FALSE`). Method of LOO-PD calculation can be also set by the option `loopd.method` which support the keywords `"exact"` and `"psis"`. The option `"exact"` exploits the analytically available expressions of the predictive density and implements an efficient row-deletion Cholesky factor update for fast calculation and avoids refitting the model $n$ times, where $n$ is the sample size. On the other hand, `"psis"` implements Pareto-smoothed importance sampling and finds approximate LOO-PD and is much faster than `"exact"`.
 
@@ -133,8 +133,8 @@ plot1
 ### Using predictive stacking
 Next, we move on to the Bayesian spatial stacking algorithm for Gaussian data. We supply the same prior list and provide candidate models constructed using `candidateModels()`. The candidate values should bracket the plausible values of the parameters. Stacking combines the predictive distributions of the candidate models, so it typically places its weight on a few candidates near the best values, mixing neighbouring candidates when the best values lie between grid points; candidates that predict poorly get zero weight.
 ```{r spLMstack}
-cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
-                                 nu = c(0.5, 1.5, 2.5),
+cand.mod <- candidateModels(list(phi = c(1, 2, 3, 4),
+                                 nu = c(0.5, 1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
 
@@ -351,8 +351,8 @@ ggplot(post_scale_df, aes(x = value)) +
 #### Using predictive stacking
 Next, we move on to the function `spGLMstack()` that will implement our proposed stacking algorithm. The argument `loopd.controls` is used to provide details on what algorithm to be used to find LOO-PD. Valid options for the tag `method` is `"exact"` and `"CV"`. We use $K$-fold cross-validation by assigning `method = "CV"`and `CV.K = 10`. The tag `nMC` decides the number of Monte Carlo samples to be used to find the LOO-PD.
 ```{r spGLMstack_Pois}
-cand.mod <- candidateModels(list(phi = c(1, 2, 4, 8),
-                                 nu = c(0.5, 1, 1.5, 2.5),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
+                                 nu = c(0.5, 1, 1.5, 1.75),
                                  boundary = c(0.5, 0.75)), "cartesian")
 
 mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
@@ -442,7 +442,7 @@ This will follow the same workflow as Poisson data with the exception that the s
 ```{r}
 mod1 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat, family = "binomial",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 
@@ -459,7 +459,7 @@ Finally, we present only the `spGLMexact()` function for the spatial binary data
 ```{r}
 mod1 <- spGLMexact(y_bin ~ x1 + x2, data = dat, family = "binary",
                    coords = as.matrix(dat[, c("s1", "s2")]), cor.fn = "matern",
-                   spParams = list(phi = 6, nu = 2.5),
+                   spParams = list(phi = 4, nu = 1.75),
                    boundary = 0.75, n.samples = 1000, verbose = FALSE)
 ```
 

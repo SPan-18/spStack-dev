@@ -147,7 +147,7 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
                   coords = as.matrix(dat[, c("s1", "s2")]),
                   cor.fn = "matern",
                   priors = prior_list,
-                  spParams = list(phi = 3, nu = 2.5),
+                  spParams = list(phi = 4, nu = 1.75),
                   noise_sp_ratio = 0.1,
                   n.samples = 100,
                   loopd = TRUE, loopd.method = "exact")

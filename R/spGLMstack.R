@@ -142,7 +142,7 @@
 #' data(simSpatial)
 #' dat <- simSpatial[1:150, ]
 #' cand.mod <- candidateModels(list(phi = c(2, 4, 8),
-#'                                  nu = c(1.5, 2.5),
+#'                                  nu = c(1.5, 1.75),
 #'                                  boundary = c(0.75)), "cartesian")
 #'
 #' mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
@@ -476,6 +476,7 @@ spGLMstack <- function(formula, data = parent.frame(), family,
   # leave-one-out/CV subsets) once and shares it across their boundary values
   cand_phi <- vapply(list_candidate, function(x) as.numeric(x[["phi"]]), numeric(1))
   cand_nu <- vapply(list_candidate, function(x) as.numeric(x[["nu"]]), numeric(1))
+  if(cor.fn == "matern") warn_large_nu(cand_nu)
   cand_boundary <- vapply(list_candidate, function(x) as.numeric(x[["boundary"]]),
                           numeric(1))
   cand_key <- sprintf("%a %a", cand_phi, cand_nu)          # exact (hexadecimal) keys

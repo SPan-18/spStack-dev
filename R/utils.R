@@ -813,3 +813,19 @@ check_stvc_lm_process_type <- function(process.type){
   process.type
 
 }
+
+# warns (once) if any Matern smoothness value is 2 or larger: such smooth
+# correlation functions give nearly singular correlation matrices, notably for
+# the GLMs whose latent correlation matrix has no nugget
+warn_large_nu <- function(nu){
+  nu <- nu[!is.na(nu)]
+  big <- sort(unique(nu[nu >= 2]))
+  if(length(big) > 0){
+    warning("nu >= 2 (supplied: ", paste(format(big), collapse = ", "),
+            ") gives a very smooth Matern correlation whose correlation matrix",
+            " is often nearly singular, so results may lose accuracy (see the",
+            " 'diagnostics' element of the output). Values of nu below 2 are",
+            " recommended.", call. = FALSE)
+  }
+  invisible(NULL)
+}

@@ -150,7 +150,7 @@ data(simSpatial)
 dat <- simSpatial[1:100, ]
 
 cand.mod <- candidateModels(list(phi = c(2, 3, 4),
-                                 nu = c(1.5, 2.5),
+                                 nu = c(1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.25)),
                             "cartesian")
 

@@ -169,7 +169,7 @@ set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:150, ]
 cand.mod <- candidateModels(list(phi = c(2, 4, 8),
-                                 nu = c(1.5, 2.5),
+                                 nu = c(1.5, 1.75),
                                  boundary = c(0.75)), "cartesian")
 
 mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",

@@ -125,7 +125,7 @@
 #' dat <- simSpatial[1:100, ]
 #'
 #' cand.mod <- candidateModels(list(phi = c(2, 3, 4),
-#'                                  nu = c(1.5, 2.5),
+#'                                  nu = c(1, 1.5, 1.75),
 #'                                  noise_sp_ratio = c(0.1, 0.25)),
 #'                             "cartesian")
 #'
@@ -342,6 +342,7 @@ spLMstack <- function(formula, data = parent.frame(), coords, cor.fn,
   # spatial correlation matrix once and loops over their noise_sp_ratio values
   cand_phi <- vapply(list_candidate, function(x) as.numeric(x[["phi"]]), numeric(1))
   cand_nu <- vapply(list_candidate, function(x) as.numeric(x[["nu"]]), numeric(1))
+  if(cor.fn == "matern") warn_large_nu(cand_nu)
   cand_deltasq <- vapply(list_candidate, function(x) as.numeric(x[["noise_sp_ratio"]]),
                          numeric(1))
   cand_key <- sprintf("%a %a", cand_phi, cand_nu)          # exact (hexadecimal) keys
