@@ -12,6 +12,7 @@
 #' colorblind-friendly diverging palette 'RdBu' from ColorBrewer.
 #' @param mark_points Logical; if \code{TRUE}, the input points are marked.
 #' Default is \code{FALSE}.
+#' @param title (optional) a title for the plot. Default is no title.
 #' @return a `ggplot` object containing the surface plot
 #' @importFrom MBA mba.surf
 #' @importFrom ggplot2 ggplot aes geom_raster scale_fill_distiller
@@ -34,11 +35,11 @@
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
 surfaceplot <- function(tab, coords_name, var_name, h = 8,
-                        col.pal, mark_points = FALSE){
+                        col.pal, mark_points = FALSE, title = NULL){
 
   surf_df <- surface_grid(tab, coords_name, var_name, h)
   plot <- surface_ggplot(surf_df, tab, coords_name, range(surf_df$z), col.pal,
-                         mark_points)
+                         mark_points, title)
   plot
 
 }
@@ -62,7 +63,12 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' colorblind-friendly diverging palette 'RdBu' from ColorBrewer.
 #' @param mark_points Logical; if \code{TRUE}, the input points are marked.
 #' Default is \code{FALSE}.
-#' @return a list containing two `ggplot` objects
+#' @param titles a character vector of length 2, the titles of the two plots.
+#' Default is the names of the two variables, `c(var1_name, var2_name)`; use
+#' `NULL` for no titles.
+#' @return a list containing two `ggplot` objects, which share the colour scale
+#' (one legend serves both, e.g. with `patchwork::wrap_plots(plots) +
+#' patchwork::plot_layout(guides = "collect")`)
 #' @importFrom MBA mba.surf
 #' @importFrom ggplot2 ggplot aes geom_raster scale_fill_distiller
 #'   geom_point scale_fill_gradientn
@@ -72,13 +78,19 @@ surfaceplot <- function(tab, coords_name, var_name, h = 8,
 #' @examples
 #' data(simSpatial)
 #' plots_2 <- surfaceplot2(simSpatial, coords_name = c("s1", "s2"),
-#'                         var1_name = "z_true", var2_name = "y_gauss")
+#'                         var1_name = "z_true", var2_name = "y_gauss",
+#'                         titles = c("True spatial effect", "Gaussian response"))
 #' plots_2
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
 #' @export
 surfaceplot2 <- function(tab, coords_name, var1_name, var2_name,
-                        h = 8, col.pal, mark_points = FALSE){
+                        h = 8, col.pal, mark_points = FALSE,
+                        titles = c(var1_name, var2_name)){
+
+  if(!is.null(titles) && (!is.character(titles) || length(titles) != 2)){
+    stop("titles must be a character vector of length 2, or NULL.")
+  }
 
   surf_df1 <- surface_grid(tab, coords_name, var1_name, h)
   surf_df2 <- surface_grid(tab, coords_name, var2_name, h)
@@ -87,9 +99,9 @@ surfaceplot2 <- function(tab, coords_name, var1_name, var2_name,
   common_limits <- range(c(surf_df1$z, surf_df2$z))
 
   plot1 <- surface_ggplot(surf_df1, tab, coords_name, common_limits, col.pal,
-                          mark_points)
+                          mark_points, titles[1])
   plot2 <- surface_ggplot(surf_df2, tab, coords_name, common_limits, col.pal,
-                          mark_points)
+                          mark_points, titles[2])
 
   return(list(plot1, plot2))
 
@@ -110,16 +122,17 @@ surface_grid <- function(tab, coords_name, var_name, h){
 }
 
 # internal: raster plot of a surface from surface_grid(), with the fill scale on
-# the given limits, axes labelled by coords_name, and optionally the observed
-# points of tab marked
+# the given limits, axes labelled by coords_name, an optional title (NULL for
+# none), and optionally the observed points of tab marked
 surface_ggplot <- function(surf_df, tab, coords_name, limits, col.pal,
-                           mark_points){
+                           mark_points, title = NULL){
 
   plot <- ggplot(surf_df, aes(x = .data$x, y = .data$y)) +
     geom_raster(aes(fill = .data$z)) +
-    labs(x = coords_name[1], y = coords_name[2]) +
+    labs(x = coords_name[1], y = coords_name[2], fill = NULL, title = title) +
     theme_bw() +
     theme(axis.ticks = element_line(linewidth = 0.25),
+          plot.title = element_text(size = 11, hjust = 0.5),
           panel.background = element_blank(),
           panel.grid = element_blank(),
           legend.box.just = "center",

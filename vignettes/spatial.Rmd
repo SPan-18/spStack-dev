@@ -58,7 +58,8 @@ The package lazy-loads the synthetic dataset `simSpatial`, observed at 500 locat
 
 ```{r fig.align='center', fig.alt="Interpolated surface of the true spatial effect."}
 data("simSpatial")
-surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true")
+surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true",
+            title = "True spatial effect z")
 ```
 
 ### Using fixed hyperparameters
@@ -214,7 +215,8 @@ The package also provides helper functions to plot interpolated spatial surfaces
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                       var1_name = "z_true", var2_name = "z_hat")
+                       var1_name = "z_true", var2_name = "z_hat",
+                       titles = c("True z", "Posterior median of z"))
 patchwork::wrap_plots(plot_z) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -360,7 +362,8 @@ We can also compare the interpolated spatial surfaces of the true spatial effect
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                       var1_name = "z_true", var2_name = "z_hat")
+                       var1_name = "z_true", var2_name = "z_hat",
+                       titles = c("True z", "Posterior median of z"))
 patchwork::wrap_plots(plot_z) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -419,7 +422,9 @@ where the varying intercept $z_0$ is the ring pattern `z2_true`, $z_0(s) = \cos(
 dat <- simSpatial[1:200, ]
 n <- nrow(dat)
 plot_true <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                          var1_name = "z2_true", var2_name = "z_true")
+                          var1_name = "z2_true", var2_name = "z_true",
+                          titles = c("True varying intercept z0",
+                                     "True varying slope part z1"))
 patchwork::wrap_plots(plot_true) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -487,14 +492,16 @@ Finally, we compare the interpolated surfaces of the true varying coefficients a
 dat$z0_hat <- apply(z0_samps, 1, median)
 dat$z1_hat <- apply(z1_samps, 1, median)
 plot_z0 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                        var1_name = "z2_true", var2_name = "z0_hat")
+                        var1_name = "z2_true", var2_name = "z0_hat",
+                        titles = c("True z0", "Posterior median of z0"))
 patchwork::wrap_plots(plot_z0) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
 ```
 ```{r fig.align='center', fig.height=3.5, fig.width=7, fig.alt="Interpolated surfaces of the true spatially varying slope and its posterior median."}
 plot_z1 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                        var1_name = "z_true", var2_name = "z1_hat")
+                        var1_name = "z_true", var2_name = "z1_hat",
+                        titles = c("True z1", "Posterior median of z1"))
 patchwork::wrap_plots(plot_z1) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
