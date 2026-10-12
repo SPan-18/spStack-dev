@@ -21,8 +21,8 @@ A function to recover posterior samples of scale parameters that
 were marginalized out during model fit. This is only applicable for spatial
 or, spatial-temporal generalized linear models. This function applies on
 outputs of functions that fits a spatial/spatial-temporal generalized linear
-model, such as \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, and
-\code{\link[=stvcGLMstack]{stvcGLMstack()}}.
+model, such as \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=svcGLMexact]{svcGLMexact()}},
+\code{\link[=svcGLMstack]{svcGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, and \code{\link[=stvcGLMstack]{stvcGLMstack()}}.
 }
 \examples{
 set.seed(1234)
@@ -45,7 +45,8 @@ mod1.1 <- recoverGLMscale(mod1)
 post_samps <- stackedSampler(mod1.1)
 }
 \seealso{
-\code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}
+\code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=svcGLMexact]{svcGLMexact()}}, \code{\link[=svcGLMstack]{svcGLMstack()}},
+\code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

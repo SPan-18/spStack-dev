@@ -708,6 +708,40 @@ void sptCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_tm
 }
 
 
+// Correlation matrices of the varying coefficients models (svc and stvc). The kernel is set by corfn:
+//   'gneiting-decay': spatial-temporal, theta = (phi_s, phi_t), the temporal coordinates are required;
+//   'exponential', 'matern': spatial, theta = (phi, nu) (nu is ignored by 'exponential'), and the temporal
+//   coordinates are ignored (they may be NULL).
+// The spatial coordinates are two-dimensional.
+int vcCorValid(std::string &corfn){
+  return (corfn == "gneiting-decay" || corfn == "exponential" || corfn == "matern");
+}
+
+// n x n correlation matrix
+void vcCorFull(int n, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C){
+  if(corfn == "gneiting-decay"){
+    if(coords_tm == NULL){
+      Rf_error("c++ error: temporal coordinates are required by the 'gneiting-decay' correlation function.");
+    }
+    sptCorFull(n, 2, coords_sp, coords_tm, theta, corfn, C);
+  }else{
+    spCorFull2(n, 2, coords_sp, theta, corfn, C);
+  }
+}
+
+// n x n' cross-correlation matrix
+void vcCorCross(int n, int n_prime, double *coords_sp, double *coords_tm, double *coords_sp_prime,
+                double *coords_tm_prime, double *theta, std::string &corfn, double *C){
+  if(corfn == "gneiting-decay"){
+    if(coords_tm == NULL || coords_tm_prime == NULL){
+      Rf_error("c++ error: temporal coordinates are required by the 'gneiting-decay' correlation function.");
+    }
+    sptCorCross(n, n_prime, 2, coords_sp, coords_tm, coords_sp_prime, coords_tm_prime, theta, corfn, C);
+  }else{
+    spCorCross(n, n_prime, 2, coords_sp, coords_sp_prime, theta, corfn, C);
+  }
+}
+
 // gneiting-decay spatio-temporal correlation function (Gneiting and Guttorp 2010)
 double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t){
 

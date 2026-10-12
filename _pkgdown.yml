@@ -23,8 +23,10 @@ reference:
   contents:
   - spLMstack
   - spGLMstack
-  - stvcGLMstack
+  - svcLMstack
+  - svcGLMstack
   - stvcLMstack
+  - stvcGLMstack
   - candidateModels
 - title: Exact samplers and finds LOO-PD
   desc: |
@@ -32,8 +34,10 @@ reference:
   contents:
   - spLMexact
   - spGLMexact
-  - stvcGLMexact
+  - svcLMexact
+  - svcGLMexact
   - stvcLMexact
+  - stvcGLMexact
 - title: Downstream posterior sampling
   desc: |
     Posterior recovery of scale parameters and posterior predictive inference

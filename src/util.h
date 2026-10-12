@@ -72,6 +72,13 @@ void spCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_sp_
 void sptCorCross(int n, int n_prime, int p, double *coords_sp, double *coords_tm,
                  double *coords_sp_prime, double *coords_tm_prime, double *theta, std::string &corfn, double *C);
 
+int vcCorValid(std::string &corfn);
+
+void vcCorFull(int n, double *coords_sp, double *coords_tm, double *theta, std::string &corfn, double *C);
+
+void vcCorCross(int n, int n_prime, double *coords_sp, double *coords_tm, double *coords_sp_prime,
+                double *coords_tm_prime, double *theta, std::string &corfn, double *C);
+
 double gneiting_spt_decay(double dist_s, double dist_t, double phi_s, double phi_t);
 
 void zeros(double *x, int length);

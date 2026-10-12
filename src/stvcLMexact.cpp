@@ -14,12 +14,14 @@
 # define FCONE
 #endif
 
-// Bayesian linear model with spatially-temporally varying coefficients (Gaussian response),
+// Bayesian linear model with spatially-temporally (stvc, 'gneiting-decay' correlation) or spatially (svc, 'exponential'
+// or 'matern' correlation) varying coefficients (Gaussian response),
 //   y = X*beta + sum_q D_q*z_q + eps,  eps ~ N(0, sigmaSq*I),  D_q = diag(XTilde[, q]),
 //   z_q | sigmaSq ~ N(0, (sigmaSq/deltasq_q)*R_q) independent,
 //   beta | sigmaSq ~ N(muBeta, sigmaSq*Vbeta) (or flat),  sigmaSq ~ IG(a, b) (or p(sigmaSq) ~ 1/sigmaSq),
 // with the noise-to-spatial variance ratios deltasq_q and the correlation matrices R_q = R(phi_s_q, phi_t_q)
-// fixed. With Rcal = blockdiag(R_q/deltasq_q) and XTildeBlk = [D_1, ..., D_r], the marginal covariance of y given
+// fixed (R_q = R(phi_q, nu_q) for svc, whose entry points pass time_coords = NULL and nu in place of phi_t).
+// With Rcal = blockdiag(R_q/deltasq_q) and XTildeBlk = [D_1, ..., D_r], the marginal covariance of y given
 // (beta, sigmaSq) is sigmaSq*Vy, Vy = I + XTildeBlk*Rcal*t(XTildeBlk) = I + sum_q D_q*R_q*D_q/deltasq_q, and the joint
 // posterior is sampled exactly by composition:
 //   sigmaSq | y ~ IG(a + n/2, b + sse/2),  beta | sigmaSq, y ~ N(betahat, sigmaSq*B),
@@ -60,9 +62,11 @@ static void solveU(VyFactor &F, int ncol, double *B, int ldb){
   }
 }
 
-// Builds the nR distinct spatial-temporal correlation matrices R_k in Rbuf (nR blocks of n x n) and factorizes them
+// Builds the nR distinct correlation matrices R_k in Rbuf (nR blocks of n x n) and factorizes them
 // in place: on exit, the lower triangle of block k holds chol(R_k) and its strict upper triangle R_k. Also records
-// the off-diagonal correlation range and the smallest relative Cholesky pivot of each R_k (diagnostics).
+// the off-diagonal correlation range and the smallest relative Cholesky pivot of each R_k (diagnostics). The
+// process parameters of R_k are (phi_s[k], phi_t[k])
+// (phi_s, phi_t) of 'gneiting-decay' or (phi, nu) of the spatial kernels; see vcCorFull()).
 static void stvcLM_corChol(int n, int nR, double *coords_sp, double *coords_tm, double *phi_s, double *phi_t,
                            std::string &corfn, double *Rbuf, double *pivR, double *minCor, double *maxCor){
 
@@ -75,14 +79,14 @@ static void stvcLM_corChol(int n, int nR, double *coords_sp, double *coords_tm, 
     Rk = Rbuf + nn * k;
     thetaspt[0] = phi_s[k];
     thetaspt[1] = phi_t[k];
-    sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Rk);
+    vcCorFull(n, coords_sp, coords_tm, thetaspt, corfn, Rk);
     corOffDiagRange(Rk, n, &minCor[k], &maxCor[k]);
     F77_NAME(dpotrf)("L", &n, Rk, &n, &info FCONE);
     if(info != 0){
       if(nR > 1){
-        Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix of process %i failed (info = %i); check for nearly coincident space-time locations or very small decay parameters.\n", k + 1, info);
+        Rf_error("c++ error: Cholesky factorization of the correlation matrix of process %i failed (info = %i); check for nearly coincident space-time locations or very small decay parameters.\n", k + 1, info);
       }
-      Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); check for nearly coincident space-time locations or very small decay parameters.\n", info);
+      Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i); check for nearly coincident space-time locations or very small decay parameters.\n", info);
     }
     pivR[k] = minRelPivot(Rk, n, NULL, 1.0);
   }
@@ -477,11 +481,12 @@ static SEXP stvcLM_run(SEXP Y_r, SEXP X_r, SEXP XTilde_r, SEXP n_r, SEXP p_r, SE
   int r = INTEGER(r_r)[0];
   int pp = p * p;
   double *coords_sp = REAL(sp_coords_r);
-  double *coords_tm = REAL(time_coords_r);
+  double *coords_tm = Rf_isNull(time_coords_r) ? NULL : REAL(time_coords_r);   // NULL for the spatial kernels
   std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
-  if(corfn != "gneiting-decay"){
-    Rf_error("c++ error: cor.fn must be 'gneiting-decay'.");
+  if(!vcCorValid(corfn)){
+    Rf_error("c++ error: cor.fn must be 'gneiting-decay', 'exponential' or 'matern'.");
   }
+  const int spatial = (corfn != "gneiting-decay");
   std::string processType = CHAR(STRING_ELT(processType_r, 0));
   int nR = 0;
   if(processType == "independent"){
@@ -525,8 +530,8 @@ static SEXP stvcLM_run(SEXP Y_r, SEXP X_r, SEXP XTilde_r, SEXP n_r, SEXP p_r, SE
     Rprintf("----------------------------------------\n");
     Rprintf("Model fit with %i observations.\n\n", n);
     Rprintf("Number of covariates %i (including intercept).\n", p);
-    Rprintf("Number of covariates with spatial-temporally varying coefficients %i.\n\n", r);
-    Rprintf("Using the %s spatial-temporal correlation function.\n", corfn.c_str());
+    Rprintf("Number of covariates with %s varying coefficients %i.\n\n", spatial ? "spatially" : "spatially-temporally", r);
+    Rprintf("Using the %s %s correlation function.\n", corfn.c_str(), spatial ? "spatial" : "spatial-temporal");
     Rprintf("Process type: %s.\n\n", processType.c_str());
     Rprintf("Priors:\n");
     if(betaPrior == "flat"){
@@ -542,15 +547,21 @@ static SEXP stvcLM_run(SEXP Y_r, SEXP X_r, SEXP XTilde_r, SEXP n_r, SEXP p_r, SE
     }else{
       Rprintf("\tsigma.sq: Inverse-Gamma\n\tshape = %.2f, scale = %.2f.\n\n", sigmaSqIGa, sigmaSqIGb);
     }
-    Rprintf("Spatial-temporal process parameters:\n");
+    Rprintf("%s process parameters:\n", spatial ? "Spatial" : "Spatial-temporal");
     for(q = 0; q < nR; q++){
       if(nR > 1){
-        Rprintf("\tprocess %i: phi_s = %.2f, phi_t = %.2f, noise-to-spatial variance ratio = %.2f.\n",
-                q + 1, phi_s[q], phi_t[q], deltasqAll[q]);
+        Rprintf("\tprocess %i: ", q + 1);
       }else{
-        Rprintf("\tphi_s = %.2f, phi_t = %.2f, noise-to-spatial variance ratio = %.2f.\n",
-                phi_s[q], phi_t[q], deltasqAll[q]);
+        Rprintf("\t");
       }
+      if(!spatial){
+        Rprintf("phi_s = %.2f, phi_t = %.2f", phi_s[q], phi_t[q]);
+      }else if(corfn == "matern"){
+        Rprintf("phi = %.2f, nu = %.2f", phi_s[q], phi_t[q]);
+      }else{
+        Rprintf("phi = %.2f", phi_s[q]);
+      }
+      Rprintf(", noise-to-spatial variance ratio = %.2f.\n", deltasqAll[q]);
     }
     Rprintf("\nNumber of posterior samples = %i.\n\n", nSamples);
     if(loopd){

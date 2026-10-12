@@ -5,8 +5,8 @@
 #' were marginalized out during model fit. This is only applicable for spatial
 #' or, spatial-temporal generalized linear models. This function applies on
 #' outputs of functions that fits a spatial/spatial-temporal generalized linear
-#' model, such as [spGLMexact()], [spGLMstack()], [stvcGLMexact()], and
-#' [stvcGLMstack()].
+#' model, such as [spGLMexact()], [spGLMstack()], [svcGLMexact()],
+#' [svcGLMstack()], [stvcGLMexact()], and [stvcGLMstack()].
 #' @param mod_out an object returned by a fitting a spatial or spatial-temporal
 #' GLM.
 #' @return An object of the same class as input, and updates the list tagged
@@ -14,7 +14,8 @@
 #' are `sigmasq.beta` and `z.scale`.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @seealso [spGLMexact()], [spGLMstack()], [stvcGLMexact()], [stvcGLMstack()]
+#' @seealso [spGLMexact()], [spGLMstack()], [svcGLMexact()], [svcGLMstack()],
+#' [stvcGLMexact()], [stvcGLMstack()]
 #' @examples
 #' set.seed(1234)
 #' data(simSpatial)
@@ -155,6 +156,44 @@ recoverGLMscale <- function(mod_out){
 
         mod_out$samples[[i]][['sigmasq.beta']] <- scale_samps[['sigmasq.beta']]
         mod_out$samples[[i]][['z.scale']] <- scale_samps[['z.scale']]
+    }
+
+    return(mod_out)
+
+  }else if(inherits(mod_out, c('svcGLMexact', 'svcGLMstack'))){
+
+    # spatially varying coefficients: the routine of the stvc models with a
+    # spatial correlation function (no temporal coordinates, nu in place of phi_t)
+    n <- as.integer(dim(mod_out$X)[1L])
+    p <- as.integer(length(mod_out$X.names))
+    r <- as.integer(length(mod_out$X.svc.names))
+    coords <- mod_out$coords
+    storage.mode(coords) <- "double"
+    priors <- mod_out$priors
+    mu.beta <- as.double(priors[['mu.beta']])
+    V.beta <- priors[['V.beta']]
+    IW.scale <- priors[['IW.scale']]
+    storage.mode(V.beta) <- "double"
+    storage.mode(IW.scale) <- "double"
+    n.samples <- as.integer(mod_out$n.samples)
+    is_stack <- inherits(mod_out, 'svcGLMstack')
+
+    for(i in seq_len(if(is_stack) mod_out$n.models else 1L)){
+      pars <- model_params(mod_out, i)
+      s <- if(is_stack) mod_out$samples[[i]] else mod_out$samples
+      scale_samps <- .Call(C_recoverScale_stvcGLM, n, p, r,
+                           coords, NULL, mod_out$cor.fn,
+                           mu.beta, V.beta, as.double(priors[['nu.beta']]),
+                           as.double(priors[['nu.z']]), IW.scale,
+                           mod_out$process.type, as.double(pars[["phi"]]), svc_c_nu(pars[["nu"]]),
+                           n.samples, s[['beta']], s[['z']])
+      if(is_stack){
+        mod_out$samples[[i]][['sigmasq.beta']] <- scale_samps[['sigmasq.beta']]
+        mod_out$samples[[i]][['z.scale']] <- scale_samps[['z.scale']]
+      }else{
+        mod_out$samples[['sigmasq.beta']] <- scale_samps[['sigmasq.beta']]
+        mod_out$samples[['z.scale']] <- scale_samps[['z.scale']]
+      }
     }
 
     return(mod_out)

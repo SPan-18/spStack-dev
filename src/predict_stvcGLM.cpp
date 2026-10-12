@@ -62,8 +62,8 @@ static SEXP predict_stvc(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP r_r, std::strin
 
   double *coords_sp = REAL(sp_coords_r);
   double *coords_sp_new = REAL(sp_coords_new_r);
-  double *coords_tm = REAL(time_coords_r);
-  double *coords_tm_new = REAL(time_coords_new_r);
+  double *coords_tm = Rf_isNull(time_coords_r) ? NULL : REAL(time_coords_r);   // NULL for the spatial kernels
+  double *coords_tm_new = Rf_isNull(time_coords_new_r) ? NULL : REAL(time_coords_new_r);
 
   std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
 
@@ -77,8 +77,8 @@ static SEXP predict_stvc(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP r_r, std::strin
   if(processType != "independent.shared" && processType != "independent" && processType != "multivariate"){
     Rf_error("c++ error: process.type must be one of 'independent', 'independent.shared' or 'multivariate'.");
   }
-  if(corfn != "gneiting-decay"){
-    Rf_error("c++ error: cor.fn must be 'gneiting-decay'.");
+  if(!vcCorValid(corfn)){
+    Rf_error("c++ error: cor.fn must be 'gneiting-decay', 'exponential' or 'matern'.");
   }
   int nCov = (processType == "independent") ? r : 1;                   // number of distinct correlation functions
 
@@ -105,14 +105,14 @@ static SEXP predict_stvc(SEXP n_r, SEXP n_pred_r, SEXP p_r, SEXP r_r, std::strin
   for(k = 0; k < nCov; k++){
     thetaspt[0] = phi_s_vec[k];
     thetaspt[1] = phi_t_vec[k];
-    sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &cholVz[nn * k]);
+    vcCorFull(n, coords_sp, coords_tm, thetaspt, corfn, &cholVz[nn * k]);
     F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE);
-    if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i).\n", info);}
+    if(info != 0){Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i).\n", info);}
     mkLT(&cholVz[nn * k], n);
-    sptCorCross(n, n_pred, 2, coords_sp, coords_tm, coords_sp_new, coords_tm_new, thetaspt, corfn, &Cz[nn_pred * k]);
+    vcCorCross(n, n_pred, coords_sp, coords_tm, coords_sp_new, coords_tm_new, thetaspt, corfn, &Cz[nn_pred * k]);
     F77_NAME(dtrsm)(lside, lower, ntran, nunit, &n, &n_pred, &one, &cholVz[nn * k], &n, &Cz[nn_pred * k], &n FCONE FCONE FCONE FCONE);  // Cz = cholinv(R)*C
     if(joint){
-      sptCorFull(n_pred, 2, coords_sp_new, coords_tm_new, thetaspt, corfn, &z_pred_cov[n_predn_pred * k]);                        // R_new
+      vcCorFull(n_pred, coords_sp_new, coords_tm_new, thetaspt, corfn, &z_pred_cov[n_predn_pred * k]);                        // R_new
       F77_NAME(dsyrk)(lower, ytran, &n_pred, &n, &negOne, &Cz[nn_pred * k], &n, &one, &z_pred_cov[n_predn_pred * k], &n_pred FCONE FCONE);
       F77_NAME(dpotrf)(lower, &n_pred, &z_pred_cov[n_predn_pred * k], &n_pred, &info FCONE);
       if(info != 0){Rf_error("c++ error: Cholesky factorization of the conditional covariance of z.pred failed (info = %i); check for prediction locations that coincide with each other or with observed locations.\n", info);}

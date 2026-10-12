@@ -740,9 +740,12 @@ parse_lm_priors <- function(priors, p){
 
 }
 
-# response, design matrices and space-time coordinates of the spatially-temporally
-# varying coefficients models (Gaussian response), with input checks
-stvc_lm_data <- function(formula, data, sp_coords, time_coords){
+# response, design matrices and coordinates of the varying coefficients models
+# (Gaussian response), with input checks: space-time coordinates for the
+# spatially-temporally varying coefficients models, or spatial coordinates only
+# (time_coords = NULL) for the spatially varying coefficients models, whose
+# coordinates argument is named 'coords' (coords.name, used in messages)
+stvc_lm_data <- function(formula, data, sp_coords, time_coords, coords.name = "sp_coords"){
 
   if(missing(formula) || !inherits(formula, "formula")){
     stop("formula must be specified as a formula, e.g. y ~ x1 + (x1).")
@@ -760,34 +763,46 @@ stvc_lm_data <- function(formula, data, sp_coords, time_coords){
   X_tilde <- as.matrix(X_tilde)
   n <- nrow(X)
 
+  if(is.data.frame(sp_coords)){
+    sp_coords <- as.matrix(sp_coords)
+  }
   if(!is.matrix(sp_coords) || ncol(sp_coords) != 2 || nrow(sp_coords) != n){
-    stop("sp_coords must be an n x 2 matrix of spatial coordinates, with n = ", n,
+    stop(coords.name, " must be an n x 2 matrix of spatial coordinates, with n = ", n,
          " the number of observations in the model formula.")
   }
-  if(is.data.frame(time_coords)){
-    time_coords <- as.matrix(time_coords)
-  }
-  if(is.vector(time_coords) && is.numeric(time_coords)){
-    time_coords <- matrix(time_coords, ncol = 1)
-  }
-  if(!is.matrix(time_coords) || ncol(time_coords) != 1 || nrow(time_coords) != n){
-    stop("time_coords must be an n x 1 matrix (or a vector of length n) of temporal coordinates, with n = ", n,
-         " the number of observations in the model formula.")
+  spatial <- is.null(time_coords)
+  if(!spatial){
+    if(is.data.frame(time_coords)){
+      time_coords <- as.matrix(time_coords)
+    }
+    if(is.vector(time_coords) && is.numeric(time_coords)){
+      time_coords <- matrix(time_coords, ncol = 1)
+    }
+    if(!is.matrix(time_coords) || ncol(time_coords) != 1 || nrow(time_coords) != n){
+      stop("time_coords must be an n x 1 matrix (or a vector of length n) of temporal coordinates, with n = ", n,
+           " the number of observations in the model formula.")
+    }
   }
   if(nrow(X_tilde) != n){
     stop("the varying coefficient terms and the model formula have different numbers of observations.")
   }
 
-  check_no_missing(y = y, X = X, X_tilde = X_tilde, sp_coords = sp_coords, time_coords = time_coords)
-  check_distinct_coords(cbind(sp_coords, time_coords),
-                        what = "spatial-temporal coordinates",
-                        hint = "Average the observations that share both location and time.")
+  if(spatial){
+    check_no_missing(y = y, X = X, X_tilde = X_tilde, coords = sp_coords)
+    check_distinct_coords(sp_coords, what = "spatial locations",
+                          hint = "Average the observations at a common location, or model them as spatial-temporal data with stvcLMexact().")
+  }else{
+    check_no_missing(y = y, X = X, X_tilde = X_tilde, sp_coords = sp_coords, time_coords = time_coords)
+    check_distinct_coords(cbind(sp_coords, time_coords),
+                          what = "spatial-temporal coordinates",
+                          hint = "Average the observations that share both location and time.")
+    storage.mode(time_coords) <- "double"
+  }
 
   storage.mode(y) <- "double"
   storage.mode(X) <- "double"
   storage.mode(X_tilde) <- "double"
   storage.mode(sp_coords) <- "double"
-  storage.mode(time_coords) <- "double"
 
   list(y = y, X = X, X.names = holder[[3L]], X_tilde = X_tilde, X_tilde.names = holder[[6L]],
        sp_coords = sp_coords, time_coords = time_coords,
@@ -828,4 +843,439 @@ warn_large_nu <- function(nu){
             " recommended.", call. = FALSE)
   }
   invisible(NULL)
+}
+
+# ---------------------------------------------------------------------------
+# spatially varying coefficients (svc) models
+# ---------------------------------------------------------------------------
+# The svc models use the C++ routines of the stvc models with a spatial
+# correlation function ('exponential' or 'matern'): the temporal coordinates
+# are NULL and the vector of smoothness parameters nu takes the place of phi_t
+# (see vcCorFull() in src/util.cpp).
+
+# correlation function of the svc models
+check_svc_cor_fn <- function(cor.fn){
+
+  if(missing(cor.fn) || is.null(cor.fn)){
+    stop("cor.fn must be specified; choose from c('exponential', 'matern').")
+  }
+  if(!is.character(cor.fn) || length(cor.fn) != 1 || !cor.fn %in% c("exponential", "matern")){
+    stop("cor.fn = '", paste(cor.fn, collapse = ", "), "' is not a valid option; choose from c('exponential', 'matern').",
+         if(identical(cor.fn, "gneiting-decay")) " The spatial-temporal 'gneiting-decay' correlation function is used by the stvc* functions." else "")
+  }
+  cor.fn
+
+}
+
+# process type of the svc and stvc generalized linear models
+check_vc_glm_process_type <- function(process.type){
+
+  if(missing(process.type)){
+    stop("process.type must be specified. Choose from c('independent', 'independent.shared', 'multivariate').")
+  }
+  if(!is.character(process.type) || length(process.type) != 1 ||
+     !process.type %in% c("independent", "independent.shared", "multivariate")){
+    stop("Invalid process.type. Choose from c('independent', 'independent.shared', 'multivariate').")
+  }
+  process.type
+
+}
+
+# number of distinct correlation matrices of a varying coefficients model
+vc_nR <- function(process.type, r){
+  if(process.type == "independent") as.integer(r) else 1L
+}
+
+# checks one process parameter (a vector of nR positive reals)
+check_vc_param <- function(v, nm, nR, process.type){
+  if(!is.numeric(v) || length(v) != nR || any(!is.finite(v)) || any(v <= 0)){
+    if(nR > 1){
+      stop("when process.type = 'independent', ", nm, " must be a vector of ", nR, " positive reals.")
+    }
+    stop(nm, " must be a positive scalar when process.type = '", process.type, "'.")
+  }
+  as.double(v)
+}
+
+# fixed spatial process parameters of an svc model: list(phi, nu), each of
+# length nR; nu is NA for the exponential correlation function (not used)
+svc_sp_params <- function(spParams, cor.fn, nR, process.type){
+
+  if(missing(spParams) || is.null(spParams)){
+    stop("spParams (spatial process parameters) must be supplied.")
+  }
+  tags <- if(cor.fn == "matern") "'phi' and 'nu'" else "'phi'"
+  if(!is.list(spParams) || is.null(names(spParams))){
+    stop("spParams must be a list with tags ", tags, ".")
+  }
+  names(spParams) <- tolower(names(spParams))
+  nms <- if(cor.fn == "matern") c("phi", "nu") else "phi"
+  for(nm in nms){
+    if(!nm %in% names(spParams)){
+      stop(nm, " must be supplied in spParams.")
+    }
+  }
+  phi <- check_vc_param(spParams[["phi"]], "phi", nR, process.type)
+  if(cor.fn == "matern"){
+    nu <- check_vc_param(spParams[["nu"]], "nu", nR, process.type)
+    warn_large_nu(nu)
+  }else{
+    nu <- rep(NA_real_, nR)
+  }
+  list(phi = phi, nu = nu)
+
+}
+
+# smoothness parameters as passed to C++ (NA, i.e., exponential, as 0)
+svc_c_nu <- function(nu){
+  nu <- as.double(nu)
+  nu[is.na(nu)] <- 0
+  nu
+}
+
+# validates the candidate models of the svc stacking functions: each a named list
+# with entries 'phi' (and 'nu' if cor.fn = 'matern'), vectors of nR positive
+# reals, and 'extra' ('noise_sp_ratio', a vector of nR positive reals, or
+# 'boundary', a scalar in (0, 1)); returns the list with nu = NA added for the
+# exponential correlation function
+svc_candidates <- function(candidate.models, cor.fn, nR, process.type, extra){
+
+  if(missing(candidate.models) || is.null(candidate.models)){
+    stop("candidate.models must be supplied.")
+  }
+  if(!inherits(candidate.models, "candidateModels")){
+    stop("candidate.models must be an object of class 'candidateModels'.")
+  }
+  nms <- sort(c("phi", if(cor.fn == "matern") "nu", extra))
+  len_extra <- if(extra == "boundary") 1L else nR
+  ok <- all(vapply(candidate.models, function(x){
+    is.list(x) && identical(sort(names(x)), nms) &&
+      all(vapply(names(x), function(nm){
+        v <- x[[nm]]
+        is.numeric(v) && length(v) == (if(nm == extra) len_extra else nR) && all(is.finite(v)) && all(v > 0)
+      }, logical(1)))
+  }, logical(1)))
+  if(!ok){
+    what <- paste0("'", setdiff(nms, extra), "'", collapse = " and ")
+    if(nR > 1){
+      stop("each element of candidate.models must be a named list with entries ", what, " (vectors of ", nR,
+           " positive reals when process.type = 'independent'; supply them as list() entries in candidateModels())",
+           " and '", extra, "' (", if(extra == "boundary") "a scalar" else paste("a vector of", nR, "positive reals"), ").")
+    }
+    stop("each element of candidate.models must be a named list with positive scalar entries ", what,
+         " and '", extra, "'.")
+  }
+  out <- lapply(candidate.models, function(x){
+    list(phi = as.double(x[["phi"]]),
+         nu = if(cor.fn == "matern") as.double(x[["nu"]]) else rep(NA_real_, nR),
+         extra = as.double(x[[extra]]))
+  })
+  out <- lapply(out, function(x){ names(x)[3] <- extra; x })
+  if(cor.fn == "matern"){
+    warn_large_nu(unlist(lapply(out, function(x) x[["nu"]])))
+  }
+  out
+
+}
+
+# stacking summary of the svc models: one row per candidate, columns phi, nu
+# (matern only) and extra (one column per process if nR > 1), and the weight
+svc_stacking_summary <- function(cands, cor.fn, nR, extra, w_hat){
+
+  nms <- c("phi", if(cor.fn == "matern") "nu", extra)
+  stack_out <- as.matrix(do.call("rbind", lapply(cands, function(x){
+    unlist(lapply(nms, function(nm) as.numeric(x[[nm]])))
+  })))
+  par_names <- unlist(lapply(nms, function(nm){
+    k <- length(cands[[1]][[nm]])
+    if(k > 1) paste0(nm, "[", seq_len(k), "]") else nm
+  }))
+  stack_out <- cbind(stack_out, round(w_hat, 3))
+  colnames(stack_out) <- c(par_names, "weight")
+  rownames(stack_out) <- paste("Model", seq_len(nrow(stack_out)))
+  stack_out
+
+}
+
+# grouping of the candidate models of the varying coefficients stacking
+# functions: candidates sharing the process parameters (par1, par2) (those of
+# the correlation matrices) are fitted in one call; returns a list of index
+# vectors
+vc_candidate_groups <- function(par1, par2){
+
+  key <- vapply(seq_along(par1), function(k){
+    paste(sprintf("%a", c(par1[[k]], par2[[k]])), collapse = " ")   # exact (hexadecimal) keys
+  }, character(1))
+  groups <- split(seq_along(par1), factor(key, levels = unique(key)))
+  names(groups) <- NULL
+  groups
+
+}
+
+# runs fit_group over the candidate groups, sequentially or with the future plan
+# set by the user (parallel = TRUE), and puts the results back in candidate order
+vc_run_groups <- function(groups, fit_group, n.models, parallel){
+
+  if(parallel){
+    current_plan <- future::plan()
+    NWORKERS.machine <- parallel::detectCores()
+    NWORKERS.future <- future::nbrOfWorkers()
+    if(NWORKERS.future >= NWORKERS.machine){
+      stop("Number of workers requested exceeds/matches machine limit. Choose a value less than or equal to ",
+           NWORKERS.machine - 1, " to avoid overcommitment of resources.")
+    }
+    if(rstudioapi::isAvailable()){
+      if(inherits(current_plan, "multicore")){
+        stop("The 'multicore' plan is considered unstable when called from RStudio. Either run the script from",
+             " terminal or, switch to a suitable plan, for example, 'multisession', 'cluster'. See",
+             " https://cran.r-project.org/web/packages/future/vignettes/future-1-overview.html for details.")
+      }
+    }else if(.Platform$OS.type == "windows" && inherits(current_plan, "multicore")){
+      stop("'multicore' is not supported by Windows due to OS limitations. Instead, use 'multisession' or, 'cluster' plan.")
+    }
+    res <- future_lapply(seq_along(groups), fit_group, future.seed = TRUE)
+  }else{
+    if(!inherits(future::plan(), "sequential")){
+      message("Parallelization plan other than 'sequential' setup but parallel is set to FALSE. Ignoring parallelization plan.")
+    }
+    res <- lapply(seq_along(groups), fit_group)
+  }
+  samps <- vector("list", n.models)
+  for(g in seq_along(groups)){
+    samps[groups[[g]]] <- res[[g]]
+  }
+  samps
+
+}
+
+# response and design matrices of the varying coefficients generalized linear
+# models, with input checks
+vc_glm_data <- function(formula, data, family){
+
+  if(missing(family)){
+    stop("Family not specified")
+  }
+  if(!is.character(family) || length(family) != 1){
+    stop("Family must be a character string. Choose from c('poisson', 'binary', 'binomial').")
+  }
+  family <- tolower(family)
+  if(!family %in% c("poisson", "binary", "binomial")){
+    stop("Invalid family. Choose from c('poisson', 'binary', 'binomial').")
+  }
+  if(missing(formula) || !inherits(formula, "formula")){
+    stop("formula must be specified as a formula, e.g. y ~ x1 + (x1).")
+  }
+  holder <- parseFormula2(formula, data)
+  if(family == "binomial"){
+    if(ncol(holder[[1L]]) != 2){
+      stop("Response must be of the form cbind(y, n_trials).")
+    }
+    y <- as.numeric(holder[[1L]][, 1])
+    n.binom <- as.numeric(holder[[1L]][, 2])
+  }else{
+    y <- as.numeric(holder[[1L]])
+  }
+  X <- as.matrix(holder[[2L]])
+  if(is.null(holder[[5L]])){
+    stop("formula does not indicate varying coefficient terms; put them in parentheses, e.g. y ~ x1 + (x1).")
+  }
+  X_tilde <- as.matrix(holder[[5L]])
+  n <- nrow(X)
+  if(family == "binary"){n.binom <- rep(1.0, n)}
+  if(family == "poisson"){n.binom <- rep(0.0, n)}
+
+  if(family == "poisson"){
+    if(any(y < 0)){
+      stop("family = 'poisson' but y contains negative values")
+    }
+    if(any(!floor(y) == y)){
+      warning("family = 'poisson' but response contains non-integer values")
+    }
+  }else if(family == "binary"){
+    if(any(y != 0 & y != 1)){
+      stop("family = 'binary', response can only be either 0 or 1")
+    }
+  }else if(family == "binomial"){
+    if(any(!floor(n.binom) == n.binom)){
+      warning("family = 'binomial' but n_trials contains non-integer values")
+    }
+    if(any(y > n.binom)){
+      stop("Number of successes exceeds number of trials in the data.")
+    }
+  }
+
+  storage.mode(y) <- "double"
+  storage.mode(n.binom) <- "double"
+  storage.mode(X) <- "double"
+  storage.mode(X_tilde) <- "double"
+  list(family = family, y = y, n.binom = n.binom, X = X, X.names = holder[[3L]],
+       X_tilde = X_tilde, X_tilde.names = holder[[6L]],
+       n = as.integer(n), p = as.integer(ncol(X)), r = as.integer(ncol(X_tilde)))
+
+}
+
+# priors of the varying coefficients generalized linear models (as in
+# stvcGLMexact()): list(V.beta, nu.beta, nu.z, sigmaSq.xi, IW.scale)
+parse_vc_glm_priors <- function(priors, p, r, process.type){
+
+  V.beta <- diag(rep(100.0, p))
+  nu.beta <- 2.1
+  nu.z <- 2.1
+  sigmaSq.xi <- 0.1
+  IW.scale <- diag(rep(1.0, r))
+
+  if(!missing(priors) && !is.null(priors)){
+    if(!is.list(priors) || is.null(names(priors))){
+      stop("priors must be a named list with tags among 'V.beta', 'nu.beta', 'nu.z', 'sigmaSq.xi' and 'IW.scale'.")
+    }
+    names(priors) <- tolower(names(priors))
+    valid <- c("v.beta", "nu.beta", "nu.z", "sigmasq.xi", "iw.scale")
+    if(any(!names(priors) %in% valid)){
+      stop("invalid tag(s) in priors: '", paste(setdiff(names(priors), valid), collapse = "', '"),
+           "'. Valid tags are 'V.beta', 'nu.beta', 'nu.z', 'sigmaSq.xi' and 'IW.scale'.")
+    }
+    missing.flag <- 0
+    if(!"v.beta" %in% names(priors)){
+      missing.flag <- missing.flag + 1
+    }else{
+      V.beta <- priors[["v.beta"]]
+      if(!is.numeric(V.beta) || length(V.beta) != p^2){
+        stop("priors[['V.beta']] must be a ", p, "x", p, " covariance matrix.")
+      }
+      check_cov_matrix(V.beta, p, "priors[['V.beta']]")
+    }
+    if(!"nu.beta" %in% names(priors)){
+      missing.flag <- missing.flag + 1
+    }else{
+      nu.beta <- priors[["nu.beta"]]
+      if(!is.numeric(nu.beta) || length(nu.beta) != 1){
+        stop("priors[['nu.beta']] must be a single numeric value.")
+      }
+      if(nu.beta < 2.1){
+        message("Supplied nu.beta is less than 2.1. Setting it to defaults.")
+        nu.beta <- 2.1
+      }
+    }
+    if(!"nu.z" %in% names(priors)){
+      missing.flag <- missing.flag + 1
+    }else{
+      nu.z <- priors[["nu.z"]]
+      if(!is.numeric(nu.z) || length(nu.z) != 1){
+        stop("priors[['nu.z']] must be a single numeric value.")
+      }
+      if(process.type == "multivariate"){
+        if(nu.z < 1){
+          message("Supplied nu.z is less than 1. Setting it to 1.")
+          nu.z <- 1
+        }
+      }else if(nu.z < 2.1){
+        message("Supplied nu.z is less than 2.1. Setting it to defaults.")
+        nu.z <- 2.1
+      }
+    }
+    if(!"sigmasq.xi" %in% names(priors)){
+      missing.flag <- missing.flag + 1
+    }else{
+      sigmaSq.xi <- priors[["sigmasq.xi"]]
+      if(!is.numeric(sigmaSq.xi) || length(sigmaSq.xi) != 1 || sigmaSq.xi <= 0){
+        stop("priors[['sigmaSq.xi']] must be a positive real number.")
+      }
+    }
+    if(process.type == "multivariate"){
+      if(!"iw.scale" %in% names(priors)){
+        missing.flag <- missing.flag + 1
+      }else{
+        IW.scale <- priors[["iw.scale"]]
+        if(!is.numeric(IW.scale) || length(IW.scale) != r^2){
+          stop("priors[['IW.scale']] must be a ", r, "x", r, " covariance matrix.")
+        }
+        check_cov_matrix(IW.scale, r, "priors[['IW.scale']]")
+      }
+    }
+    if(missing.flag > 0){
+      message("Some priors were not supplied. Using defaults.")
+    }
+  }
+
+  storage.mode(V.beta) <- "double"
+  storage.mode(nu.beta) <- "double"
+  storage.mode(nu.z) <- "double"
+  storage.mode(sigmaSq.xi) <- "double"
+  storage.mode(IW.scale) <- "double"
+  list(V.beta = V.beta, nu.beta = nu.beta, nu.z = nu.z, sigmaSq.xi = sigmaSq.xi, IW.scale = IW.scale)
+
+}
+
+# leave-one-out controls of the varying coefficients GLM stacking functions (as
+# in stvcGLMstack()): list(method, CV.K, nMC, CV.update (integer flag), controls)
+parse_vc_glm_loopd_controls <- function(loopd.controls, n){
+
+  if(missing(loopd.controls) || is.null(loopd.controls)){
+    loopd.controls <- if(n > 99) list(method = "CV", CV.K = 10, nMC = 500) else list(method = "exact", CV.K = 0, nMC = 500)
+  }
+  if(!is.list(loopd.controls)){
+    stop("loopd.controls must be a list.")
+  }
+  names(loopd.controls) <- tolower(names(loopd.controls))
+  if(!"method" %in% names(loopd.controls)){
+    stop("method missing from loopd.controls.")
+  }
+  loopd.method <- tolower(loopd.controls[["method"]])
+  if(!loopd.method %in% c("exact", "cv")){
+    stop("method = '", loopd.method, "' is not a valid option; choose from c('exact', 'CV').")
+  }
+  CV.K <- 0L
+  if(loopd.method == "cv"){
+    if(n < 100){
+      message("Sample size too low for CV. Finding exact LOO-PD.")
+      loopd.method <- "exact"
+    }else{
+      if(!"cv.k" %in% names(loopd.controls)){
+        message("CV.K missing from loopd.controls. Using defaults.")
+        CV.K <- 10
+      }else{
+        CV.K <- loopd.controls[["cv.k"]]
+      }
+      if(CV.K < 10){
+        message("CV.K must be at least 10. Setting it to 10.")
+        CV.K <- 10
+      }else if(CV.K > 20){
+        message("CV.K must be at most 20. Setting it to 20.")
+        CV.K <- 20
+      }
+      if(floor(CV.K) != CV.K){
+        message("CV.K must be integer. Setting it to nearest integer.")
+        CV.K <- round(CV.K)
+      }
+    }
+  }
+  if(!"nmc" %in% names(loopd.controls)){
+    message("nMC missing from loopd.controls. Using defaults.")
+    loopd.nMC <- 500
+  }else{
+    loopd.nMC <- loopd.controls[["nmc"]]
+  }
+  if(loopd.nMC < 500){
+    message("Number of Monte Carlo samples too low. Using defaults.")
+    loopd.nMC <- 500
+  }
+  CV.update <- if("cv.update" %in% names(loopd.controls)) loopd.controls[["cv.update"]] else "auto"
+  CV.update <- resolve_CV_update(CV.update)
+  if(loopd.method == "cv"){
+    loopd.controls[["cv.update"]] <- CV.update
+  }
+  list(method = loopd.method, CV.K = as.integer(CV.K), nMC = as.integer(loopd.nMC),
+       CV.update = as.integer(CV.update == "update"), controls = loopd.controls)
+
+}
+
+# candidate boundary values of the varying coefficients GLM stacking functions
+check_vc_boundaries <- function(eps){
+  if(any(!is.finite(eps) | eps <= 0 | eps >= 1)){
+    stop("each 'boundary' in candidate.models must be in the interval (0, 1).")
+  }
+  if(any(eps < 0.1)){
+    message("candidate.models contains boundary < 0.1: the latent pseudo-data of observations at the edge of the support (y = 0, or y = trials) are very diffuse (standard deviation about 1/boundary on the linear predictor scale). Larger boundary values are recommended.")
+  }
+  invisible(eps)
 }

@@ -10,7 +10,8 @@ stackedSampler(mod_out, n.samples)
 \item{mod_out}{an object that is an output of a model fit or a prediction
 task, i.e., the class should be either \code{spLMstack}, \code{pp.spLMstack},
 \code{spGLMstack}, \code{pp.spGLMstack}, \code{stvcGLMstack}, \code{pp.stvcGLMstack},
-\code{stvcLMstack}, or \code{pp.stvcLMstack}.}
+\code{stvcLMstack}, \code{pp.stvcLMstack}, \code{svcLMstack}, \code{pp.svcLMstack},
+\code{svcGLMstack} or \code{pp.svcGLMstack}.}
 
 \item{n.samples}{(optional) If missing, inherits the number
 of posterior samples from the original output. Otherwise, it specifies
@@ -33,7 +34,8 @@ The list may also include other scale parameters corresponding to the model.
 A helper function to sample from the stacked posterior
 distribution to obtain final posterior samples that can be used for
 subsequent analysis. This function applies on outputs of functions
-\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}} and \code{\link[=stvcLMstack]{stvcLMstack()}}.
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=svcLMstack]{svcLMstack()}}, \code{\link[=svcGLMstack]{svcGLMstack()}},
+\code{\link[=stvcGLMstack]{stvcGLMstack()}} and \code{\link[=stvcLMstack]{stvcLMstack()}}.
 }
 \details{
 After obtaining the optimal stacking weights
@@ -68,7 +70,8 @@ post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 }
 \seealso{
-\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMstack]{stvcLMstack()}}
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=svcLMstack]{svcLMstack()}}, \code{\link[=svcGLMstack]{svcGLMstack()}},
+\code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMstack]{stvcLMstack()}}
 }
 \author{
 Soumyakanti Pan \href{mailto:span18@ucla.edu}{span18@ucla.edu},\cr

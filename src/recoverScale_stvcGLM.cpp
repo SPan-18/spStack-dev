@@ -48,7 +48,7 @@ extern "C" {
     double *betaSamps = REAL(betaSamps_r);
 
     double *coords_sp = REAL(sp_coords_r);
-    double *coords_tm = REAL(time_coords_r);
+    double *coords_tm = Rf_isNull(time_coords_r) ? NULL : REAL(time_coords_r);   // NULL for the spatial kernels
 
     std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
 
@@ -69,8 +69,8 @@ extern "C" {
     if(processType != "independent.shared" && processType != "independent" && processType != "multivariate"){
       Rf_error("c++ error: process.type must be one of 'independent', 'independent.shared' or 'multivariate'.");
     }
-    if(corfn != "gneiting-decay"){
-      Rf_error("c++ error: cor.fn must be 'gneiting-decay'.");
+    if(!vcCorValid(corfn)){
+      Rf_error("c++ error: cor.fn must be 'gneiting-decay', 'exponential' or 'matern'.");
     }
     int nCov = (processType == "independent") ? r : 1;                   // number of distinct correlation functions
 
@@ -84,9 +84,9 @@ extern "C" {
     for(k = 0; k < nCov; k++){
         thetaspt[0] = phi_s_vec[k];
         thetaspt[1] = phi_t_vec[k];
-        sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &cholVz[nn * k]);
+        vcCorFull(n, coords_sp, coords_tm, thetaspt, corfn, &cholVz[nn * k]);
         F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE);
-        if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i).\n", info);}
+        if(info != 0){Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i).\n", info);}
         mkLT(&cholVz[nn * k], n);
     }
 

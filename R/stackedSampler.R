@@ -3,11 +3,13 @@
 #' @description A helper function to sample from the stacked posterior
 #' distribution to obtain final posterior samples that can be used for
 #' subsequent analysis. This function applies on outputs of functions
-#' [spLMstack()], [spGLMstack()], [stvcGLMstack()] and [stvcLMstack()].
+#' [spLMstack()], [spGLMstack()], [svcLMstack()], [svcGLMstack()],
+#' [stvcGLMstack()] and [stvcLMstack()].
 #' @param mod_out an object that is an output of a model fit or a prediction
 #' task, i.e., the class should be either `spLMstack`, `pp.spLMstack`,
 #' `spGLMstack`, `pp.spGLMstack`, `stvcGLMstack`, `pp.stvcGLMstack`,
-#' `stvcLMstack`, or `pp.stvcLMstack`.
+#' `stvcLMstack`, `pp.stvcLMstack`, `svcLMstack`, `pp.svcLMstack`,
+#' `svcGLMstack` or `pp.svcGLMstack`.
 #' @param n.samples (optional) If missing, inherits the number
 #' of posterior samples from the original output. Otherwise, it specifies
 #' number of posterior samples to draw from the stacked posterior. If it exceeds
@@ -32,7 +34,8 @@
 #' models.
 #' @author Soumyakanti Pan <span18@ucla.edu>,\cr
 #' Sudipto Banerjee <sudipto@ucla.edu>
-#' @seealso [spLMstack()], [spGLMstack()], [stvcGLMstack()], [stvcLMstack()]
+#' @seealso [spLMstack()], [spGLMstack()], [svcLMstack()], [svcGLMstack()],
+#' [stvcGLMstack()], [stvcLMstack()]
 #' @examples
 #' set.seed(1234)
 #' data(simSpatial)
@@ -77,7 +80,9 @@ stackedSampler <- function(mod_out, n.samples){
   if(inherits(mod_out, c('spLMstack', 'pp.spLMstack',
                          'spGLMstack', 'pp.spGLMstack',
                          'stvcGLMstack', 'pp.stvcGLMstack',
-                         'stvcLMstack', 'pp.stvcLMstack'))){
+                         'stvcLMstack', 'pp.stvcLMstack',
+                         'svcLMstack', 'pp.svcLMstack',
+                         'svcGLMstack', 'pp.svcGLMstack'))){
 
     nModels <- mod_out$n.models
     model_id <- sample(seq_len(nModels), n.samples, replace = TRUE, prob = mod_out$stacking.weights)
@@ -119,7 +124,8 @@ stackedSampler <- function(mod_out, n.samples){
 
   }else{
     stop("Invalid model output class. Input must be an output from either of the
-         following functions: spLMstack(), spGLMstack(), stvcGLMstack(), stvcLMstack(),
+         following functions: spLMstack(), spGLMstack(), svcLMstack(), svcGLMstack(),
+         stvcGLMstack(), stvcLMstack(),
          or of posteriorPredict() applied to one of them.")
   }
 

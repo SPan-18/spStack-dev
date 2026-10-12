@@ -55,9 +55,12 @@ extern "C" {
     std::string family = CHAR(STRING_ELT(family_r, 0));
 
     double *coords_sp = REAL(sp_coords_r);
-    double *coords_tm = REAL(time_coords_r);
+    double *coords_tm = Rf_isNull(time_coords_r) ? NULL : REAL(time_coords_r);   // NULL for the spatial kernels
 
     std::string corfn = CHAR(STRING_ELT(corfn_r, 0));
+    if(!vcCorValid(corfn)){
+      Rf_error("c++ error: cor.fn must be 'gneiting-decay', 'exponential' or 'matern'.");
+    }
 
     // priors
     double *betaMu = (double *) R_alloc(p, sizeof(double)); zeros(betaMu, p);
@@ -84,7 +87,7 @@ extern "C" {
     double *thetaspt = (double *) R_alloc(2, sizeof(double));
     double *Vz = NULL;
 
-    if(corfn == "gneiting-decay"){
+    if(vcCorValid(corfn)){
 
       if(processType == "independent.shared" || processType == "multivariate"){
 
@@ -94,7 +97,7 @@ extern "C" {
         thetaspt[1] = phi_t_vec[0];
 
         Vz = (double *) R_alloc(nn, sizeof(double)); zeros(Vz, nn);
-        sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, Vz);
+        vcCorFull(n, coords_sp, coords_tm, thetaspt, corfn, Vz);
 
       }else if(processType == "independent"){
 
@@ -107,7 +110,7 @@ extern "C" {
         for(k = 0; k < r; k++){
           thetaspt[0] = phi_s_vec[k];
           thetaspt[1] = phi_t_vec[k];
-          sptCorFull(n, 2, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
+          vcCorFull(n, coords_sp, coords_tm, thetaspt, corfn, &Vz[nn * k]);
         }
 
       }
@@ -139,7 +142,7 @@ extern "C" {
 
       Rprintf("\tsigmaSq.beta ~ IG(nu.beta/2, nu.beta/2)\n");
       Rprintf("\tnu.beta = %.2f, nu.z = %.2f.\n", nu_beta, nu_z);
-      Rprintf("\tSpatial-temporal process model: %s.\n", processType.c_str());
+      Rprintf("\tProcess model: %s.\n", processType.c_str());
       if(processType == "multivariate"){
         Rprintf("\tSigma: Inverse-Wishart\n");
         Rprintf("\tdf: %.2f\n", nu_z);
@@ -150,20 +153,29 @@ extern "C" {
       Rprintf("\tsigmaSq.xi = %.2f.\n", sigmaSq_xi);
       Rprintf("\tBoundary adjustment parameter = %.2f.\n\n", epsilon);
 
-      Rprintf("Spatial-temporal correlation function: %s.\n", corfn.c_str());
+      Rprintf("Correlation function: %s.\n", corfn.c_str());
 
       Rprintf("Process type: %s.\n", processType.c_str());
 
       if(processType == "independent.shared" || processType == "multivariate"){
-        Rprintf("All %i spatial-temporal processes share common parameters:\n", r);
+        Rprintf("All %i processes share common parameters:\n", r);
         if(corfn == "gneiting-decay"){
             Rprintf("\tphi_s = %.2f, and, phi_t = %.2f.\n\n", phi_s_vec[0], phi_t_vec[0]);
+        }else if(corfn == "matern"){
+            Rprintf("\tphi = %.2f, and, nu = %.2f.\n\n", phi_s_vec[0], phi_t_vec[0]);
+        }else{
+            Rprintf("\tphi = %.2f.\n\n", phi_s_vec[0]);
         }
       }else{
-        Rprintf("Parameters for the %i spatial-temporal process(es):\n", r);
+        Rprintf("Parameters for the %i process(es):\n", r);
         if(corfn == "gneiting-decay"){
             Rprintf("\tphi_s ="); printVec(phi_s_vec, r);
             Rprintf("\tphi_t ="); printVec(phi_t_vec, r);
+        }else{
+            Rprintf("\tphi ="); printVec(phi_s_vec, r);
+            if(corfn == "matern"){
+              Rprintf("\tnu ="); printVec(phi_t_vec, r);
+            }
         }
       }
 
@@ -184,7 +196,7 @@ extern "C" {
 
       cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
       F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or very small decay parameters.\n", info);}
       mkLT(cholVz, n);
 
     }else if(processType == "independent"){
@@ -192,7 +204,7 @@ extern "C" {
       cholVz = (double *) R_alloc(nnr, sizeof(double)); zeros(cholVz, nnr);          // r nxn matrices chol(Vz)
       F77_NAME(dcopy)(&nnr, Vz, &incOne, cholVz, &incOne);
       for(k = 0; k < r; k++){
-          F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
+          F77_NAME(dpotrf)(lower, &n, &cholVz[nn * k], &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or very small decay parameters.\n", info);}
           mkLT(&cholVz[nn * k], n);
       }
 
@@ -200,7 +212,7 @@ extern "C" {
 
       cholVz = (double *) R_alloc(nn, sizeof(double)); zeros(cholVz, nn);            // nxn matrix chol(Vz)
       F77_NAME(dcopy)(&nn, Vz, &incOne, cholVz, &incOne);
-      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the spatial-temporal correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident space-time locations or very small phi_s, phi_t.\n", info);}
+      F77_NAME(dpotrf)(lower, &n, cholVz, &n, &info FCONE); if(info != 0){Rf_error("c++ error: Cholesky factorization of the correlation matrix failed (info = %i); it is numerically singular, check for nearly coincident locations or very small decay parameters.\n", info);}
       mkLT(cholVz, n);
       chol_iwScale = (double *) R_alloc(rr, sizeof(double)); zeros(chol_iwScale, rr);
       F77_NAME(dcopy)(&rr, iwScale, &incOne, chol_iwScale, &incOne);

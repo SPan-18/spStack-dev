@@ -2,7 +2,10 @@
 ## simSpaceTime. Run from the package root: source("data-raw/simData.R").
 
 ## simSpatial: point-referenced data on the unit square sharing the covariates
-## x1, x2 and the spatial effect z, with one response for each family.
+## x1, x2 and the spatial effect z, with one response for each family, and two
+## responses with spatially varying coefficients: a varying intercept z2 (rings,
+## centred to have mean zero over the unit square) and a varying slope of x1
+## (5 + z, or -0.5 + z for the Poisson response).
 set.seed(1729)
 n <- 500
 s1 <- runif(n)
@@ -10,6 +13,9 @@ s2 <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
 z <- 1.5 * sin(2 * pi * s1) * sin(2 * pi * s2)                        # checkerboard
+ring <- function(s1, s2) cos(4 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2))
+g <- (seq_len(1000) - 0.5) / 1000                         # midpoint grid on the unit square
+z2 <- ring(s1, s2) - mean(outer(g, g, ring))              # rings, mean zero over the square
 n_trials <- sample(5:20, n, replace = TRUE)
 simSpatial <- data.frame(
   s1 = s1, s2 = s2, x1 = x1, x2 = x2,
@@ -18,8 +24,10 @@ simSpatial <- data.frame(
   y_binom = rbinom(n, n_trials, plogis(0.5 - 0.5 * x1 + 0.5 * x2 + z)),
   n_trials = n_trials,
   y_bin = rbinom(n, 1, plogis(0.5 - 0.5 * x1 + 0.5 * x2 + z)),
-  y_svc = rnorm(n, 2 + (5 + z) * x1 - x2, sd = 0.5),
-  z_true = z
+  y_svc = rnorm(n, 2 + z2 + (5 + z) * x1 - x2, sd = 0.5),
+  y_svc_pois = rpois(n, exp(2 + z2 + (-0.5 + z) * x1 + 0.3 * x2)),
+  z_true = z,
+  z2_true = z2
 )
 
 ## simSpaceTime: spatial-temporal data with a varying intercept (a wave

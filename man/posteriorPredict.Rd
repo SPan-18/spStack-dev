@@ -9,7 +9,8 @@ posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
 \arguments{
 \item{mod_out}{an object returned by any model fit under fixed
 hyperparameters or using predictive stacking, i.e., \code{\link[=spLMexact]{spLMexact()}},
-\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}},
+\code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}}, \code{\link[=svcLMexact]{svcLMexact()}},
+\code{\link[=svcLMstack]{svcLMstack()}}, \code{\link[=svcGLMexact]{svcGLMexact()}}, \code{\link[=svcGLMstack]{svcGLMstack()}}, \code{\link[=stvcGLMexact]{stvcGLMexact()}},
 \code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMexact]{stvcLMexact()}} or \code{\link[=stvcLMstack]{stvcLMstack()}}.}
 
 \item{coords_new}{new spatial coordinates (an \eqn{n_{new} \times 2}{n_new x 2}
@@ -19,9 +20,10 @@ matrix) at which the latent process, the mean, and the response is to be
 predicted.}
 
 \item{covars_new}{new covariates at the new coordinates: a matrix or, for
-the spatial-temporal models, a list with tags \code{fixed} (covariates with fixed
-effects) and \code{vc} (covariates with spatially-temporally varying
-coefficients). See examples for the structure of this list.}
+the varying coefficients models (svc and stvc), a list with tags \code{fixed}
+(covariates with fixed effects) and \code{vc} (covariates with spatially or
+spatially-temporally varying coefficients). See examples for the structure
+of this list.}
 
 \item{joint}{a logical value indicating whether to return the joint posterior
 predictive samples of the latent process at the new locations or times.
@@ -84,6 +86,7 @@ cor(z_pred, dat_pred$z_true)
 }
 \seealso{
 \code{\link[=spLMexact]{spLMexact()}}, \code{\link[=spLMstack]{spLMstack()}}, \code{\link[=spGLMexact]{spGLMexact()}}, \code{\link[=spGLMstack]{spGLMstack()}},
+\code{\link[=svcLMexact]{svcLMexact()}}, \code{\link[=svcLMstack]{svcLMstack()}}, \code{\link[=svcGLMexact]{svcGLMexact()}}, \code{\link[=svcGLMstack]{svcGLMstack()}},
 \code{\link[=stvcGLMexact]{stvcGLMexact()}}, \code{\link[=stvcGLMstack]{stvcGLMstack()}}, \code{\link[=stvcLMexact]{stvcLMexact()}}, \code{\link[=stvcLMstack]{stvcLMstack()}}
 }
 \author{
