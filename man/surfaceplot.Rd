@@ -4,14 +4,22 @@
 \alias{surfaceplot}
 \title{Make a surface plot}
 \usage{
-surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
+surfaceplot(
+  tab,
+  coords_name,
+  var_name,
+  h = 8,
+  col.pal,
+  mark_points = FALSE,
+  title = NULL
+)
 }
 \arguments{
 \item{tab}{a data-frame containing spatial co-ordinates and the variable to
 plot}
 
 \item{coords_name}{name of the two columns that contains the co-ordinates of
-the points}
+the points, also used as the axis labels}
 
 \item{var_name}{name of the column containing the variable to be plotted}
 
@@ -24,6 +32,8 @@ colorblind-friendly diverging palette 'RdBu' from ColorBrewer.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked.
 Default is \code{FALSE}.}
+
+\item{title}{(optional) a title for the plot. Default is no title.}
 }
 \value{
 a \code{ggplot} object containing the surface plot

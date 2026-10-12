@@ -56,9 +56,7 @@ otherwise a scalar.}
 \item{priors}{(optional) a list with each tag corresponding to a
 hyperparameter name and containing hyperprior details. Valid tags include
 \code{V.beta}, \code{nu.beta}, \code{nu.z}, \code{sigmaSq.xi} and \code{IW.scale}. Values of \code{nu.beta}
-and \code{nu.z} must be at least 2.1 (\code{nu.z}, the inverse-Wishart degrees of
-freedom if \code{process.type = 'multivariate'}, at least 1). If not supplied,
-uses defaults.}
+and \code{nu.z} must be at least 2.1. If not supplied, uses defaults.}
 
 \item{boundary}{Specifies the boundary adjustment parameter. Must be a real
 number between 0 and 1. Default is 0.5.}

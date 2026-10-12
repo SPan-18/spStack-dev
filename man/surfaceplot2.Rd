@@ -11,7 +11,8 @@ surfaceplot2(
   var2_name,
   h = 8,
   col.pal,
-  mark_points = FALSE
+  mark_points = FALSE,
+  titles = c(var1_name, var2_name)
 )
 }
 \arguments{
@@ -19,7 +20,7 @@ surfaceplot2(
 plot}
 
 \item{coords_name}{name of the two columns that contains the co-ordinates of
-the points}
+the points, also used as the axis labels}
 
 \item{var1_name}{name of the column containing the first variable to be
 plotted}
@@ -36,9 +37,14 @@ colorblind-friendly diverging palette 'RdBu' from ColorBrewer.}
 
 \item{mark_points}{Logical; if \code{TRUE}, the input points are marked.
 Default is \code{FALSE}.}
+
+\item{titles}{a character vector of length 2, the titles of the two plots.
+Default is the names of the two variables, \code{c(var1_name, var2_name)}; use
+\code{NULL} for no titles.}
 }
 \value{
-a list containing two \code{ggplot} objects
+a list containing two \code{ggplot} objects, which share the colour scale
+(one legend serves both, e.g. with \code{patchwork::wrap_plots(plots) + patchwork::plot_layout(guides = "collect")})
 }
 \description{
 Make two side-by-side surface plots, particularly useful towards
@@ -47,7 +53,8 @@ a comparative study of two spatial surfaces.
 \examples{
 data(simSpatial)
 plots_2 <- surfaceplot2(simSpatial, coords_name = c("s1", "s2"),
-                        var1_name = "z_true", var2_name = "y_gauss")
+                        var1_name = "z_true", var2_name = "y_gauss",
+                        titles = c("True spatial effect", "Gaussian response"))
 plots_2
 }
 \author{
