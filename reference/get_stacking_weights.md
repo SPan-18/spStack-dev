@@ -128,13 +128,13 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.292s
+#> ℹ Compile time: 0.304s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
 #> ✔ Optimal value: -68.4263
-#> ℹ Compile time: 0.292s
-#> ℹ Solver time: 0.057s
+#> ℹ Compile time: 0.304s
+#> ℹ Solver time: 0.061s
 print(round(w_hat$weights, 4))
 #> [1] 0 0 0 0 0 0 0 1 0
 print(w_hat$solver)
