@@ -23,10 +23,8 @@ header-includes:
 
 In this article, we discuss the following functions -
 
-- `stvcLMexact()`
-- `stvcLMstack()`
-- `stvcGLMexact()`
-- `stvcGLMstack()`
+- `stvcLMexact()` and `stvcLMstack()`
+- `stvcGLMexact()` and `stvcGLMstack()`
 - `recoverGLMscale()`
 
 These functions can be used to fit Gaussian and non-Gaussian spatial-temporal point-referenced data with spatially-temporally varying coefficients.
