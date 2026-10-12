@@ -280,10 +280,10 @@ mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> ----------------------------------------
 post_beta <- mod1$samples$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>             2.5%       50%      97.5%
-#> [1,] -1.05212357  1.784620  3.9945642
-#> [2,] -0.78722198 -0.615500 -0.5018917
-#> [3,]  0.04804292  0.178207  0.3122756
+#>             2.5%        50%      97.5%
+#> [1,] -0.41715031  1.7700756  4.7355700
+#> [2,] -0.82319387 -0.6015056 -0.4866882
+#> [3,]  0.03690055  0.1713839  0.2884113
 
 # Example 2: spatial binomial count data
 mod2 <- spGLMexact(cbind(y_binom, n_trials) ~ x1 + x2, data = dat,

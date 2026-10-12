@@ -263,6 +263,65 @@ plot_z_summ + plot_y_summ
 
 ![](posterior-predictive_files/figure-html/unnamed-chunk-7-1.png)
 
+## Prediction in spatially varying coefficients model
+
+For the spatially varying coefficients models, `covars_new` is a list
+with tags `fixed` (covariates with fixed effects) and `vc` (covariates
+with spatially varying coefficients), and `coords_new` is a matrix of
+new coordinates as before. We fit
+[`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md)
+to the Gaussian response `y_svc` of `simSpatial`, which has a spatially
+varying intercept (`z2_true`) and a spatially varying slope of `x1`
+(`5 + z_true`).
+
+``` r
+
+n_train <- 200
+n_pred <- 50
+dat_train <- simSpatial[1:n_train, ]
+dat_pred <- simSpatial[n_train + 1:n_pred, ]
+
+cand.svc <- candidateModels(list(phi = list(c(4, 4), c(8, 4), c(8, 8)),
+                                 nu = list(c(1.5, 1.5)),
+                                 noise_sp_ratio = list(c(0.1, 0.1), c(0.25, 0.25))),
+                            "cartesian")
+mod_svc <- svcLMstack(y_svc ~ x1 + x2 + (x1), data = dat_train,
+                      coords = as.matrix(dat_train[, c("s1", "s2")]),
+                      cor.fn = "matern", process.type = "independent",
+                      candidate.models = cand.svc,
+                      n.samples = 1000, verbose = FALSE)
+
+mod_svc_pred <- posteriorPredict(mod_svc,
+                                 coords_new = as.matrix(dat_pred[, c("s1", "s2")]),
+                                 covars_new = list(fixed = cbind(1, dat_pred$x1, dat_pred$x2),
+                                                   vc = cbind(1, dat_pred$x1)),
+                                 joint = TRUE)
+post_samps <- stackedSampler(mod_svc_pred)
+```
+
+The rows $`1, \ldots, n_{pred}`$ of `z.pred` hold the predicted varying
+intercept and the rows $`n_{pred} + 1, \ldots, 2 n_{pred}`$ the
+predicted varying part of the slope of `x1`.
+
+``` r
+
+plot_pred <- function(truth, samps, lab){
+  summ <- t(apply(samps, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+  df <- data.frame(truth = truth, L = summ[, 1], M = summ[, 2], U = summ[, 3])
+  ggplot(data = df, aes(x = truth)) +
+    geom_errorbar(aes(ymin = L, ymax = U), alpha = 0.5, color = "skyblue") +
+    geom_point(aes(y = M), size = 0.5, color = "darkblue", alpha = 0.5) +
+    geom_abline(slope = 1, intercept = 0, color = "red", linetype = "solid") +
+    xlab(paste("True", lab)) + ylab(paste("Posterior predictive of", lab)) +
+    theme_bw() + theme(panel.grid = element_blank(), aspect.ratio = 1)
+}
+plot_pred(dat_pred$z2_true, post_samps$z.pred[1:n_pred, ], "z0") +
+  plot_pred(dat_pred$z_true, post_samps$z.pred[n_pred + 1:n_pred, ], "z1") +
+  plot_pred(dat_pred$y_svc, post_samps$y.pred, "y")
+```
+
+![](posterior-predictive_files/figure-html/unnamed-chunk-9-1.png)
+
 ## Prediction in spatially-temporally varying coefficients model
 
 Define the collection of candidate parameters and fit the model using
@@ -301,24 +360,24 @@ mod1 <- stvcGLMstack(y_pois ~ x1 + x2 + (x1), data = dat_train, family = "poisso
     ## 
     ##            | phi_s | phi_t | boundary | weight |
     ## +----------+-------+-------+----------+--------+
-    ## | Model 1  |      2|      2|      0.50| 0.000  |
-    ## | Model 2  |      3|      2|      0.50| 0.000  |
-    ## | Model 3  |      4|      2|      0.50| 0.000  |
-    ## | Model 4  |      2|      4|      0.50| 0.000  |
-    ## | Model 5  |      3|      4|      0.50| 0.000  |
-    ## | Model 6  |      4|      4|      0.50| 0.000  |
-    ## | Model 7  |      2|      8|      0.50| 0.000  |
-    ## | Model 8  |      3|      8|      0.50| 0.000  |
-    ## | Model 9  |      4|      8|      0.50| 0.000  |
-    ## | Model 10 |      2|      2|      0.75| 0.000  |
-    ## | Model 11 |      3|      2|      0.75| 0.000  |
-    ## | Model 12 |      4|      2|      0.75| 0.000  |
-    ## | Model 13 |      2|      4|      0.75| 0.001  |
-    ## | Model 14 |      3|      4|      0.75| 0.223  |
-    ## | Model 15 |      4|      4|      0.75| 0.000  |
-    ## | Model 16 |      2|      8|      0.75| 0.000  |
-    ## | Model 17 |      3|      8|      0.75| 0.776  |
-    ## | Model 18 |      4|      8|      0.75| 0.000  |
+    ## | Model 1  |      2|      2|      0.50| 0      |
+    ## | Model 2  |      3|      2|      0.50| 0      |
+    ## | Model 3  |      4|      2|      0.50| 0      |
+    ## | Model 4  |      2|      4|      0.50| 0      |
+    ## | Model 5  |      3|      4|      0.50| 0      |
+    ## | Model 6  |      4|      4|      0.50| 0      |
+    ## | Model 7  |      2|      8|      0.50| 0      |
+    ## | Model 8  |      3|      8|      0.50| 0      |
+    ## | Model 9  |      4|      8|      0.50| 0      |
+    ## | Model 10 |      2|      2|      0.75| 0      |
+    ## | Model 11 |      3|      2|      0.75| 0      |
+    ## | Model 12 |      4|      2|      0.75| 0      |
+    ## | Model 13 |      2|      4|      0.75| 0      |
+    ## | Model 14 |      3|      4|      0.75| 0      |
+    ## | Model 15 |      4|      4|      0.75| 0      |
+    ## | Model 16 |      2|      8|      0.75| 0      |
+    ## | Model 17 |      3|      8|      0.75| 1      |
+    ## | Model 18 |      4|      8|      0.75| 0      |
     ## +----------+-------+-------+----------+--------+
 
 Define the new coordinates, run
@@ -376,4 +435,4 @@ plot_z2_summ <- ggplot(data = z2_combn, aes(x = z)) +
 plot_z1_summ + plot_z2_summ
 ```
 
-![](posterior-predictive_files/figure-html/unnamed-chunk-10-1.png)
+![](posterior-predictive_files/figure-html/unnamed-chunk-12-1.png)

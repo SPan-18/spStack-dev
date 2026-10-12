@@ -7,15 +7,17 @@
   `sim_stvcPoisson`, and `sim_spData()` is removed. `simSpatial` has one
   set of locations, covariates `x1`, `x2` and a spatial effect with a
   checkerboard pattern, shared by Gaussian, Poisson, binomial and binary
-  responses (and a Gaussian response with a spatially varying slope);
-  `simSpaceTime` has a varying intercept that travels across space over
-  time and a varying slope of `x1`, shared by Gaussian and Poisson
-  responses. The true surfaces are deterministic, so the examples and
-  vignettes show how well the Gaussian process models recover them. All
-  examples and vignettes now use these two datasets, and the examples no
-  longer draw plots. The code that generates the data is in `data-raw/`
-  and in the examples of the dataset help pages. Code that loads the old
-  datasets must be updated.
+  responses (and a Gaussian and a Poisson response with a spatially
+  varying intercept, a ring pattern centred to mean zero over the unit
+  square, and a spatially varying slope of `x1`); `simSpaceTime` has a
+  varying intercept that travels across space over time and a varying
+  slope of `x1`, shared by Gaussian and Poisson responses. The true
+  surfaces are deterministic, so the examples and vignettes show how
+  well the Gaussian process models recover them. All examples and
+  vignettes now use these two datasets, and the examples no longer draw
+  plots. The code that generates the data is in `data-raw/` and in the
+  examples of the dataset help pages. Code that loads the old datasets
+  must be updated.
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
   [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
@@ -28,6 +30,32 @@
   [`surfaceplot2()`](https://span-18.github.io/spStack-dev/reference/surfaceplot2.md):
   the default palette is now the colorblind-friendly diverging
   ColorBrewer palette ‘RdBu’ (it was ‘RdYlBu’).
+- [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md),
+  [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
+  [`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),
+  [`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md):
+  new functions for spatially varying coefficients models (Gaussian, and
+  Poisson, binomial and binary responses), with exponential or Matern
+  correlation functions. They are the spatial counterparts of the
+  `stvc*` functions and share their C++ routines, with a spatial
+  correlation function in place of the Gneiting one:
+  `process.type = "independent"` (each process with its own `phi`, `nu`
+  and, for the Gaussian model, `noise_sp_ratio`) or
+  `"independent.shared"`, and for the GLMs also `"multivariate"`. The
+  stacking functions group the candidate models by (`phi`, `nu`), the
+  parameters of the correlation matrices, so each group builds and
+  factorizes them once and is one unit of parallel work.
+  [`posteriorPredict()`](https://span-18.github.io/spStack-dev/reference/posteriorPredict.md)
+  (with `coords_new` a matrix and `covars_new` a list with tags `fixed`
+  and `vc`),
+  [`stackedSampler()`](https://span-18.github.io/spStack-dev/reference/stackedSampler.md)
+  and
+  [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
+  support them. Previously a spatially varying coefficients model could
+  only be approximated with the `stvc*` functions at a constant time,
+  where the Gneiting correlation reduces to the exponential one, `phi_t`
+  has no effect (stacking over it duplicated candidates) and the Matern
+  family is not available.
 - [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),
   [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md):
   new functions for the Bayesian linear model with spatially-temporally

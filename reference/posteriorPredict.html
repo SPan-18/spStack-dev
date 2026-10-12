@@ -59,7 +59,8 @@ of the latent spatial or spatial-temporal process.</p>
 <dl><dt id="arg-mod-out">mod_out<a class="anchor" aria-label="anchor" href="#arg-mod-out"></a></dt>
 <dd><p>an object returned by any model fit under fixed
 hyperparameters or using predictive stacking, i.e., <code><a href="spLMexact.html">spLMexact()</a></code>,
-<code><a href="spLMstack.html">spLMstack()</a></code>, <code><a href="spGLMexact.html">spGLMexact()</a></code>, <code><a href="spGLMstack.html">spGLMstack()</a></code>, <code><a href="stvcGLMexact.html">stvcGLMexact()</a></code>,
+<code><a href="spLMstack.html">spLMstack()</a></code>, <code><a href="spGLMexact.html">spGLMexact()</a></code>, <code><a href="spGLMstack.html">spGLMstack()</a></code>, <code><a href="svcLMexact.html">svcLMexact()</a></code>,
+<code><a href="svcLMstack.html">svcLMstack()</a></code>, <code><a href="svcGLMexact.html">svcGLMexact()</a></code>, <code><a href="svcGLMstack.html">svcGLMstack()</a></code>, <code><a href="stvcGLMexact.html">stvcGLMexact()</a></code>,
 <code><a href="stvcGLMstack.html">stvcGLMstack()</a></code>, <code><a href="stvcLMexact.html">stvcLMexact()</a></code> or <code><a href="stvcLMstack.html">stvcLMstack()</a></code>.</p></dd>
 
 
@@ -73,9 +74,10 @@ predicted.</p></dd>
 
 <dt id="arg-covars-new">covars_new<a class="anchor" aria-label="anchor" href="#arg-covars-new"></a></dt>
 <dd><p>new covariates at the new coordinates: a matrix or, for
-the spatial-temporal models, a list with tags <code>fixed</code> (covariates with fixed
-effects) and <code>vc</code> (covariates with spatially-temporally varying
-coefficients). See examples for the structure of this list.</p></dd>
+the varying coefficients models (svc and stvc), a list with tags <code>fixed</code>
+(covariates with fixed effects) and <code>vc</code> (covariates with spatially or
+spatially-temporally varying coefficients). See examples for the structure
+of this list.</p></dd>
 
 
 <dt id="arg-joint">joint<a class="anchor" aria-label="anchor" href="#arg-joint"></a></dt>
@@ -104,6 +106,7 @@ posterior predictive samples were requested.</p>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p><code><a href="spLMexact.html">spLMexact()</a></code>, <code><a href="spLMstack.html">spLMstack()</a></code>, <code><a href="spGLMexact.html">spGLMexact()</a></code>, <code><a href="spGLMstack.html">spGLMstack()</a></code>,
+<code><a href="svcLMexact.html">svcLMexact()</a></code>, <code><a href="svcLMstack.html">svcLMstack()</a></code>, <code><a href="svcGLMexact.html">svcGLMexact()</a></code>, <code><a href="svcGLMstack.html">svcGLMstack()</a></code>,
 <code><a href="stvcGLMexact.html">stvcGLMexact()</a></code>, <code><a href="stvcGLMstack.html">stvcGLMstack()</a></code>, <code><a href="stvcLMexact.html">stvcLMexact()</a></code>, <code><a href="stvcLMstack.html">stvcLMstack()</a></code></p></div>
     </div>
     <div class="section level2">

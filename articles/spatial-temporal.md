@@ -118,7 +118,7 @@ mod_lm <- stvcLMexact(y_gauss ~ x1 + x2 + (x1), data = dat,
     ## Model fit with 200 observations.
     ## 
     ## Number of covariates 3 (including intercept).
-    ## Number of covariates with spatial-temporally varying coefficients 2.
+    ## Number of covariates with spatially-temporally varying coefficients 2.
     ## 
     ## Using the gneiting-decay spatial-temporal correlation function.
     ## Process type: independent.

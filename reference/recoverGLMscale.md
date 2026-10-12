@@ -7,6 +7,8 @@ outputs of functions that fits a spatial/spatial-temporal generalized
 linear model, such as
 [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+[`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
 [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
 and
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md).
@@ -33,6 +35,8 @@ tags are `sigmasq.beta` and `z.scale`.
 
 [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+[`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
 [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
 

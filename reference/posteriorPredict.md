@@ -19,6 +19,10 @@ posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
   [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
   [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
   [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+  [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md),
+  [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
+  [`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),
+  [`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
   [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
   [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
   [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
@@ -34,10 +38,11 @@ posteriorPredict(mod_out, coords_new, covars_new, joint = FALSE, nBinom_new)
 
 - covars_new:
 
-  new covariates at the new coordinates: a matrix or, for the
-  spatial-temporal models, a list with tags `fixed` (covariates with
-  fixed effects) and `vc` (covariates with spatially-temporally varying
-  coefficients). See examples for the structure of this list.
+  new covariates at the new coordinates: a matrix or, for the varying
+  coefficients models (svc and stvc), a list with tags `fixed`
+  (covariates with fixed effects) and `vc` (covariates with spatially or
+  spatially-temporally varying coefficients). See examples for the
+  structure of this list.
 
 - joint:
 
@@ -68,6 +73,10 @@ and whether the joint posterior predictive samples were requested.
 [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
 [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+[`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md),
+[`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
+[`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
 [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md),
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
 [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),

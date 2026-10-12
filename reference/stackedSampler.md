@@ -5,6 +5,8 @@ obtain final posterior samples that can be used for subsequent analysis.
 This function applies on outputs of functions
 [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+[`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
 and
 [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md).
@@ -21,8 +23,9 @@ stackedSampler(mod_out, n.samples)
 
   an object that is an output of a model fit or a prediction task, i.e.,
   the class should be either `spLMstack`, `pp.spLMstack`, `spGLMstack`,
-  `pp.spGLMstack`, `stvcGLMstack`, `pp.stvcGLMstack`, `stvcLMstack`, or
-  `pp.stvcLMstack`.
+  `pp.spGLMstack`, `stvcGLMstack`, `pp.stvcGLMstack`, `stvcLMstack`,
+  `pp.stvcLMstack`, `svcLMstack`, `pp.svcLMstack`, `svcGLMstack` or
+  `pp.svcGLMstack`.
 
 - n.samples:
 
@@ -63,6 +66,8 @@ models.
 
 [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md),
 [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md),
+[`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md),
 [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md),
 [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
 
@@ -109,7 +114,7 @@ print(mod1$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.146   0.283   0.109 
+#>   0.106   0.228   0.085 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta

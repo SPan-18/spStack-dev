@@ -6,13 +6,16 @@ In this article, we discuss the following functions -
 - [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
 - [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md)
 - [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
-- [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
+- [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md)
   and
-  [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
-  (spatially varying coefficients)
+  [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md)
+- [`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md)
+  and
+  [`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md)
 
 These functions can be used to fit Gaussian and non-Gaussian spatial
-point-referenced data.
+point-referenced data, with spatial random effects (`sp*`) or with
+spatially varying coefficients (`svc*`).
 
 ``` r
 
@@ -307,7 +310,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   5.168   1.973   5.029
+#>   4.860   1.781   4.824
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -423,179 +426,6 @@ patchwork::wrap_plots(plot_z) +
 effects and the posterior
 medians.](spatial_files/figure-html/unnamed-chunk-12-1.png)
 
-### Spatially varying coefficients
-
-The effect of a covariate may itself vary over space. The functions
-[`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
-and
-[`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
-fit the Gaussian linear model with spatially-temporally varying
-coefficients
-``` math
-y(\ell) = x(\ell)^{ \scriptstyle \top }\beta + \tilde{x}(\ell)^{ \scriptstyle \top }z(\ell) + \epsilon(\ell), \quad \epsilon(\ell) \sim \mathsf{N}(0, \sigma^2),
-```
-where each of the $`r`$ varying coefficients $`z_j`$ is an independent
-Gaussian process with variance $`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$
-and a Gneiting space-time correlation function with decay parameters
-$`\phi_s`$ and $`\phi_t`$. The joint posterior is available in closed
-form and is sampled exactly. If all observations share one time point,
-the Gneiting correlation reduces to the exponential correlation
-$`\exp(-\phi_s \lVert s - s' \rVert)`$ ($`\phi_t`$ then has no effect),
-and these functions fit a spatially varying coefficients model.
-
-The response `y_svc` of `simSpatial` was simulated from
-``` math
-y(s) = 2 + \{5 + z(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, 0.5^2)\;,
-```
-so that the checkerboard $`z(s)`$ is now the spatially varying part of
-the slope of $`x_1`$. In the `formula`, the variables in parentheses
-receive varying coefficients: `y_svc ~ x1 + x2 + (x1)` has fixed effects
-for the intercept, `x1` and `x2`, and varying coefficients for the
-intercept and `x1` (the intercept is included in both parts by default).
-With `process.type = "independent.shared"`, the processes share the
-decay parameters and the noise-to-spatial variance ratio; with
-`process.type = "independent"`, each process has its own, supplied as
-vectors of length $`r`$. Here the true varying intercept is zero, so we
-let each process have its own parameters: a large noise-to-spatial
-variance ratio for the intercept process ($`\delta^2_1 = 10`$, a small
-process variance) and a smaller one for the slope process
-($`\delta^2_2 = 0.25`$). We supply a constant time coordinate.
-
-``` r
-
-n <- nrow(dat)
-mod4 <- stvcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
-                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
-                    time_coords = matrix(0, n, 1),
-                    cor.fn = "gneiting-decay",
-                    process.type = "independent",
-                    sptParams = list(phi_s = c(1, 1), phi_t = c(1, 1)),
-                    noise_sp_ratio = c(10, 0.25),
-                    n.samples = 1000, loopd = TRUE, verbose = TRUE)
-#> ----------------------------------------
-#>  Model description
-#> ----------------------------------------
-#> Model fit with 200 observations.
-#> 
-#> Number of covariates 3 (including intercept).
-#> Number of covariates with spatial-temporally varying coefficients 2.
-#> 
-#> Using the gneiting-decay spatial-temporal correlation function.
-#> Process type: independent.
-#> 
-#> Priors:
-#>  beta flat.
-#>  sigma.sq: flat, proportional to 1/sigma.sq.
-#> 
-#> Spatial-temporal process parameters:
-#>  process 1: phi_s = 1.00, phi_t = 1.00, noise-to-spatial variance ratio = 10.00.
-#>  process 2: phi_s = 1.00, phi_t = 1.00, noise-to-spatial variance ratio = 0.25.
-#> 
-#> Number of posterior samples = 1000.
-#> 
-#> LOO-PD calculation method = exact.
-#> ----------------------------------------
-```
-
-The posterior samples of the fixed effects, the noise variance
-$`\sigma^2`$, and the process variances
-$`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$ are summarized below.
-
-``` r
-
-summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-rownames(summary_beta) <- mod4$X.names
-print(summary_beta)
-#>                  2.5%       50%      97.5%
-#> (Intercept)  1.734195  1.972642  2.2077086
-#> x1           3.651781  5.045439  6.4200868
-#> x2          -1.103684 -1.027115 -0.9492804
-print(quantile(mod4$samples$sigmaSq, c(0.025, 0.5, 0.975)))
-#>      2.5%       50%     97.5% 
-#> 0.1777098 0.2137095 0.2644504
-print(t(apply(mod4$samples$sigmaSq.z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>            2.5%        50%      97.5%
-#> [1,] 0.01777098 0.02137095 0.02644504
-#> [2,] 0.71083930 0.85483819 1.05780153
-```
-
-Next, we use predictive stacking over candidate values of $`\phi_s`$ and
-$`\delta^2`$. For `process.type = "independent"`, each candidate value
-is a vector of length $`r`$, supplied as
-[`list()`](https://rdrr.io/r/base/list.html) entries in
-[`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md).
-
-``` r
-
-cand.svc <- candidateModels(list(phi_s = list(c(1, 1), c(2, 1), c(1, 2)),
-                                 phi_t = list(c(1, 1)),
-                                 noise_sp_ratio = list(c(1, 0.25), c(10, 0.25))),
-                            "cartesian")
-
-mod5 <- stvcLMstack(y_svc ~ x1 + x2 + (x1), data = dat,
-                    sp_coords = as.matrix(dat[, c("s1", "s2")]),
-                    time_coords = matrix(0, n, 1),
-                    cor.fn = "gneiting-decay",
-                    process.type = "independent",
-                    candidate.models = cand.svc,
-                    n.samples = 1000, verbose = TRUE)
-#> 
-#> STACKING WEIGHTS:
-#> 
-#>           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |
-#> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
-#> | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.000  |
-#> | Model 2 |         2|         1|         1|         1|                  1|               0.25| 0.000  |
-#> | Model 3 |         1|         2|         1|         1|                  1|               0.25| 0.000  |
-#> | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.157  |
-#> | Model 5 |         2|         1|         1|         1|                 10|               0.25| 0.000  |
-#> | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.843  |
-#> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
-post_svc <- stackedSampler(mod5)
-```
-
-The samples of $`z`$ are stacked by process: rows $`1, \ldots, n`$ hold
-the varying intercept and rows $`n+1, \ldots, 2n`$ the varying part of
-the slope of `x1`. The slope of `x1` at each location is
-$`\beta_1 + z_2(s)`$, whose true value is $`5 + z(s)`$.
-
-``` r
-
-slope <- sweep(post_svc$z[n + seq_len(n), ], 2, post_svc$beta[2, ], "+")
-slope_summ <- t(apply(slope, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
-slope_df <- data.frame(truth = 5 + dat$z_true, sL = slope_summ[, 1],
-                       sM = slope_summ[, 2], sU = slope_summ[, 3])
-
-ggplot(data = slope_df, aes(x = truth)) +
-  geom_point(aes(y = sM), size = 0.75, color = "darkblue", alpha = 0.5) +
-  geom_errorbar(aes(ymin = sL, ymax = sU), width = 0.05, alpha = 0.15,
-                color = "skyblue") +
-  geom_abline(slope = 1, intercept = 0, color = "red") +
-  xlab("True slope") + ylab("Stacked posterior of slope") + theme_bw() +
-  theme(panel.background = element_blank(),
-        panel.grid = element_blank(), aspect.ratio = 1)
-```
-
-![Stacked posterior of the spatially varying slope against its true
-value](spatial_files/figure-html/unnamed-chunk-14-1.png)
-
-Finally, we compare the interpolated surfaces of the true slope and its
-posterior median.
-
-``` r
-
-dat$slope_true <- 5 + dat$z_true
-dat$slope_hat <- slope_summ[, 2]
-plot_slope <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                           var1_name = "slope_true", var2_name = "slope_hat")
-patchwork::wrap_plots(plot_slope) +
-    patchwork::plot_layout(guides = "collect") &
-    ggplot2::theme(legend.position = "right")
-```
-
-![Interpolated surfaces of the true spatially varying slope and its
-posterior median.](spatial_files/figure-html/unnamed-chunk-15-1.png)
-
 ### Analysis of spatial non-Gaussian data
 
 We also offer functions for Bayesian analysis of spatially
@@ -618,7 +448,7 @@ ggplot(dat, aes(x = s1, y = s2)) +
         legend.box.just = "center", aspect.ratio = 1)
 ```
 
-![](spatial_files/figure-html/unnamed-chunk-16-1.png)
+![](spatial_files/figure-html/unnamed-chunk-13-1.png)
 
 #### Under fixed hyperparameters
 
@@ -691,9 +521,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  0.3925744  1.9425506  3.3814461
-#> x1          -0.6924571 -0.5731162 -0.4857559
-#> x2           0.1510413  0.2288716  0.3147262
+#> (Intercept)  0.4648574  1.8693588  3.5106584
+#> x1          -0.6892104 -0.5749415 -0.4792360
+#> x2           0.1465937  0.2263370  0.3052922
 ```
 
 #### Posterior recovery of scale parameters
@@ -727,7 +557,7 @@ ggplot(post_scale_df, aes(x = value)) +
 ```
 
 ![Posterior distributions of the scale parameters of the fixed and the
-random effects.](spatial_files/figure-html/unnamed-chunk-19-1.png)
+random effects.](spatial_files/figure-html/unnamed-chunk-16-1.png)
 
 #### Using predictive stacking
 
@@ -771,8 +601,8 @@ mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> | Model 12 |    8|  1.50|      0.50| 0.000  |
 #> | Model 13 |    2|  1.75|      0.50| 0.000  |
 #> | Model 14 |    4|  1.75|      0.50| 0.000  |
-#> | Model 15 |    6|  1.75|      0.50| 0.016  |
-#> | Model 16 |    8|  1.75|      0.50| 0.000  |
+#> | Model 15 |    6|  1.75|      0.50| 0.000  |
+#> | Model 16 |    8|  1.75|      0.50| 0.085  |
 #> | Model 17 |    2|  0.50|      0.75| 0.000  |
 #> | Model 18 |    4|  0.50|      0.75| 0.000  |
 #> | Model 19 |    6|  0.50|      0.75| 0.000  |
@@ -787,8 +617,8 @@ mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> | Model 28 |    8|  1.50|      0.75| 0.000  |
 #> | Model 29 |    2|  1.75|      0.75| 0.000  |
 #> | Model 30 |    4|  1.75|      0.75| 0.000  |
-#> | Model 31 |    6|  1.75|      0.75| 0.932  |
-#> | Model 32 |    8|  1.75|      0.75| 0.051  |
+#> | Model 31 |    6|  1.75|      0.75| 0.915  |
+#> | Model 32 |    8|  1.75|      0.75| 0.000  |
 #> +----------+-----+------+----------+--------+
 ```
 
@@ -803,7 +633,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  30.767  39.251  17.989
+#>  26.876  31.148  15.287
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -836,9 +666,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod2$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept)  0.4344236  1.9441538  3.7926679
-#> x1          -0.6310748 -0.5197367 -0.4265340
-#> x2           0.1275555  0.2158637  0.3095337
+#> (Intercept) -0.1184183  1.9207219  3.8246820
+#> x1          -0.6418614 -0.5188044 -0.4271350
+#> x2           0.1252065  0.2172837  0.3130309
 ```
 
 The response `y_pois` was simulated using
@@ -864,7 +694,7 @@ ggplot(post_beta_df, aes(x = value)) +
 ```
 
 ![Posterior distributions of the fixed
-effects](spatial_files/figure-html/unnamed-chunk-24-1.png)
+effects](spatial_files/figure-html/unnamed-chunk-21-1.png)
 
 Finally, we analyze the posterior samples of the spatial random effects.
 
@@ -886,7 +716,7 @@ plotz <- ggplot(data = z_combn, aes(x = z)) +
 plotz
 ```
 
-![](spatial_files/figure-html/unnamed-chunk-25-1.png)
+![](spatial_files/figure-html/unnamed-chunk-22-1.png)
 
 We can also compare the interpolated spatial surfaces of the true
 spatial effects with that of their posterior median.
@@ -902,7 +732,7 @@ patchwork::wrap_plots(plot_z) +
     ggplot2::theme(legend.position = "right")
 ```
 
-![](spatial_files/figure-html/unnamed-chunk-26-1.png)
+![](spatial_files/figure-html/unnamed-chunk-23-1.png)
 
 ### Spatial binomial count data
 
@@ -932,10 +762,10 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                   2.5%        50%      97.5%
-#> (Intercept) -1.7489521  0.3989754  3.0786533
-#> x1          -0.5650698 -0.4572771 -0.3544336
-#> x2           0.4038249  0.5286602  0.6530702
+#>                   2.5%        50%     97.5%
+#> (Intercept) -2.3539324  0.3690014  2.750959
+#> x1          -0.5818462 -0.4603834 -0.341955
+#> x2           0.4061823  0.5326127  0.657267
 ```
 
 ### Spatial binary data
@@ -965,10 +795,284 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                    2.5%        50%       97.5%
-#> (Intercept) -2.23873450  0.1782874  2.45882572
-#> x1          -0.56079633 -0.3270974 -0.07887275
-#> x2          -0.04396074  0.2199109  0.48096174
+#> (Intercept) -2.27294685  0.1883535  2.90099020
+#> x1          -0.56571333 -0.3215925 -0.09382391
+#> x2          -0.03810248  0.2146429  0.46852522
 ```
+
+## Spatially varying coefficients models
+
+The effect of a covariate may itself vary over space. The functions
+[`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md)
+and
+[`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md)
+fit the Gaussian linear model with spatially varying coefficients
+``` math
+y(s) = x(s)^{ \scriptstyle \top }\beta + \tilde{x}(s)^{ \scriptstyle \top }z(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, \sigma^2),
+```
+where $`\tilde{x}(s)`$ holds the $`r`$ covariates with spatially varying
+coefficients and each $`z_j`$, $`j = 1, \ldots, r`$, is an independent
+Gaussian process with variance $`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$
+and an exponential or Matérn correlation function with decay $`\phi_j`$
+and smoothness $`\nu_j`$. As for
+[`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md),
+the joint posterior is available in closed form and is sampled exactly,
+and the leave-one-out predictive densities are found in closed form. The
+functions
+[`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md)
+and
+[`svcGLMstack()`](https://span-18.github.io/spStack-dev/reference/svcGLMstack.md)
+fit the corresponding Poisson, binomial and binary models. These are the
+spatial counterparts of the spatial-temporal functions
+[`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md),
+[`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md),
+[`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
+and
+[`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
+(see the article on spatial-temporal models), which use the Gneiting
+space-time correlation function.
+
+In the `formula`, the variables in parentheses receive varying
+coefficients: `y ~ x1 + x2 + (x1)` has fixed effects for the intercept,
+`x1` and `x2`, and varying coefficients for the intercept and `x1` (the
+intercept is included in both parts by default). The argument
+`process.type` decides how the $`r`$ processes are parametrized. With
+`process.type = "independent.shared"`, they share one
+$`(\phi, \nu, \delta^2)`$; with `process.type = "independent"`, each has
+its own, supplied as vectors of length $`r`$. The GLM functions also
+offer `process.type = "multivariate"`, a multivariate Gaussian process
+with an inverse-Wishart prior on the $`r \times r`$ cross-covariance
+matrix.
+
+The responses `y_svc` (Gaussian) and `y_svc_pois` (Poisson) of
+`simSpatial` have a spatially varying intercept and a spatially varying
+slope of $`x_1`$,
+``` math
+\begin{aligned}
+y_{\mathrm{svc}}(s) &= 2 + z_0(s) + \{5 + z_1(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, 0.5^2),\\
+y_{\mathrm{svc\_pois}}(s) &\sim \mathrm{Poisson}(\exp[2 + z_0(s) + \{-0.5 + z_1(s)\} x_1(s) + 0.3 x_2(s)]),
+\end{aligned}
+```
+where the varying intercept $`z_0`$ is the ring pattern `z2_true`,
+$`z_0(s) = \cos(4\pi \lVert s - s_0\rVert) - c`$ with
+$`s_0 = (0.5, 0.5)`$, and the varying part of the slope $`z_1`$ is the
+checkerboard `z_true` from before. Both are centred to have mean zero
+over the unit square, so that the fixed effects $`\beta_0`$ and
+$`\beta_1`$ are the average intercept and slope. We take the same 200
+locations as before.
+
+``` r
+
+dat <- simSpatial[1:200, ]
+n <- nrow(dat)
+plot_true <- surfaceplot2(dat, coords_name = c("s1", "s2"),
+                          var1_name = "z2_true", var2_name = "z_true")
+patchwork::wrap_plots(plot_true)
+```
+
+![Interpolated surfaces of the true spatially varying intercept and
+slope.](spatial_files/figure-html/unnamed-chunk-28-1.png)
+
+### Using fixed hyperparameters
+
+The ring pattern of the intercept varies on a finer scale than the
+checkerboard of the slope, so we give the intercept process a larger
+spatial decay with `process.type = "independent"`.
+
+``` r
+
+mod_svc1 <- svcLMexact(y_svc ~ x1 + x2 + (x1), data = dat,
+                       coords = as.matrix(dat[, c("s1", "s2")]),
+                       cor.fn = "matern", process.type = "independent",
+                       spParams = list(phi = c(8, 4), nu = c(1.5, 1.5)),
+                       noise_sp_ratio = c(0.25, 0.25),
+                       n.samples = 1000, loopd = TRUE, verbose = TRUE)
+#> ----------------------------------------
+#>  Model description
+#> ----------------------------------------
+#> Model fit with 200 observations.
+#> 
+#> Number of covariates 3 (including intercept).
+#> Number of covariates with spatially varying coefficients 2.
+#> 
+#> Using the matern spatial correlation function.
+#> Process type: independent.
+#> 
+#> Priors:
+#>  beta flat.
+#>  sigma.sq: flat, proportional to 1/sigma.sq.
+#> 
+#> Spatial process parameters:
+#>  process 1: phi = 8.00, nu = 1.50, noise-to-spatial variance ratio = 0.25.
+#>  process 2: phi = 4.00, nu = 1.50, noise-to-spatial variance ratio = 0.25.
+#> 
+#> Number of posterior samples = 1000.
+#> 
+#> LOO-PD calculation method = exact.
+#> ----------------------------------------
+```
+
+The posterior samples of the fixed effects, the noise variance
+$`\sigma^2`$, and the process variances
+$`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$ are summarized below.
+
+``` r
+
+summary_beta <- t(apply(mod_svc1$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+rownames(summary_beta) <- mod_svc1$X.names
+print(summary_beta)
+#>                  2.5%       50%      97.5%
+#> (Intercept)  1.396123  2.160469  2.8984346
+#> x1           3.976377  5.074585  6.0823018
+#> x2          -1.088830 -1.006246 -0.9280821
+print(quantile(mod_svc1$samples$sigmaSq, c(0.025, 0.5, 0.975)))
+#>      2.5%       50%     97.5% 
+#> 0.1843816 0.2217701 0.2733229
+print(t(apply(mod_svc1$samples$sigmaSq.z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
+#>           2.5%       50%    97.5%
+#> [1,] 0.7375266 0.8870806 1.093292
+#> [2,] 0.7375266 0.8870806 1.093292
+```
+
+### Using predictive stacking
+
+Next, we stack over candidate values of the pairs $`(\phi_0, \phi_1)`$,
+$`(\nu_0, \nu_1)`$ and $`(\delta^2_0, \delta^2_1)`$ of the two
+processes. For `process.type = "independent"`, each candidate value is a
+vector of length $`r`$, supplied as
+[`list()`](https://rdrr.io/r/base/list.html) entries in
+[`candidateModels()`](https://span-18.github.io/spStack-dev/reference/candidateModels.md).
+Candidate models that share $`(\phi, \nu)`$ share the factorizations of
+the spatial correlation matrices.
+
+``` r
+
+cand.svc <- candidateModels(list(phi = list(c(4, 4), c(8, 2), c(8, 4), c(8, 8), c(12, 4)),
+                                 nu = list(c(1, 1), c(1.5, 1.5)),
+                                 noise_sp_ratio = list(c(0.1, 0.1), c(0.25, 0.25), c(0.5, 0.5))),
+                            "cartesian")
+mod_svc2 <- svcLMstack(y_svc ~ x1 + x2 + (x1), data = dat,
+                       coords = as.matrix(dat[, c("s1", "s2")]),
+                       cor.fn = "matern", process.type = "independent",
+                       candidate.models = cand.svc,
+                       n.samples = 1000, verbose = FALSE)
+mod_svc2$stacking.summary[mod_svc2$stacking.weights > 0.01, ]
+#>          phi[1] phi[2] nu[1] nu[2] noise_sp_ratio[1] noise_sp_ratio[2] weight
+#> Model 4       8      8   1.0   1.0              0.10              0.10  0.172
+#> Model 8       8      4   1.5   1.5              0.10              0.10  0.056
+#> Model 18      8      4   1.5   1.5              0.25              0.25  0.772
+post_svc <- stackedSampler(mod_svc2)
+```
+
+The samples of $`z`$ are stacked by process: rows $`1, \ldots, n`$ hold
+the varying intercept $`z_0`$ and rows $`n+1, \ldots, 2n`$ the varying
+part of the slope $`z_1`$. We compare them with their true values.
+
+``` r
+
+plot_vs_truth <- function(truth, samps, lab){
+  summ <- t(apply(samps, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+  df <- data.frame(truth = truth, L = summ[, 1], M = summ[, 2], U = summ[, 3])
+  ggplot(data = df, aes(x = truth)) +
+    geom_point(aes(y = M), size = 0.75, color = "darkblue", alpha = 0.5) +
+    geom_errorbar(aes(ymin = L, ymax = U), width = 0.05, alpha = 0.15,
+                  color = "skyblue") +
+    geom_abline(slope = 1, intercept = 0, color = "red") +
+    xlab(paste("True", lab)) + ylab(paste("Stacked posterior of", lab)) +
+    theme_bw() + theme(panel.background = element_blank(),
+                       panel.grid = element_blank(), aspect.ratio = 1)
+}
+z0_samps <- post_svc$z[seq_len(n), ]
+z1_samps <- post_svc$z[n + seq_len(n), ]
+plot_vs_truth(dat$z2_true, z0_samps, "z0") + plot_vs_truth(dat$z_true, z1_samps, "z1")
+```
+
+![Stacked posterior of the spatially varying coefficients against their
+true values](spatial_files/figure-html/unnamed-chunk-30-1.png)
+
+The data separate the fixed intercept $`\beta_0`$ from the varying
+intercept $`z_0`$ only weakly: their sum $`\beta_0 + z_0(s)`$ is well
+identified, but the posterior of $`\beta_0`$ is wide (see the summary of
+`mod_svc1` above), so the posterior of $`z_0`$ can sit slightly off the
+line of equality while its credible intervals still cover the truth. The
+same holds for $`\beta_1`$ and $`z_1`$.
+
+Finally, we compare the interpolated surfaces of the true varying
+coefficients and their posterior medians.
+
+``` r
+
+dat$z0_hat <- apply(z0_samps, 1, median)
+dat$z1_hat <- apply(z1_samps, 1, median)
+plot_z0 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
+                        var1_name = "z2_true", var2_name = "z0_hat")
+patchwork::wrap_plots(plot_z0) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
+```
+
+![Interpolated surfaces of the true spatially varying intercept and its
+posterior median.](spatial_files/figure-html/unnamed-chunk-31-1.png)
+
+``` r
+
+plot_z1 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
+                        var1_name = "z_true", var2_name = "z1_hat")
+patchwork::wrap_plots(plot_z1) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
+```
+
+![Interpolated surfaces of the true spatially varying slope and its
+posterior median.](spatial_files/figure-html/unnamed-chunk-32-1.png)
+
+### Poisson count data with spatially varying coefficients
+
+The workflow for the non-Gaussian responses is the same, with `boundary`
+in place of the noise-to-spatial variance ratio. We stack the Poisson
+model for `y_svc_pois` over candidate values of $`(\phi_0, \phi_1)`$ and
+the boundary adjustment parameter.
+
+``` r
+
+cand.svc.pois <- candidateModels(list(phi = list(c(4, 4), c(8, 2), c(8, 4), c(8, 8), c(12, 4)),
+                                      nu = list(c(1.5, 1.5)),
+                                      boundary = c(0.5, 0.75)),
+                                 "cartesian")
+mod_svc3 <- svcGLMstack(y_svc_pois ~ x1 + x2 + (x1), data = dat,
+                        family = "poisson",
+                        coords = as.matrix(dat[, c("s1", "s2")]),
+                        cor.fn = "matern", process.type = "independent",
+                        candidate.models = cand.svc.pois,
+                        n.samples = 1000, verbose = FALSE)
+mod_svc3$stacking.summary[mod_svc3$stacking.weights > 0.01, ]
+#>         phi[1] phi[2] nu[1] nu[2] boundary weight
+#> Model 3      8      4   1.5   1.5     0.50  0.483
+#> Model 8      8      4   1.5   1.5     0.75  0.517
+post_svc_pois <- stackedSampler(mod_svc3)
+```
+
+The true value of the fixed effects is $`\beta = (2, -0.5, 0.3)`$.
+
+``` r
+
+summary_beta <- t(apply(post_svc_pois$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
+print(summary_beta)
+#>                   2.5%        50%     97.5%
+#> (Intercept)  0.6011234  2.1447684 3.6911667
+#> x1          -2.6112959 -0.5021217 1.8132130
+#> x2           0.2052388  0.3538919 0.5199399
+```
+
+``` r
+
+plot_vs_truth(dat$z2_true, post_svc_pois$z[seq_len(n), ], "z0") +
+  plot_vs_truth(dat$z_true, post_svc_pois$z[n + seq_len(n), ], "z1")
+```
+
+![Stacked posterior of the spatially varying coefficients of the Poisson
+model against their true
+values](spatial_files/figure-html/unnamed-chunk-34-1.png)
 
 ## References
 
