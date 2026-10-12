@@ -263,24 +263,24 @@ mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> 
 #>           | phi | nu   | boundary | weight |
 #> +---------+-----+------+----------+--------+
-#> | Model 1 |    2|  1.50|      0.75| 0      |
-#> | Model 2 |    4|  1.50|      0.75| 0      |
-#> | Model 3 |    8|  1.50|      0.75| 0      |
-#> | Model 4 |    2|  1.75|      0.75| 0      |
-#> | Model 5 |    4|  1.75|      0.75| 1      |
-#> | Model 6 |    8|  1.75|      0.75| 0      |
+#> | Model 1 |    2|  1.50|      0.75| 0.000  |
+#> | Model 2 |    4|  1.50|      0.75| 0.017  |
+#> | Model 3 |    8|  1.50|      0.75| 0.000  |
+#> | Model 4 |    2|  1.75|      0.75| 0.000  |
+#> | Model 5 |    4|  1.75|      0.75| 0.000  |
+#> | Model 6 |    8|  1.75|      0.75| 0.983  |
 #> +---------+-----+------+----------+--------+
 #> 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>                   2.5%        50%      97.5%
-#> (Intercept) -1.7424934  0.3380438  2.5206201
-#> x1          -0.6212466 -0.5196680 -0.4311229
-#> x2           0.2024747  0.2962013  0.4007540
+#>                    2.5%        50%      97.5%
+#> (Intercept) -0.37752530  1.8993145  4.3537532
+#> x1          -0.67842387 -0.5129881 -0.4059203
+#> x2           0.07020665  0.1888277  0.3057305
 
 # compare the posterior medians of the spatial effects with the truth
 cor(apply(post_samps$z, 1, median), dat$z_true)
-#> [1] 0.9872694
+#> [1] 0.9831318
 ```

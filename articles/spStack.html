@@ -87,7 +87,7 @@ details surrounding the methodology can be found in the articles <span class="ci
 <code>y_gauss</code> of the lazyloaded synthetic data
 <code>simSpatial</code>, observed at 500 locations in the unit square
 with two covariates <code>x1</code> and <code>x2</code> and a spatial
-effect <code>z_true</code> with a ring pattern (see
+effect <code>z_true</code> with a checkerboard pattern (see
 <code><a href="../reference/simSpatial.html">?simSpatial</a></code>).</p>
 <p><strong>Step 1.</strong> Load the library spStack and prepare the
 data. Here we split the data into <code>dat_train</code> and
@@ -114,7 +114,7 @@ parallelization plan can be used if <code>parallel</code> is set
 <code>TRUE</code>, and <code>solver</code> argument specifies the solver
 used to carry out the optimization routine to get stacking weights.</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span><span class="op">)</span>,</span>
 <span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">1.75</span><span class="op">)</span>,</span>
 <span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                            <span class="st">"cartesian"</span><span class="op">)</span></span>
@@ -130,38 +130,38 @@ used to carry out the optimization routine to get stacking weights.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            | phi | nu   | noise_sp_ratio | weight |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span>
-<span><span class="co">#&gt; | Model 1  |    1|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 2  |    2|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 3  |    3|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 4  |    4|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 5  |    1|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 6  |    2|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 7  |    3|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 8  |    4|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 9  |    1|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 10 |    2|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 11 |    3|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 12 |    4|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 13 |    1|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 14 |    2|  1.75|             0.1| 1      |</span></span>
-<span><span class="co">#&gt; | Model 15 |    3|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 16 |    4|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 17 |    1|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 18 |    2|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 19 |    3|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 20 |    4|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 21 |    1|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 22 |    2|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 23 |    3|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 24 |    4|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 25 |    1|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 26 |    2|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 27 |    3|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 28 |    4|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 29 |    1|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 30 |    2|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 31 |    3|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 32 |    4|  1.75|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 1  |    2|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 2  |    4|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 3  |    6|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 4  |    8|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 5  |    2|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 6  |    4|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 7  |    6|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 8  |    8|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 9  |    2|  1.50|             0.1| 0.171  |</span></span>
+<span><span class="co">#&gt; | Model 10 |    4|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 11 |    6|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 12 |    8|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 13 |    2|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 14 |    4|  1.75|             0.1| 0.829  |</span></span>
+<span><span class="co">#&gt; | Model 15 |    6|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 16 |    8|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 17 |    2|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 18 |    4|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 19 |    6|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 20 |    8|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 21 |    2|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 22 |    4|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 23 |    6|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 24 |    8|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 25 |    2|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 26 |    4|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 27 |    6|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 28 |    8|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 29 |    2|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 30 |    4|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 31 |    6|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 32 |    8|  1.75|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span></code></pre></div>
 <p><strong>Step 3.</strong> Use the helper function
 <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code> to sample from the stacked posterior
@@ -176,10 +176,10 @@ posterior samples of the corresponding parameter.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  2.5%        50%     97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -3.476336 -1.1821234  1.162845</span></span>
-<span><span class="co">#&gt; x1           4.881745  4.9504871  5.012338</span></span>
-<span><span class="co">#&gt; x2          -1.047124 -0.9776729 -0.901013</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  0.2333897  1.9707472  3.8792045</span></span>
+<span><span class="co">#&gt; x1           4.8772842  4.9433701  5.0065215</span></span>
+<span><span class="co">#&gt; x2          -1.0608007 -0.9888064 -0.9117957</span></span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The following optional steps are only required
 if interested in posterior predictive inference.</p>
@@ -282,9 +282,9 @@ density.</p>
 <span><span class="co">#&gt; | Model 11 |    6|  1.50|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 12 |    8|  1.50|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 13 |    2|  1.75|      0.50| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 14 |    4|  1.75|      0.50| 0.327  |</span></span>
+<span><span class="co">#&gt; | Model 14 |    4|  1.75|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 15 |    6|  1.75|      0.50| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 16 |    8|  1.75|      0.50| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 16 |    8|  1.75|      0.50| 0.056  |</span></span>
 <span><span class="co">#&gt; | Model 17 |    2|  0.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 18 |    4|  0.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 19 |    6|  0.50|      0.75| 0.000  |</span></span>
@@ -294,12 +294,12 @@ density.</p>
 <span><span class="co">#&gt; | Model 23 |    6|  1.00|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 24 |    8|  1.00|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 25 |    2|  1.50|      0.75| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 26 |    4|  1.50|      0.75| 0.370  |</span></span>
+<span><span class="co">#&gt; | Model 26 |    4|  1.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 27 |    6|  1.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 28 |    8|  1.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 29 |    2|  1.75|      0.75| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 30 |    4|  1.75|      0.75| 0.302  |</span></span>
-<span><span class="co">#&gt; | Model 31 |    6|  1.75|      0.75| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 30 |    4|  1.75|      0.75| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 31 |    6|  1.75|      0.75| 0.944  |</span></span>
 <span><span class="co">#&gt; | Model 32 |    8|  1.75|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------+--------+</span></span></code></pre></div>
 <p><strong>Step 3.</strong> Run <code><a href="../reference/stackedSampler.html">stackedSampler()</a></code> to obtain
@@ -313,9 +313,9 @@ output.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -1.7883209  0.3670600  2.6336907</span></span>
-<span><span class="co">#&gt; x1          -0.6244859 -0.5086049 -0.4228556</span></span>
-<span><span class="co">#&gt; x2           0.2018477  0.3003301  0.3964770</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept) -0.1240447  1.9266254  4.1197544</span></span>
+<span><span class="co">#&gt; x1          -0.6264807 -0.5195038 -0.4297793</span></span>
+<span><span class="co">#&gt; x2           0.1241155  0.2163329  0.3045803</span></span></code></pre></div>
 <blockquote>
 <p><strong>Note:</strong> The following optional steps are only required
 if interested in posterior predictive inference.</p>

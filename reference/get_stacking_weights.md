@@ -105,15 +105,15 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #>           | phi | nu   | noise_sp_ratio | weight |
 #> +---------+-----+------+----------------+--------+
-#> | Model 1 |    2|  1.00|             0.1| 0.000  |
-#> | Model 2 |    3|  1.00|             0.1| 0.000  |
-#> | Model 3 |    4|  1.00|             0.1| 0.000  |
-#> | Model 4 |    2|  1.50|             0.1| 0.899  |
-#> | Model 5 |    3|  1.50|             0.1| 0.000  |
-#> | Model 6 |    4|  1.50|             0.1| 0.000  |
-#> | Model 7 |    2|  1.75|             0.1| 0.101  |
-#> | Model 8 |    3|  1.75|             0.1| 0.000  |
-#> | Model 9 |    4|  1.75|             0.1| 0.000  |
+#> | Model 1 |    2|  1.00|             0.1| 0      |
+#> | Model 2 |    3|  1.00|             0.1| 0      |
+#> | Model 3 |    4|  1.00|             0.1| 0      |
+#> | Model 4 |    2|  1.50|             0.1| 0      |
+#> | Model 5 |    3|  1.50|             0.1| 0      |
+#> | Model 6 |    4|  1.50|             0.1| 0      |
+#> | Model 7 |    2|  1.75|             0.1| 0      |
+#> | Model 8 |    3|  1.75|             0.1| 0      |
+#> | Model 9 |    4|  1.75|             0.1| 1      |
 #> +---------+-----+------+----------------+--------+
 #> 
 
@@ -128,15 +128,15 @@ w_hat <- get_stacking_weights(loopd_mat)
 #> ────────────────────────────────── CVXR v1.9.2 ─────────────────────────────────
 #> ℹ Problem: 1 variable, 2 constraints (DCP)
 #> ℹ Compilation: "CLARABEL" via CVXR::FlipObjective -> CVXR::Dcp2Cone -> CVXR::CvxAttr2Constr -> CVXR::ConeMatrixStuffing -> CVXR::Clarabel_Solver
-#> ℹ Compile time: 0.213s
+#> ℹ Compile time: 0.314s
 #> ─────────────────────────────── Numerical solver ───────────────────────────────
 #> ──────────────────────────────────── Summary ───────────────────────────────────
 #> ✔ Status: optimal
-#> ✔ Optimal value: -60.0724
-#> ℹ Compile time: 0.213s
-#> ℹ Solver time: 0.056s
+#> ✔ Optimal value: -59.2027
+#> ℹ Compile time: 0.314s
+#> ℹ Solver time: 0.061s
 print(round(w_hat$weights, 4))
-#> [1] 0.0000 0.0000 0.0000 0.8992 0.0000 0.0000 0.1008 0.0000 0.0000
+#> [1] 0 0 0 0 0 0 0 0 1
 print(w_hat$solver)
 #> [1] "CVXR:CLARABEL"
 print(w_hat$status)

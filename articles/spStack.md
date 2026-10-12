@@ -21,7 +21,7 @@ set.seed(1729)
 Here is a quick example using the Gaussian response `y_gauss` of the
 lazyloaded synthetic data `simSpatial`, observed at 500 locations in the
 unit square with two covariates `x1` and `x2` and a spatial effect
-`z_true` with a ring pattern (see
+`z_true` with a checkerboard pattern (see
 [`?simSpatial`](https://span-18.github.io/spStack-dev/reference/simSpatial.md)).
 
 **Step 1.** Load the library spStack and prepare the data. Here we split
@@ -54,7 +54,7 @@ used to carry out the optimization routine to get stacking weights.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(1, 2, 3, 4),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
                                  nu = c(0.5, 1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
@@ -70,38 +70,38 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
 #> 
 #>            | phi | nu   | noise_sp_ratio | weight |
 #> +----------+-----+------+----------------+--------+
-#> | Model 1  |    1|  0.50|             0.1| 0      |
-#> | Model 2  |    2|  0.50|             0.1| 0      |
-#> | Model 3  |    3|  0.50|             0.1| 0      |
-#> | Model 4  |    4|  0.50|             0.1| 0      |
-#> | Model 5  |    1|  1.00|             0.1| 0      |
-#> | Model 6  |    2|  1.00|             0.1| 0      |
-#> | Model 7  |    3|  1.00|             0.1| 0      |
-#> | Model 8  |    4|  1.00|             0.1| 0      |
-#> | Model 9  |    1|  1.50|             0.1| 0      |
-#> | Model 10 |    2|  1.50|             0.1| 0      |
-#> | Model 11 |    3|  1.50|             0.1| 0      |
-#> | Model 12 |    4|  1.50|             0.1| 0      |
-#> | Model 13 |    1|  1.75|             0.1| 0      |
-#> | Model 14 |    2|  1.75|             0.1| 1      |
-#> | Model 15 |    3|  1.75|             0.1| 0      |
-#> | Model 16 |    4|  1.75|             0.1| 0      |
-#> | Model 17 |    1|  0.50|             0.5| 0      |
-#> | Model 18 |    2|  0.50|             0.5| 0      |
-#> | Model 19 |    3|  0.50|             0.5| 0      |
-#> | Model 20 |    4|  0.50|             0.5| 0      |
-#> | Model 21 |    1|  1.00|             0.5| 0      |
-#> | Model 22 |    2|  1.00|             0.5| 0      |
-#> | Model 23 |    3|  1.00|             0.5| 0      |
-#> | Model 24 |    4|  1.00|             0.5| 0      |
-#> | Model 25 |    1|  1.50|             0.5| 0      |
-#> | Model 26 |    2|  1.50|             0.5| 0      |
-#> | Model 27 |    3|  1.50|             0.5| 0      |
-#> | Model 28 |    4|  1.50|             0.5| 0      |
-#> | Model 29 |    1|  1.75|             0.5| 0      |
-#> | Model 30 |    2|  1.75|             0.5| 0      |
-#> | Model 31 |    3|  1.75|             0.5| 0      |
-#> | Model 32 |    4|  1.75|             0.5| 0      |
+#> | Model 1  |    2|  0.50|             0.1| 0.000  |
+#> | Model 2  |    4|  0.50|             0.1| 0.000  |
+#> | Model 3  |    6|  0.50|             0.1| 0.000  |
+#> | Model 4  |    8|  0.50|             0.1| 0.000  |
+#> | Model 5  |    2|  1.00|             0.1| 0.000  |
+#> | Model 6  |    4|  1.00|             0.1| 0.000  |
+#> | Model 7  |    6|  1.00|             0.1| 0.000  |
+#> | Model 8  |    8|  1.00|             0.1| 0.000  |
+#> | Model 9  |    2|  1.50|             0.1| 0.171  |
+#> | Model 10 |    4|  1.50|             0.1| 0.000  |
+#> | Model 11 |    6|  1.50|             0.1| 0.000  |
+#> | Model 12 |    8|  1.50|             0.1| 0.000  |
+#> | Model 13 |    2|  1.75|             0.1| 0.000  |
+#> | Model 14 |    4|  1.75|             0.1| 0.829  |
+#> | Model 15 |    6|  1.75|             0.1| 0.000  |
+#> | Model 16 |    8|  1.75|             0.1| 0.000  |
+#> | Model 17 |    2|  0.50|             0.5| 0.000  |
+#> | Model 18 |    4|  0.50|             0.5| 0.000  |
+#> | Model 19 |    6|  0.50|             0.5| 0.000  |
+#> | Model 20 |    8|  0.50|             0.5| 0.000  |
+#> | Model 21 |    2|  1.00|             0.5| 0.000  |
+#> | Model 22 |    4|  1.00|             0.5| 0.000  |
+#> | Model 23 |    6|  1.00|             0.5| 0.000  |
+#> | Model 24 |    8|  1.00|             0.5| 0.000  |
+#> | Model 25 |    2|  1.50|             0.5| 0.000  |
+#> | Model 26 |    4|  1.50|             0.5| 0.000  |
+#> | Model 27 |    6|  1.50|             0.5| 0.000  |
+#> | Model 28 |    8|  1.50|             0.5| 0.000  |
+#> | Model 29 |    2|  1.75|             0.5| 0.000  |
+#> | Model 30 |    4|  1.75|             0.5| 0.000  |
+#> | Model 31 |    6|  1.75|             0.5| 0.000  |
+#> | Model 32 |    8|  1.75|             0.5| 0.000  |
 #> +----------+-----+------+----------------+--------+
 ```
 
@@ -124,10 +124,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                  2.5%        50%     97.5%
-#> (Intercept) -3.476336 -1.1821234  1.162845
-#> x1           4.881745  4.9504871  5.012338
-#> x2          -1.047124 -0.9776729 -0.901013
+#>                   2.5%        50%      97.5%
+#> (Intercept)  0.2333897  1.9707472  3.8792045
+#> x1           4.8772842  4.9433701  5.0065215
+#> x2          -1.0608007 -0.9888064 -0.9117957
 ```
 
 > **Note:** The following optional steps are only required if interested
@@ -250,9 +250,9 @@ mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
 #> | Model 11 |    6|  1.50|      0.50| 0.000  |
 #> | Model 12 |    8|  1.50|      0.50| 0.000  |
 #> | Model 13 |    2|  1.75|      0.50| 0.000  |
-#> | Model 14 |    4|  1.75|      0.50| 0.327  |
+#> | Model 14 |    4|  1.75|      0.50| 0.000  |
 #> | Model 15 |    6|  1.75|      0.50| 0.000  |
-#> | Model 16 |    8|  1.75|      0.50| 0.000  |
+#> | Model 16 |    8|  1.75|      0.50| 0.056  |
 #> | Model 17 |    2|  0.50|      0.75| 0.000  |
 #> | Model 18 |    4|  0.50|      0.75| 0.000  |
 #> | Model 19 |    6|  0.50|      0.75| 0.000  |
@@ -262,12 +262,12 @@ mod1 <- spGLMstack(y_pois ~ x1 + x2, data = dat_train, family = "poisson",
 #> | Model 23 |    6|  1.00|      0.75| 0.000  |
 #> | Model 24 |    8|  1.00|      0.75| 0.000  |
 #> | Model 25 |    2|  1.50|      0.75| 0.000  |
-#> | Model 26 |    4|  1.50|      0.75| 0.370  |
+#> | Model 26 |    4|  1.50|      0.75| 0.000  |
 #> | Model 27 |    6|  1.50|      0.75| 0.000  |
 #> | Model 28 |    8|  1.50|      0.75| 0.000  |
 #> | Model 29 |    2|  1.75|      0.75| 0.000  |
-#> | Model 30 |    4|  1.75|      0.75| 0.302  |
-#> | Model 31 |    6|  1.75|      0.75| 0.000  |
+#> | Model 30 |    4|  1.75|      0.75| 0.000  |
+#> | Model 31 |    6|  1.75|      0.75| 0.944  |
 #> | Model 32 |    8|  1.75|      0.75| 0.000  |
 #> +----------+-----+------+----------+--------+
 ```
@@ -286,9 +286,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -1.7883209  0.3670600  2.6336907
-#> x1          -0.6244859 -0.5086049 -0.4228556
-#> x2           0.2018477  0.3003301  0.3964770
+#> (Intercept) -0.1240447  1.9266254  4.1197544
+#> x1          -0.6264807 -0.5195038 -0.4297793
+#> x2           0.1241155  0.2163329  0.3045803
 ```
 
 > **Note:** The following optional steps are only required if interested

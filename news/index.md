@@ -6,7 +6,7 @@
   `simGaussian`, `simPoisson`, `simBinom`, `simBinary` and
   `sim_stvcPoisson`, and `sim_spData()` is removed. `simSpatial` has one
   set of locations, covariates `x1`, `x2` and a spatial effect with a
-  ring pattern, shared by Gaussian, Poisson, binomial and binary
+  checkerboard pattern, shared by Gaussian, Poisson, binomial and binary
   responses (and a Gaussian response with a spatially varying slope);
   `simSpaceTime` has a varying intercept that travels across space over
   time and a varying slope of `x1`, shared by Gaussian and Poisson

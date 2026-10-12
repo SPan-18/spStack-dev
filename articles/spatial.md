@@ -34,14 +34,14 @@ library(patchwork)
 
 The package lazy-loads the synthetic dataset `simSpatial`, observed at
 500 locations in the unit square. It has two covariates `x1` and `x2`, a
-spatial effect `z_true` with a ring pattern,
-$`z(s) = 1.5 \sin(2\pi \lVert s - (0.5, 0.5) \rVert + \pi/4)`$, and one
-response for each family: Gaussian `y_gauss`, Poisson `y_pois`, binomial
-`y_binom` (out of `n_trials` trials) and binary `y_bin`. All the
-responses share the covariates and the spatial effect, so we apply every
-function in this article to the same data. The spatial effect is a
-deterministic surface, not a draw from a Gaussian process, so we can see
-how well the Gaussian process models recover it. See
+spatial effect `z_true` with a checkerboard pattern,
+$`z(s) = 1.5 \sin(2\pi s_1) \sin(2\pi s_2)`$, and one response for each
+family: Gaussian `y_gauss`, Poisson `y_pois`, binomial `y_binom` (out of
+`n_trials` trials) and binary `y_bin`. All the responses share the
+covariates and the spatial effect, so we apply every function in this
+article to the same data. The spatial effect is a deterministic surface,
+not a draw from a Gaussian process, so we can see how well the Gaussian
+process models recover it. See
 [`?simSpatial`](https://span-18.github.io/spStack-dev/reference/simSpatial.md)
 for the code that generated the data.
 
@@ -80,7 +80,7 @@ muBeta <- c(0, 0, 0)
 VBeta <- diag(1E4, 3)
 sigmaSqIGa <- 2
 sigmaSqIGb <- 2
-phi0 <- 2
+phi0 <- 4
 nu0 <- 1.75
 noise_sp_ratio <- 0.1
 prior_list <- list(beta.norm = list(muBeta, VBeta),
@@ -112,8 +112,12 @@ and $`\nu`$ act together: the effective range, the distance at which the
 correlation drops to 0.05, is $`3/\phi`$ for $`\nu = 0.5`$
 (exponential), $`4/\phi`$ for $`\nu = 1`$, about $`4.7/\phi`$ for
 $`\nu = 1.5`$, and about $`5.1/\phi`$ for $`\nu = 1.75`$. For example,
-$`\phi = 2`$ with $`\nu = 1.75`$ corresponds to an effective range of
-about 2.5 on the unit square. Values $`\nu \geq 2`$ give very smooth
+$`\phi = 4`$ with $`\nu = 1.75`$ corresponds to an effective range of
+about 1.3 on the unit square. When the effective range is much larger
+than the extent of the data, a spatial effect that is nearly constant
+over the domain is hard to tell apart from the intercept: the data then
+determine $`\beta_0 + z(s)`$ well, but not how it splits between
+$`\beta_0`$ and $`z(s)`$. Values $`\nu \geq 2`$ give very smooth
 surfaces whose correlation matrices are nearly singular, and are rarely
 needed.
 
@@ -162,7 +166,7 @@ mod1 <- spLMexact(y_gauss ~ x1 + x2, data = dat,
 #>  shape = 2.00, scale = 2.00.
 #> 
 #> Spatial process parameters:
-#>  phi = 2.00, and, nu = 1.75.
+#>  phi = 4.00, and, nu = 1.75.
 #> Noise-to-spatial variance ratio = 0.10.
 #> 
 #> Number of posterior samples = 1000.
@@ -180,10 +184,10 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                  2.5%        50%      97.5%
-#> (Intercept) -3.514002 -1.0438240  1.2218260
-#> x1           4.881059  4.9516414  5.0156597
-#> x2          -1.047992 -0.9779704 -0.9039985
+#>                   2.5%        50%      97.5%
+#> (Intercept)  0.2593375  2.0950784  3.7907408
+#> x1           4.8754455  4.9459705  5.0093922
+#> x2          -1.0577566 -0.9878126 -0.9139223
 ```
 
 ### Leave-one-out predictive densities using PSIS
@@ -239,7 +243,7 @@ weight.
 
 ``` r
 
-cand.mod <- candidateModels(list(phi = c(1, 2, 3, 4),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
                                  nu = c(0.5, 1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")
@@ -256,38 +260,38 @@ mod3 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #> 
 #>            | phi | nu   | noise_sp_ratio | weight |
 #> +----------+-----+------+----------------+--------+
-#> | Model 1  |    1|  0.50|             0.1| 0      |
-#> | Model 2  |    2|  0.50|             0.1| 0      |
-#> | Model 3  |    3|  0.50|             0.1| 0      |
-#> | Model 4  |    4|  0.50|             0.1| 0      |
-#> | Model 5  |    1|  1.00|             0.1| 0      |
-#> | Model 6  |    2|  1.00|             0.1| 0      |
-#> | Model 7  |    3|  1.00|             0.1| 0      |
-#> | Model 8  |    4|  1.00|             0.1| 0      |
-#> | Model 9  |    1|  1.50|             0.1| 0      |
-#> | Model 10 |    2|  1.50|             0.1| 0      |
-#> | Model 11 |    3|  1.50|             0.1| 0      |
-#> | Model 12 |    4|  1.50|             0.1| 0      |
-#> | Model 13 |    1|  1.75|             0.1| 0      |
-#> | Model 14 |    2|  1.75|             0.1| 1      |
-#> | Model 15 |    3|  1.75|             0.1| 0      |
-#> | Model 16 |    4|  1.75|             0.1| 0      |
-#> | Model 17 |    1|  0.50|             0.5| 0      |
-#> | Model 18 |    2|  0.50|             0.5| 0      |
-#> | Model 19 |    3|  0.50|             0.5| 0      |
-#> | Model 20 |    4|  0.50|             0.5| 0      |
-#> | Model 21 |    1|  1.00|             0.5| 0      |
-#> | Model 22 |    2|  1.00|             0.5| 0      |
-#> | Model 23 |    3|  1.00|             0.5| 0      |
-#> | Model 24 |    4|  1.00|             0.5| 0      |
-#> | Model 25 |    1|  1.50|             0.5| 0      |
-#> | Model 26 |    2|  1.50|             0.5| 0      |
-#> | Model 27 |    3|  1.50|             0.5| 0      |
-#> | Model 28 |    4|  1.50|             0.5| 0      |
-#> | Model 29 |    1|  1.75|             0.5| 0      |
-#> | Model 30 |    2|  1.75|             0.5| 0      |
-#> | Model 31 |    3|  1.75|             0.5| 0      |
-#> | Model 32 |    4|  1.75|             0.5| 0      |
+#> | Model 1  |    2|  0.50|             0.1| 0.000  |
+#> | Model 2  |    4|  0.50|             0.1| 0.000  |
+#> | Model 3  |    6|  0.50|             0.1| 0.000  |
+#> | Model 4  |    8|  0.50|             0.1| 0.000  |
+#> | Model 5  |    2|  1.00|             0.1| 0.000  |
+#> | Model 6  |    4|  1.00|             0.1| 0.000  |
+#> | Model 7  |    6|  1.00|             0.1| 0.000  |
+#> | Model 8  |    8|  1.00|             0.1| 0.000  |
+#> | Model 9  |    2|  1.50|             0.1| 0.109  |
+#> | Model 10 |    4|  1.50|             0.1| 0.000  |
+#> | Model 11 |    6|  1.50|             0.1| 0.000  |
+#> | Model 12 |    8|  1.50|             0.1| 0.000  |
+#> | Model 13 |    2|  1.75|             0.1| 0.000  |
+#> | Model 14 |    4|  1.75|             0.1| 0.891  |
+#> | Model 15 |    6|  1.75|             0.1| 0.000  |
+#> | Model 16 |    8|  1.75|             0.1| 0.000  |
+#> | Model 17 |    2|  0.50|             0.5| 0.000  |
+#> | Model 18 |    4|  0.50|             0.5| 0.000  |
+#> | Model 19 |    6|  0.50|             0.5| 0.000  |
+#> | Model 20 |    8|  0.50|             0.5| 0.000  |
+#> | Model 21 |    2|  1.00|             0.5| 0.000  |
+#> | Model 22 |    4|  1.00|             0.5| 0.000  |
+#> | Model 23 |    6|  1.00|             0.5| 0.000  |
+#> | Model 24 |    8|  1.00|             0.5| 0.000  |
+#> | Model 25 |    2|  1.50|             0.5| 0.000  |
+#> | Model 26 |    4|  1.50|             0.5| 0.000  |
+#> | Model 27 |    6|  1.50|             0.5| 0.000  |
+#> | Model 28 |    8|  1.50|             0.5| 0.000  |
+#> | Model 29 |    2|  1.75|             0.5| 0.000  |
+#> | Model 30 |    4|  1.75|             0.5| 0.000  |
+#> | Model 31 |    6|  1.75|             0.5| 0.000  |
+#> | Model 32 |    8|  1.75|             0.5| 0.000  |
 #> +----------+-----+------+----------------+--------+
 ```
 
@@ -303,7 +307,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.948   1.691   4.862
+#>   5.556   2.007   5.409
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -328,10 +332,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod3$X.names
 print(summary_beta)
-#>                  2.5%        50%      97.5%
-#> (Intercept) -3.556916 -1.1934571  1.2341361
-#> x1           4.888126  4.9517837  5.0151449
-#> x2          -1.049969 -0.9795415 -0.9067872
+#>                   2.5%        50%      97.5%
+#> (Intercept)  0.1676296  1.9844450  3.8604981
+#> x1           4.8801705  4.9458360  5.0085880
+#> x2          -1.0597316 -0.9896297 -0.9127652
 ```
 
 The response `y_gauss` was simulated using the true value
@@ -443,13 +447,13 @@ The response `y_svc` of `simSpatial` was simulated from
 ``` math
 y(s) = 2 + \{5 + z(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, 0.5^2)\;,
 ```
-so that the ring $`z(s)`$ is now the spatially varying part of the slope
-of $`x_1`$. In the `formula`, the variables in parentheses receive
-varying coefficients: `y_svc ~ x1 + x2 + (x1)` has fixed effects for the
-intercept, `x1` and `x2`, and varying coefficients for the intercept and
-`x1` (the intercept is included in both parts by default). With
-`process.type = "independent.shared"`, the processes share the decay
-parameters and the noise-to-spatial variance ratio; with
+so that the checkerboard $`z(s)`$ is now the spatially varying part of
+the slope of $`x_1`$. In the `formula`, the variables in parentheses
+receive varying coefficients: `y_svc ~ x1 + x2 + (x1)` has fixed effects
+for the intercept, `x1` and `x2`, and varying coefficients for the
+intercept and `x1` (the intercept is included in both parts by default).
+With `process.type = "independent.shared"`, the processes share the
+decay parameters and the noise-to-spatial variance ratio; with
 `process.type = "independent"`, each process has its own, supplied as
 vectors of length $`r`$. Here the true varying intercept is zero, so we
 let each process have its own parameters: a large noise-to-spatial
@@ -502,17 +506,17 @@ $`\sigma^2_{z_j} = \sigma^2/\delta^2_j`$ are summarized below.
 summary_beta <- t(apply(mod4$samples$beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod4$X.names
 print(summary_beta)
-#>                  2.5%        50%      97.5%
-#> (Intercept)  1.785428  2.0374472  2.2858943
-#> x1           1.717683  3.1906673  4.6435601
-#> x2          -1.053642 -0.9727139 -0.8904492
+#>                  2.5%       50%      97.5%
+#> (Intercept)  1.734195  1.972642  2.2077086
+#> x1           3.651781  5.045439  6.4200868
+#> x2          -1.103684 -1.027115 -0.9492804
 print(quantile(mod4$samples$sigmaSq, c(0.025, 0.5, 0.975)))
 #>      2.5%       50%     97.5% 
-#> 0.1985160 0.2387306 0.2954121
+#> 0.1777098 0.2137095 0.2644504
 print(t(apply(mod4$samples$sigmaSq.z, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
-#>           2.5%        50%      97.5%
-#> [1,] 0.0198516 0.02387306 0.02954121
-#> [2,] 0.7940641 0.95492227 1.18164847
+#>            2.5%        50%      97.5%
+#> [1,] 0.01777098 0.02137095 0.02644504
+#> [2,] 0.71083930 0.85483819 1.05780153
 ```
 
 Next, we use predictive stacking over candidate values of $`\phi_s`$ and
@@ -540,12 +544,12 @@ mod5 <- stvcLMstack(y_svc ~ x1 + x2 + (x1), data = dat,
 #> 
 #>           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |
 #> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
-#> | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.117  |
+#> | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.000  |
 #> | Model 2 |         2|         1|         1|         1|                  1|               0.25| 0.000  |
 #> | Model 3 |         1|         2|         1|         1|                  1|               0.25| 0.000  |
-#> | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.883  |
+#> | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.157  |
 #> | Model 5 |         2|         1|         1|         1|                 10|               0.25| 0.000  |
-#> | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.000  |
+#> | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.843  |
 #> +---------+----------+----------+----------+----------+-------------------+-------------------+--------+
 post_svc <- stackedSampler(mod5)
 ```
@@ -669,7 +673,7 @@ mod1 <- spGLMexact(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #>  Boundary adjustment parameter = 0.50.
 #> 
 #> Spatial process parameters:
-#>  phi = 2.00, and, nu = 1.75.
+#>  phi = 4.00, and, nu = 1.75.
 #> 
 #> Number of posterior samples = 1000.
 #> ----------------------------------------
@@ -687,9 +691,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -2.9904772 -0.9792525  0.9246436
-#> x1          -0.6235185 -0.5220600 -0.4330682
-#> x2           0.2178655  0.3089373  0.4007939
+#> (Intercept)  0.3925744  1.9425506  3.3814461
+#> x1          -0.6924571 -0.5731162 -0.4857559
+#> x2           0.1510413  0.2288716  0.3147262
 ```
 
 #### Posterior recovery of scale parameters
@@ -766,8 +770,8 @@ mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> | Model 11 |    6|  1.50|      0.50| 0.000  |
 #> | Model 12 |    8|  1.50|      0.50| 0.000  |
 #> | Model 13 |    2|  1.75|      0.50| 0.000  |
-#> | Model 14 |    4|  1.75|      0.50| 0.262  |
-#> | Model 15 |    6|  1.75|      0.50| 0.000  |
+#> | Model 14 |    4|  1.75|      0.50| 0.000  |
+#> | Model 15 |    6|  1.75|      0.50| 0.016  |
 #> | Model 16 |    8|  1.75|      0.50| 0.000  |
 #> | Model 17 |    2|  0.50|      0.75| 0.000  |
 #> | Model 18 |    4|  0.50|      0.75| 0.000  |
@@ -782,9 +786,9 @@ mod2 <- spGLMstack(y_pois ~ x1 + x2, data = dat, family = "poisson",
 #> | Model 27 |    6|  1.50|      0.75| 0.000  |
 #> | Model 28 |    8|  1.50|      0.75| 0.000  |
 #> | Model 29 |    2|  1.75|      0.75| 0.000  |
-#> | Model 30 |    4|  1.75|      0.75| 0.738  |
-#> | Model 31 |    6|  1.75|      0.75| 0.000  |
-#> | Model 32 |    8|  1.75|      0.75| 0.000  |
+#> | Model 30 |    4|  1.75|      0.75| 0.000  |
+#> | Model 31 |    6|  1.75|      0.75| 0.932  |
+#> | Model 32 |    8|  1.75|      0.75| 0.051  |
 #> +----------+-----+------+----------+--------+
 ```
 
@@ -799,7 +803,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  26.770  31.563  15.224
+#>  31.134  39.915  18.356
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -831,10 +835,10 @@ post_beta <- post_samps$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod2$X.names
 print(summary_beta)
-#>                   2.5%        50%     97.5%
-#> (Intercept) -2.8309555  0.3350982  2.605713
-#> x1          -0.6220852 -0.5062168 -0.412155
-#> x2           0.2122008  0.2997407  0.402143
+#>                   2.5%        50%      97.5%
+#> (Intercept)  0.4344236  1.9441538  3.7926679
+#> x1          -0.6310748 -0.5197367 -0.4265340
+#> x2           0.1275555  0.2158637  0.3095337
 ```
 
 The response `y_pois` was simulated using
@@ -929,9 +933,9 @@ summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.97
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
 #>                   2.5%        50%      97.5%
-#> (Intercept) -3.1714292 -0.8541721  1.8883124
-#> x1          -0.5586969 -0.4438227 -0.3326945
-#> x2           0.4039936  0.5239761  0.6586266
+#> (Intercept) -1.7489521  0.3989754  3.0786533
+#> x1          -0.5650698 -0.4572771 -0.3544336
+#> x2           0.4038249  0.5286602  0.6530702
 ```
 
 ### Spatial binary data
@@ -960,10 +964,10 @@ post_beta <- mod1$samples$beta
 summary_beta <- t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975))))
 rownames(summary_beta) <- mod1$X.names
 print(summary_beta)
-#>                   2.5%        50%      97.5%
-#> (Intercept) -3.5723868 -0.3191362 2.14476965
-#> x1          -0.3957679 -0.1522770 0.09531947
-#> x2           0.0524947  0.3192074 0.59232711
+#>                    2.5%        50%       97.5%
+#> (Intercept) -2.23873450  0.1782874  2.45882572
+#> x1          -0.56079633 -0.3270974 -0.07887275
+#> x2          -0.04396074  0.2199109  0.48096174
 ```
 
 ## References

@@ -98,8 +98,8 @@ package.</p>
 <p>The package lazy-loads the synthetic dataset <code>simSpatial</code>,
 observed at 500 locations in the unit square. It has two covariates
 <code>x1</code> and <code>x2</code>, a spatial effect
-<code>z_true</code> with a ring pattern,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1.5</mn><mrow><mi mathvariant="normal">sin</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mi>π</mi><mrow><mo stretchy="true" form="prefix">‖</mo><mi>s</mi><mo>−</mo><mo stretchy="false" form="prefix">(</mo><mn>0.5</mn><mo>,</mo><mn>0.5</mn><mo stretchy="false" form="postfix">)</mo><mo stretchy="true" form="postfix">‖</mo></mrow><mo>+</mo><mi>π</mi><mi>/</mi><mn>4</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z(s) = 1.5 \sin(2\pi \lVert s - (0.5, 0.5) \rVert + \pi/4)</annotation></semantics></math>,
+<code>z_true</code> with a checkerboard pattern,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>1.5</mn><mrow><mi mathvariant="normal">sin</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mi>π</mi><msub><mi>s</mi><mn>1</mn></msub><mo stretchy="false" form="postfix">)</mo><mrow><mi mathvariant="normal">sin</mi><mo>⁡</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mi>π</mi><msub><mi>s</mi><mn>2</mn></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z(s) = 1.5 \sin(2\pi s_1) \sin(2\pi s_2)</annotation></semantics></math>,
 and one response for each family: Gaussian <code>y_gauss</code>, Poisson
 <code>y_pois</code>, binomial <code>y_binom</code> (out of
 <code>n_trials</code> trials) and binary <code>y_bin</code>. All the
@@ -140,7 +140,7 @@ and the noise-to-spatial variance ratio
 <span><span class="va">VBeta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/diag.html" class="external-link">diag</a></span><span class="op">(</span><span class="fl">1E4</span>, <span class="fl">3</span><span class="op">)</span></span>
 <span><span class="va">sigmaSqIGa</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
 <span><span class="va">sigmaSqIGb</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
-<span><span class="va">phi0</span> <span class="op">&lt;-</span> <span class="fl">2</span></span>
+<span><span class="va">phi0</span> <span class="op">&lt;-</span> <span class="fl">4</span></span>
 <span><span class="va">nu0</span> <span class="op">&lt;-</span> <span class="fl">1.75</span></span>
 <span><span class="va">noise_sp_ratio</span> <span class="op">&lt;-</span> <span class="fl">0.1</span></span>
 <span><span class="va">prior_list</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>beta.norm <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span><span class="va">muBeta</span>, <span class="va">VBeta</span><span class="op">)</span>,</span>
@@ -196,10 +196,18 @@ and about
 for
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ν</mi><mo>=</mo><mn>1.75</mn></mrow><annotation encoding="application/x-tex">\nu = 1.75</annotation></semantics></math>.
 For example,
-<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\phi = 2</annotation></semantics></math>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ϕ</mi><mo>=</mo><mn>4</mn></mrow><annotation encoding="application/x-tex">\phi = 4</annotation></semantics></math>
 with
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ν</mi><mo>=</mo><mn>1.75</mn></mrow><annotation encoding="application/x-tex">\nu = 1.75</annotation></semantics></math>
-corresponds to an effective range of about 2.5 on the unit square.
+corresponds to an effective range of about 1.3 on the unit square. When
+the effective range is much larger than the extent of the data, a
+spatial effect that is nearly constant over the domain is hard to tell
+apart from the intercept: the data then determine
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mn>0</mn></msub><mo>+</mo><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\beta_0 + z(s)</annotation></semantics></math>
+well, but not how it splits between
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>β</mi><mn>0</mn></msub><annotation encoding="application/x-tex">\beta_0</annotation></semantics></math>
+and
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z(s)</annotation></semantics></math>.
 Values
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ν</mi><mo>≥</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">\nu \geq 2</annotation></semantics></math>
 give very smooth surfaces whose correlation matrices are nearly
@@ -250,7 +258,7 @@ much faster than <code>"exact"</code>.</p>
 <span><span class="co">#&gt;  shape = 2.00, scale = 2.00.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Spatial process parameters:</span></span>
-<span><span class="co">#&gt;  phi = 2.00, and, nu = 1.75.</span></span>
+<span><span class="co">#&gt;  phi = 4.00, and, nu = 1.75.</span></span>
 <span><span class="co">#&gt; Noise-to-spatial variance ratio = 0.10.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Number of posterior samples = 1000.</span></span>
@@ -264,10 +272,10 @@ follows.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -3.514002 -1.0438240  1.2218260</span></span>
-<span><span class="co">#&gt; x1           4.881059  4.9516414  5.0156597</span></span>
-<span><span class="co">#&gt; x2          -1.047992 -0.9779704 -0.9039985</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  0.2593375  2.0950784  3.7907408</span></span>
+<span><span class="co">#&gt; x1           4.8754455  4.9459705  5.0093922</span></span>
+<span><span class="co">#&gt; x2          -1.0577566 -0.9878126 -0.9139223</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="leave-one-out-predictive-densities-using-psis">Leave-one-out predictive densities using PSIS<a class="anchor" aria-label="anchor" href="#leave-one-out-predictive-densities-using-psis"></a>
@@ -312,7 +320,7 @@ typically places its weight on a few candidates near the best values,
 mixing neighbouring candidates when the best values lie between grid
 points; candidates that predict poorly get zero weight.</p>
 <div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">1</span>, <span class="fl">2</span>, <span class="fl">3</span>, <span class="fl">4</span><span class="op">)</span>,</span>
+<code class="sourceCode R"><span><span class="va">cand.mod</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/candidateModels.html">candidateModels</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/list.html" class="external-link">list</a></span><span class="op">(</span>phi <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">2</span>, <span class="fl">4</span>, <span class="fl">6</span>, <span class="fl">8</span><span class="op">)</span>,</span>
 <span>                                 nu <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.5</span>, <span class="fl">1</span>, <span class="fl">1.5</span>, <span class="fl">1.75</span><span class="op">)</span>,</span>
 <span>                                 noise_sp_ratio <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.1</span>, <span class="fl">0.5</span><span class="op">)</span><span class="op">)</span>,</span>
 <span>                            <span class="st">"cartesian"</span><span class="op">)</span></span>
@@ -329,38 +337,38 @@ points; candidates that predict poorly get zero weight.</p>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;            | phi | nu   | noise_sp_ratio | weight |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span>
-<span><span class="co">#&gt; | Model 1  |    1|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 2  |    2|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 3  |    3|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 4  |    4|  0.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 5  |    1|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 6  |    2|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 7  |    3|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 8  |    4|  1.00|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 9  |    1|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 10 |    2|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 11 |    3|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 12 |    4|  1.50|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 13 |    1|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 14 |    2|  1.75|             0.1| 1      |</span></span>
-<span><span class="co">#&gt; | Model 15 |    3|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 16 |    4|  1.75|             0.1| 0      |</span></span>
-<span><span class="co">#&gt; | Model 17 |    1|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 18 |    2|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 19 |    3|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 20 |    4|  0.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 21 |    1|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 22 |    2|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 23 |    3|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 24 |    4|  1.00|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 25 |    1|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 26 |    2|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 27 |    3|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 28 |    4|  1.50|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 29 |    1|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 30 |    2|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 31 |    3|  1.75|             0.5| 0      |</span></span>
-<span><span class="co">#&gt; | Model 32 |    4|  1.75|             0.5| 0      |</span></span>
+<span><span class="co">#&gt; | Model 1  |    2|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 2  |    4|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 3  |    6|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 4  |    8|  0.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 5  |    2|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 6  |    4|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 7  |    6|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 8  |    8|  1.00|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 9  |    2|  1.50|             0.1| 0.109  |</span></span>
+<span><span class="co">#&gt; | Model 10 |    4|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 11 |    6|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 12 |    8|  1.50|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 13 |    2|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 14 |    4|  1.75|             0.1| 0.891  |</span></span>
+<span><span class="co">#&gt; | Model 15 |    6|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 16 |    8|  1.75|             0.1| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 17 |    2|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 18 |    4|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 19 |    6|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 20 |    8|  0.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 21 |    2|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 22 |    4|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 23 |    6|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 24 |    8|  1.00|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 25 |    2|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 26 |    4|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 27 |    6|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 28 |    8|  1.50|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 29 |    2|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 30 |    4|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 31 |    6|  1.75|             0.5| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 32 |    8|  1.75|             0.5| 0.000  |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------------+--------+</span></span></code></pre></div>
 <p>The user can check the solver used for the stacking weights, its
 status, and the runtime by issuing the following. The
@@ -373,7 +381,7 @@ each candidate model.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   4.948   1.691   4.862</span></span></code></pre></div>
+<span><span class="co">#&gt;   5.556   2.007   5.409</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="analyzing-samples-from-the-stacked-posterior">Analyzing samples from the stacked posterior<a class="anchor" aria-label="anchor" href="#analyzing-samples-from-the-stacked-posterior"></a>
@@ -390,10 +398,10 @@ as follows.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod3</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -3.556916 -1.1934571  1.2341361</span></span>
-<span><span class="co">#&gt; x1           4.888126  4.9517837  5.0151449</span></span>
-<span><span class="co">#&gt; x2          -1.049969 -0.9795415 -0.9067872</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  0.1676296  1.9844450  3.8604981</span></span>
+<span><span class="co">#&gt; x1           4.8801705  4.9458360  5.0085880</span></span>
+<span><span class="co">#&gt; x2          -1.0597316 -0.9896297 -0.9127652</span></span></code></pre></div>
 <p>The response <code>y_gauss</code> was simulated using the true value
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mn>5</mn><mo>,</mo><mi>−</mi><mn>1</mn><msup><mo stretchy="false" form="postfix">)</mo><mi>⊤</mi></msup></mrow><annotation encoding="application/x-tex">\beta = (2, 5, -1)^{ \scriptstyle \top }</annotation></semantics></math>.
 We notice that the stacked posterior is concentrated around the
@@ -487,7 +495,7 @@ coefficients model.</p>
 <p>The response <code>y_svc</code> of <code>simSpatial</code> was
 simulated from
 <math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>y</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>=</mo><mn>2</mn><mo>+</mo><mo stretchy="false" form="prefix">{</mo><mn>5</mn><mo>+</mo><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo stretchy="false" form="postfix">}</mo><msub><mi>x</mi><mn>1</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>−</mo><msub><mi>x</mi><mn>2</mn></msub><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>ϵ</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="1.0em"></mspace><mi>ϵ</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo><mo>∼</mo><mi>𝖭</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msup><mn>0.5</mn><mn>2</mn></msup><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>,</mo></mrow><annotation encoding="application/x-tex">y(s) = 2 + \{5 + z(s)\} x_1(s) - x_2(s) + \epsilon(s), \quad \epsilon(s) \sim \mathsf{N}(0, 0.5^2)\;,</annotation></semantics></math>
-so that the ring
+so that the checkerboard
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>z</mi><mo stretchy="false" form="prefix">(</mo><mi>s</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">z(s)</annotation></semantics></math>
 is now the spatially varying part of the slope of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mn>1</mn></msub><annotation encoding="application/x-tex">x_1</annotation></semantics></math>.
@@ -550,17 +558,17 @@ are summarized below.</p>
 <code class="sourceCode R"><span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">mod4</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod4</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                  2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept)  1.785428  2.0374472  2.2858943</span></span>
-<span><span class="co">#&gt; x1           1.717683  3.1906673  4.6435601</span></span>
-<span><span class="co">#&gt; x2          -1.053642 -0.9727139 -0.8904492</span></span>
+<span><span class="co">#&gt;                  2.5%       50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  1.734195  1.972642  2.2077086</span></span>
+<span><span class="co">#&gt; x1           3.651781  5.045439  6.4200868</span></span>
+<span><span class="co">#&gt; x2          -1.103684 -1.027115 -0.9492804</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">mod4</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">sigmaSq</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt;      2.5%       50%     97.5% </span></span>
-<span><span class="co">#&gt; 0.1985160 0.2387306 0.2954121</span></span>
+<span><span class="co">#&gt; 0.1777098 0.2137095 0.2644504</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">mod4</span><span class="op">$</span><span class="va">samples</span><span class="op">$</span><span class="va">sigmaSq.z</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt;           2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; [1,] 0.0198516 0.02387306 0.02954121</span></span>
-<span><span class="co">#&gt; [2,] 0.7940641 0.95492227 1.18164847</span></span></code></pre></div>
+<span><span class="co">#&gt;            2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; [1,] 0.01777098 0.02137095 0.02644504</span></span>
+<span><span class="co">#&gt; [2,] 0.71083930 0.85483819 1.05780153</span></span></code></pre></div>
 <p>Next, we use predictive stacking over candidate values of
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>ϕ</mi><mi>s</mi></msub><annotation encoding="application/x-tex">\phi_s</annotation></semantics></math>
 and
@@ -588,12 +596,12 @@ supplied as <code><a href="https://rdrr.io/r/base/list.html" class="external-lin
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;           | phi_s[1] | phi_s[2] | phi_t[1] | phi_t[2] | noise_sp_ratio[1] | noise_sp_ratio[2] | weight |</span></span>
 <span><span class="co">#&gt; +---------+----------+----------+----------+----------+-------------------+-------------------+--------+</span></span>
-<span><span class="co">#&gt; | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.117  |</span></span>
+<span><span class="co">#&gt; | Model 1 |         1|         1|         1|         1|                  1|               0.25| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 2 |         2|         1|         1|         1|                  1|               0.25| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 3 |         1|         2|         1|         1|                  1|               0.25| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.883  |</span></span>
+<span><span class="co">#&gt; | Model 4 |         1|         1|         1|         1|                 10|               0.25| 0.157  |</span></span>
 <span><span class="co">#&gt; | Model 5 |         2|         1|         1|         1|                 10|               0.25| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 6 |         1|         2|         1|         1|                 10|               0.25| 0.843  |</span></span>
 <span><span class="co">#&gt; +---------+----------+----------+----------+----------+-------------------+-------------------+--------+</span></span>
 <span><span class="va">post_svc</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/stackedSampler.html">stackedSampler</a></span><span class="op">(</span><span class="va">mod5</span><span class="op">)</span></span></code></pre></div>
 <p>The samples of
@@ -706,7 +714,7 @@ documentation.</p>
 <span><span class="co">#&gt;  Boundary adjustment parameter = 0.50.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Spatial process parameters:</span></span>
-<span><span class="co">#&gt;  phi = 2.00, and, nu = 1.75.</span></span>
+<span><span class="co">#&gt;  phi = 4.00, and, nu = 1.75.</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt; Number of posterior samples = 1000.</span></span>
 <span><span class="co">#&gt; ----------------------------------------</span></span></code></pre></div>
@@ -721,9 +729,9 @@ The true value of the fixed effects with which the data was simulated is
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -2.9904772 -0.9792525  0.9246436</span></span>
-<span><span class="co">#&gt; x1          -0.6235185 -0.5220600 -0.4330682</span></span>
-<span><span class="co">#&gt; x2           0.2178655  0.3089373  0.4007939</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept)  0.3925744  1.9425506  3.3814461</span></span>
+<span><span class="co">#&gt; x1          -0.6924571 -0.5731162 -0.4857559</span></span>
+<span><span class="co">#&gt; x2           0.1510413  0.2288716  0.3147262</span></span></code></pre></div>
 </div>
 <div class="section level4">
 <h4 id="posterior-recovery-of-scale-parameters">Posterior recovery of scale parameters<a class="anchor" aria-label="anchor" href="#posterior-recovery-of-scale-parameters"></a>
@@ -802,8 +810,8 @@ Monte Carlo samples to be used to find the LOO-PD.</p>
 <span><span class="co">#&gt; | Model 11 |    6|  1.50|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 12 |    8|  1.50|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 13 |    2|  1.75|      0.50| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 14 |    4|  1.75|      0.50| 0.262  |</span></span>
-<span><span class="co">#&gt; | Model 15 |    6|  1.75|      0.50| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 14 |    4|  1.75|      0.50| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 15 |    6|  1.75|      0.50| 0.016  |</span></span>
 <span><span class="co">#&gt; | Model 16 |    8|  1.75|      0.50| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 17 |    2|  0.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 18 |    4|  0.50|      0.75| 0.000  |</span></span>
@@ -818,9 +826,9 @@ Monte Carlo samples to be used to find the LOO-PD.</p>
 <span><span class="co">#&gt; | Model 27 |    6|  1.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 28 |    8|  1.50|      0.75| 0.000  |</span></span>
 <span><span class="co">#&gt; | Model 29 |    2|  1.75|      0.75| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 30 |    4|  1.75|      0.75| 0.738  |</span></span>
-<span><span class="co">#&gt; | Model 31 |    6|  1.75|      0.75| 0.000  |</span></span>
-<span><span class="co">#&gt; | Model 32 |    8|  1.75|      0.75| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 30 |    4|  1.75|      0.75| 0.000  |</span></span>
+<span><span class="co">#&gt; | Model 31 |    6|  1.75|      0.75| 0.932  |</span></span>
+<span><span class="co">#&gt; | Model 32 |    8|  1.75|      0.75| 0.051  |</span></span>
 <span><span class="co">#&gt; +----------+-----+------+----------+--------+</span></span></code></pre></div>
 <p>We can extract information on the solver used for the stacking
 weights, its status, and the runtime by the following.</p>
@@ -831,7 +839,7 @@ weights, its status, and the runtime by the following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  26.770  31.563  15.224</span></span></code></pre></div>
+<span><span class="co">#&gt;  31.134  39.915  18.356</span></span></code></pre></div>
 <p>Further, we can recover the posterior samples of the scale parameters
 by passing the output obtained by running <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code> once
 again through <code><a href="../reference/recoverGLMscale.html">recoverGLMscale()</a></code>.</p>
@@ -852,10 +860,10 @@ effects.</p>
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod2</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%        50%     97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -2.8309555  0.3350982  2.605713</span></span>
-<span><span class="co">#&gt; x1          -0.6220852 -0.5062168 -0.412155</span></span>
-<span><span class="co">#&gt; x2           0.2122008  0.2997407  0.402143</span></span></code></pre></div>
+<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
+<span><span class="co">#&gt; (Intercept)  0.4344236  1.9441538  3.7926679</span></span>
+<span><span class="co">#&gt; x1          -0.6310748 -0.5197367 -0.4265340</span></span>
+<span><span class="co">#&gt; x2           0.1275555  0.2158637  0.3095337</span></span></code></pre></div>
 <p>The response <code>y_pois</code> was simulated using
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>β</mi><mo>=</mo><mo stretchy="false" form="prefix">(</mo><mn>2</mn><mo>,</mo><mi>−</mi><mn>0.5</mn><mo>,</mo><mn>0.3</mn><msup><mo stretchy="false" form="postfix">)</mo><mi>⊤</mi></msup></mrow><annotation encoding="application/x-tex">\beta = (2, -0.5, 0.3)^{ \scriptstyle \top }</annotation></semantics></math>.</p>
 <div class="sourceCode" id="cb31"><pre class="downlit sourceCode r">
@@ -930,9 +938,9 @@ was simulated is
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
 <span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -3.1714292 -0.8541721  1.8883124</span></span>
-<span><span class="co">#&gt; x1          -0.5586969 -0.4438227 -0.3326945</span></span>
-<span><span class="co">#&gt; x2           0.4039936  0.5239761  0.6586266</span></span></code></pre></div>
+<span><span class="co">#&gt; (Intercept) -1.7489521  0.3989754  3.0786533</span></span>
+<span><span class="co">#&gt; x1          -0.5650698 -0.4572771 -0.3544336</span></span>
+<span><span class="co">#&gt; x2           0.4038249  0.5286602  0.6530702</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="spatial-binary-data">Spatial binary data<a class="anchor" aria-label="anchor" href="#spatial-binary-data"></a>
@@ -955,10 +963,10 @@ was simulated is
 <span><span class="va">summary_beta</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/t.html" class="external-link">t</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/apply.html" class="external-link">apply</a></span><span class="op">(</span><span class="va">post_beta</span>, <span class="fl">1</span>, <span class="kw">function</span><span class="op">(</span><span class="va">x</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/stats/quantile.html" class="external-link">quantile</a></span><span class="op">(</span><span class="va">x</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0.025</span>, <span class="fl">0.5</span>, <span class="fl">0.975</span><span class="op">)</span><span class="op">)</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">rownames</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="va">mod1</span><span class="op">$</span><span class="va">X.names</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">summary_beta</span><span class="op">)</span></span>
-<span><span class="co">#&gt;                   2.5%        50%      97.5%</span></span>
-<span><span class="co">#&gt; (Intercept) -3.5723868 -0.3191362 2.14476965</span></span>
-<span><span class="co">#&gt; x1          -0.3957679 -0.1522770 0.09531947</span></span>
-<span><span class="co">#&gt; x2           0.0524947  0.3192074 0.59232711</span></span></code></pre></div>
+<span><span class="co">#&gt;                    2.5%        50%       97.5%</span></span>
+<span><span class="co">#&gt; (Intercept) -2.23873450  0.1782874  2.45882572</span></span>
+<span><span class="co">#&gt; x1          -0.56079633 -0.3270974 -0.07887275</span></span>
+<span><span class="co">#&gt; x2          -0.04396074  0.2199109  0.48096174</span></span></code></pre></div>
 </div>
 </div>
 <div class="section level2 unnumbered">

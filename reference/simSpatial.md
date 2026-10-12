@@ -99,5 +99,10 @@ dat <- data.frame(
   z_true = z
 )
 all.equal(dat, simSpatial)
-#> [1] TRUE
+#> [1] "Component “y_gauss”: Mean relative difference: 0.2329399"
+#> [2] "Component “y_pois”: Mean relative difference: 0.9277415" 
+#> [3] "Component “y_binom”: Mean relative difference: 0.4786585"
+#> [4] "Component “y_bin”: Mean relative difference: 2.080808"   
+#> [5] "Component “y_svc”: Mean relative difference: 0.2442966"  
+#> [6] "Component “z_true”: Mean relative difference: 1.246871"  
 ```
