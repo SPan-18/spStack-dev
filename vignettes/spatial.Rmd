@@ -33,10 +33,8 @@ knitr::opts_chunk$set(
 
 In this article, we discuss the following functions -
 
-- `spLMexact()`
-- `spLMstack()`
-- `spGLMexact()`
-- `spGLMstack()`
+- `spLMexact()` and `spLMstack()`
+- `spGLMexact()` and `spGLMstack()`
 - `svcLMexact()` and `svcLMstack()`
 - `svcGLMexact()` and `svcGLMstack()`
 
