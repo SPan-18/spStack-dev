@@ -29,7 +29,12 @@
 - [`surfaceplot()`](https://span-18.github.io/spStack-dev/reference/surfaceplot.md),
   [`surfaceplot2()`](https://span-18.github.io/spStack-dev/reference/surfaceplot2.md):
   the default palette is now the colorblind-friendly diverging
-  ColorBrewer palette ‘RdBu’ (it was ‘RdYlBu’).
+  ColorBrewer palette ‘RdBu’ (it was ‘RdYlBu’), and the axes are
+  labelled with the coordinate names given in `coords_name` (they were
+  ‘x’ and ‘y’). They no longer use the deprecated
+  [`ggplot2::aes_string()`](https://ggplot2.tidyverse.org/reference/aes_.html)
+  (which warned with ggplot2 \>= 3.0.0); `rlang` is added to Imports for
+  the `.data` pronoun (it is already a dependency of ggplot2).
 - [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md),
   [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
   [`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),

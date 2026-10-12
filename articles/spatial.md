@@ -52,14 +52,6 @@ for the code that generated the data.
 
 data("simSpatial")
 surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true")
-#> Warning: `aes_string()` was deprecated in ggplot2 3.0.0.
-#> ℹ Please use tidy evaluation idioms with `aes()`.
-#> ℹ See also `vignette("ggplot2-in-packages")` for more information.
-#> ℹ The deprecated feature was likely used in the spStack package.
-#>   Please report the issue at <https://github.com/SPan-18/spStack-dev/issues>.
-#> This warning is displayed once per session.
-#> Call `lifecycle::last_lifecycle_warnings()` to see where this warning was
-#> generated.
 ```
 
 ![Interpolated surface of the true spatial
@@ -310,7 +302,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.860   1.781   4.824
+#>   5.271   1.958   5.094
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -633,7 +625,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  26.876  31.148  15.287
+#>  31.081  39.464  18.375
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -867,7 +859,9 @@ dat <- simSpatial[1:200, ]
 n <- nrow(dat)
 plot_true <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                           var1_name = "z2_true", var2_name = "z_true")
-patchwork::wrap_plots(plot_true)
+patchwork::wrap_plots(plot_true) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
 ```
 
 ![Interpolated surfaces of the true spatially varying intercept and
