@@ -114,7 +114,7 @@ print(mod1$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.107   0.217   0.082 
+#>   0.158   0.326   0.122 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta

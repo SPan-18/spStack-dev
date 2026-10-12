@@ -3,9 +3,11 @@
 In this article, we discuss the following functions -
 
 - [`stvcLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcLMexact.md)
-- [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
+  and
+  [`stvcLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcLMstack.md)
 - [`stvcGLMexact()`](https://span-18.github.io/spStack-dev/reference/stvcGLMexact.md)
-- [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
+  and
+  [`stvcGLMstack()`](https://span-18.github.io/spStack-dev/reference/stvcGLMstack.md)
 - [`recoverGLMscale()`](https://span-18.github.io/spStack-dev/reference/recoverGLMscale.md)
 
 These functions can be used to fit Gaussian and non-Gaussian
