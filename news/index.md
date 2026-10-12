@@ -34,7 +34,13 @@
   ‘x’ and ‘y’). They no longer use the deprecated
   [`ggplot2::aes_string()`](https://ggplot2.tidyverse.org/reference/aes_.html)
   (which warned with ggplot2 \>= 3.0.0); `rlang` is added to Imports for
-  the `.data` pronoun (it is already a dependency of ggplot2).
+  the `.data` pronoun (it is already a dependency of ggplot2). New
+  arguments `title`
+  ([`surfaceplot()`](https://span-18.github.io/spStack-dev/reference/surfaceplot.md))
+  and `titles`
+  ([`surfaceplot2()`](https://span-18.github.io/spStack-dev/reference/surfaceplot2.md),
+  default the two variable names) label the plots, and the legend no
+  longer carries the internal title ‘z’.
 - [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md),
   [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md),
   [`svcGLMexact()`](https://span-18.github.io/spStack-dev/reference/svcGLMexact.md),

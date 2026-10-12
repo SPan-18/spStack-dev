@@ -51,7 +51,8 @@ for the code that generated the data.
 ``` r
 
 data("simSpatial")
-surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true")
+surfaceplot(simSpatial, coords_name = c("s1", "s2"), var_name = "z_true",
+            title = "True spatial effect z")
 ```
 
 ![Interpolated surface of the true spatial
@@ -302,7 +303,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   5.271   1.958   5.094
+#>   4.851   1.966   4.721
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -408,7 +409,8 @@ effects and their posterior medians.
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                       var1_name = "z_true", var2_name = "z_hat")
+                       var1_name = "z_true", var2_name = "z_hat",
+                       titles = c("True z", "Posterior median of z"))
 patchwork::wrap_plots(plot_z) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -625,7 +627,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  31.081  39.464  18.375
+#>  30.884  39.466  18.232
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
@@ -718,7 +720,8 @@ spatial effects with that of their posterior median.
 postmedian_z <- apply(post_z, 1, median)
 dat$z_hat <- postmedian_z
 plot_z <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                       var1_name = "z_true", var2_name = "z_hat")
+                       var1_name = "z_true", var2_name = "z_hat",
+                       titles = c("True z", "Posterior median of z"))
 patchwork::wrap_plots(plot_z) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -858,7 +861,9 @@ locations as before.
 dat <- simSpatial[1:200, ]
 n <- nrow(dat)
 plot_true <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                          var1_name = "z2_true", var2_name = "z_true")
+                          var1_name = "z2_true", var2_name = "z_true",
+                          titles = c("True varying intercept z0",
+                                     "True varying slope part z1"))
 patchwork::wrap_plots(plot_true) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -999,7 +1004,8 @@ coefficients and their posterior medians.
 dat$z0_hat <- apply(z0_samps, 1, median)
 dat$z1_hat <- apply(z1_samps, 1, median)
 plot_z0 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                        var1_name = "z2_true", var2_name = "z0_hat")
+                        var1_name = "z2_true", var2_name = "z0_hat",
+                        titles = c("True z0", "Posterior median of z0"))
 patchwork::wrap_plots(plot_z0) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
@@ -1011,7 +1017,8 @@ posterior median.](spatial_files/figure-html/unnamed-chunk-31-1.png)
 ``` r
 
 plot_z1 <- surfaceplot2(dat, coords_name = c("s1", "s2"),
-                        var1_name = "z_true", var2_name = "z1_hat")
+                        var1_name = "z_true", var2_name = "z1_hat",
+                        titles = c("True z1", "Posterior median of z1"))
 patchwork::wrap_plots(plot_z1) +
     patchwork::plot_layout(guides = "collect") &
     ggplot2::theme(legend.position = "right")
