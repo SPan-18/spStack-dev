@@ -72,10 +72,12 @@
     
 <p>In this article, we discuss the following functions -</p>
 <ul>
-<li><code><a href="../reference/spLMexact.html">spLMexact()</a></code></li>
-<li><code><a href="../reference/spLMstack.html">spLMstack()</a></code></li>
-<li><code><a href="../reference/spGLMexact.html">spGLMexact()</a></code></li>
-<li><code><a href="../reference/spGLMstack.html">spGLMstack()</a></code></li>
+<li>
+<code><a href="../reference/spLMexact.html">spLMexact()</a></code> and <code><a href="../reference/spLMstack.html">spLMstack()</a></code>
+</li>
+<li>
+<code><a href="../reference/spGLMexact.html">spGLMexact()</a></code> and <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code>
+</li>
 <li>
 <code><a href="../reference/svcLMexact.html">svcLMexact()</a></code> and <code><a href="../reference/svcLMstack.html">svcLMstack()</a></code>
 </li>
@@ -378,7 +380,7 @@ each candidate model.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod3</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;   5.104   1.982   4.981</span></span></code></pre></div>
+<span><span class="co">#&gt;   4.899   1.479   4.814</span></span></code></pre></div>
 </div>
 <div class="section level3">
 <h3 id="analyzing-samples-from-the-stacked-posterior">Analyzing samples from the stacked posterior<a class="anchor" aria-label="anchor" href="#analyzing-samples-from-the-stacked-posterior"></a>
@@ -663,7 +665,7 @@ weights, its status, and the runtime by the following.</p>
 <span><span class="co">#&gt; [1] "optimal"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/print.html" class="external-link">print</a></span><span class="op">(</span><span class="va">mod2</span><span class="op">$</span><span class="va">run.time</span><span class="op">)</span></span>
 <span><span class="co">#&gt;    user  system elapsed </span></span>
-<span><span class="co">#&gt;  31.277  39.316  18.354</span></span></code></pre></div>
+<span><span class="co">#&gt;  20.704  24.482  11.988</span></span></code></pre></div>
 <p>Further, we can recover the posterior samples of the scale parameters
 by passing the output obtained by running <code><a href="../reference/spGLMstack.html">spGLMstack()</a></code> once
 again through <code><a href="../reference/recoverGLMscale.html">recoverGLMscale()</a></code>.</p>

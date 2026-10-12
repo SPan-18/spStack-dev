@@ -3,9 +3,11 @@
 In this article, we discuss the following functions -
 
 - [`spLMexact()`](https://span-18.github.io/spStack-dev/reference/spLMexact.md)
-- [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
+  and
+  [`spLMstack()`](https://span-18.github.io/spStack-dev/reference/spLMstack.md)
 - [`spGLMexact()`](https://span-18.github.io/spStack-dev/reference/spGLMexact.md)
-- [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
+  and
+  [`spGLMstack()`](https://span-18.github.io/spStack-dev/reference/spGLMstack.md)
 - [`svcLMexact()`](https://span-18.github.io/spStack-dev/reference/svcLMexact.md)
   and
   [`svcLMstack()`](https://span-18.github.io/spStack-dev/reference/svcLMstack.md)
@@ -303,7 +305,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   5.104   1.982   4.981
+#>   4.899   1.479   4.814
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -627,7 +629,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  31.277  39.316  18.354
+#>  20.704  24.482  11.988
 ```
 
 Further, we can recover the posterior samples of the scale parameters by
