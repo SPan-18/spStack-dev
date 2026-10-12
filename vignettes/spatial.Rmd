@@ -420,7 +420,9 @@ dat <- simSpatial[1:200, ]
 n <- nrow(dat)
 plot_true <- surfaceplot2(dat, coords_name = c("s1", "s2"),
                           var1_name = "z2_true", var2_name = "z_true")
-patchwork::wrap_plots(plot_true)
+patchwork::wrap_plots(plot_true) +
+    patchwork::plot_layout(guides = "collect") &
+    ggplot2::theme(legend.position = "right")
 ```
 
 ### Using fixed hyperparameters

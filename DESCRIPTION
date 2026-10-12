@@ -23,6 +23,7 @@ Imports:
     future.apply,
     ggplot2,
     MBA,
+    rlang,
     rstudioapi
 NeedsCompilation: yes
 License: GPL-3

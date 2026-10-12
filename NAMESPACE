@@ -31,19 +31,21 @@ importFrom(future,
 )
 importFrom(future.apply,future_lapply)
 importFrom(ggplot2,
-  aes_string,
+  aes,
   element_blank,
   element_line,
   element_text,
   geom_point,
   geom_raster,
   ggplot,
+  labs,
   scale_fill_distiller,
   scale_fill_gradientn,
   theme,
   theme_bw
 )
 importFrom(parallel,detectCores)
+importFrom(rlang,.data)
 importFrom(rstudioapi,isAvailable)
 importFrom(stats,
   as.formula,
