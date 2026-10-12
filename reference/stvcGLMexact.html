@@ -292,7 +292,11 @@ fine-scale variation term which is given a conditional generalized conjugate
 multivariate distribution as prior. For more details, see Pan <em>et al.</em> 2025.
 Default values for \(V_\beta\), \(\nu_\beta\), \(\nu_z\),
 \(\sigma^2_\xi\) are diagonal with each diagonal element 100, 2.1, 2.1 and
-0.1 respectively.</p>
+0.1 respectively. If <code>process.type = 'multivariate'</code>, the \(r \times r\) cross-covariance matrix \(\Sigma\) of the processes has the prior
+\(\Sigma \sim \mathrm{IW}(\nu_z + 2r, \Psi)\), with \(\Psi\) given by
+<code>IW.scale</code>; its default \(\Psi = (\nu_z + r - 1) I_r\) gives
+\(E[\Sigma] = I_r\). The widths of the posterior credible intervals of the
+processes grow with the prior scale.</p>
     </div>
     <div class="section level2">
     <h2 id="references">References<a class="anchor" aria-label="anchor" href="#references"></a></h2>

@@ -303,7 +303,7 @@ print(mod3$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod3$run.time)
 #>    user  system elapsed 
-#>   4.988   1.992   4.859
+#>   5.104   1.982   4.981
 ```
 
 ### Analyzing samples from the stacked posterior
@@ -627,7 +627,7 @@ print(mod2$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod2$run.time)
 #>    user  system elapsed 
-#>  30.941  39.572  18.328
+#>  31.277  39.316  18.354
 ```
 
 Further, we can recover the posterior samples of the scale parameters by

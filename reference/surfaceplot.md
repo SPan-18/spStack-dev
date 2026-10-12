@@ -5,7 +5,15 @@ Make a surface plot
 ## Usage
 
 ``` r
-surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
+surfaceplot(
+  tab,
+  coords_name,
+  var_name,
+  h = 8,
+  col.pal,
+  mark_points = FALSE,
+  title = NULL
+)
 ```
 
 ## Arguments
@@ -16,7 +24,8 @@ surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
 
 - coords_name:
 
-  name of the two columns that contains the co-ordinates of the points
+  name of the two columns that contains the co-ordinates of the points,
+  also used as the axis labels
 
 - var_name:
 
@@ -38,6 +47,10 @@ surfaceplot(tab, coords_name, var_name, h = 8, col.pal, mark_points = FALSE)
 - mark_points:
 
   Logical; if `TRUE`, the input points are marked. Default is `FALSE`.
+
+- title:
+
+  (optional) a title for the plot. Default is no title.
 
 ## Value
 

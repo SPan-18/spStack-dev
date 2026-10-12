@@ -77,9 +77,7 @@ svcGLMexact(
   (optional) a list with each tag corresponding to a hyperparameter name
   and containing hyperprior details. Valid tags include `V.beta`,
   `nu.beta`, `nu.z`, `sigmaSq.xi` and `IW.scale`. Values of `nu.beta`
-  and `nu.z` must be at least 2.1 (`nu.z`, the inverse-Wishart degrees
-  of freedom if `process.type = 'multivariate'`, at least 1). If not
-  supplied, uses defaults.
+  and `nu.z` must be at least 2.1. If not supplied, uses defaults.
 
 - boundary:
 

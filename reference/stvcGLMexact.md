@@ -239,7 +239,13 @@ parameters \\\phi_s\\ and \\\phi_t\\ and the hyperparameters
 conditional generalized conjugate multivariate distribution as prior.
 For more details, see Pan *et al.* 2025. Default values for
 \\V\_\beta\\, \\\nu\_\beta\\, \\\nu_z\\, \\\sigma^2\_\xi\\ are diagonal
-with each diagonal element 100, 2.1, 2.1 and 0.1 respectively.
+with each diagonal element 100, 2.1, 2.1 and 0.1 respectively. If
+`process.type = 'multivariate'`, the \\r \times r\\ cross-covariance
+matrix \\\Sigma\\ of the processes has the prior \\\Sigma \sim
+\mathrm{IW}(\nu_z + 2r, \Psi)\\, with \\\Psi\\ given by `IW.scale`; its
+default \\\Psi = (\nu_z + r - 1) I_r\\ gives \\E\[\Sigma\] = I_r\\. The
+widths of the posterior credible intervals of the processes grow with
+the prior scale.
 
 ## References
 
