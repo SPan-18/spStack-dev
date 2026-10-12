@@ -77,7 +77,7 @@ Sudipto Banerjee <sudipto@ucla.edu>
 set.seed(1234)
 data(simSpatial)
 dat <- simSpatial[1:100, ]
-cand.mod <- candidateModels(list(phi = c(2, 3, 4),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6),
                                  nu = c(1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1)), "cartesian")
 
@@ -93,14 +93,14 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat,
 #>           | phi | nu   | noise_sp_ratio | weight |
 #> +---------+-----+------+----------------+--------+
 #> | Model 1 |    2|  1.00|             0.1| 0      |
-#> | Model 2 |    3|  1.00|             0.1| 0      |
-#> | Model 3 |    4|  1.00|             0.1| 0      |
+#> | Model 2 |    4|  1.00|             0.1| 0      |
+#> | Model 3 |    6|  1.00|             0.1| 0      |
 #> | Model 4 |    2|  1.50|             0.1| 0      |
-#> | Model 5 |    3|  1.50|             0.1| 0      |
-#> | Model 6 |    4|  1.50|             0.1| 0      |
+#> | Model 5 |    4|  1.50|             0.1| 0      |
+#> | Model 6 |    6|  1.50|             0.1| 0      |
 #> | Model 7 |    2|  1.75|             0.1| 0      |
-#> | Model 8 |    3|  1.75|             0.1| 0      |
-#> | Model 9 |    4|  1.75|             0.1| 1      |
+#> | Model 8 |    4|  1.75|             0.1| 1      |
+#> | Model 9 |    6|  1.75|             0.1| 0      |
 #> +---------+-----+------+----------------+--------+
 #> 
 print(mod1$diagnostics$solver$used)
@@ -109,13 +109,13 @@ print(mod1$diagnostics$solver$status)
 #> [1] "optimal"
 print(mod1$run.time)
 #>    user  system elapsed 
-#>   0.153   0.283   0.110 
+#>   0.146   0.283   0.109 
 
 post_samps <- stackedSampler(mod1)
 post_beta <- post_samps$beta
 print(t(apply(post_beta, 1, function(x) quantile(x, c(0.025, 0.5, 0.975)))))
 #>                   2.5%       50%      97.5%
-#> (Intercept)  0.3720111  2.049223  3.6784190
-#> x1           4.8219224  4.911603  4.9968917
-#> x2          -1.1087376 -1.006999 -0.9087994
+#> (Intercept)  0.4462668  2.009989  3.6174445
+#> x1           4.8140231  4.910563  4.9956319
+#> x2          -1.1072606 -1.005054 -0.9071391
 ```

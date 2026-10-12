@@ -93,7 +93,7 @@ dat_train <- simSpatial[1:n_train, ]
 dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 # fit a spatial linear model using predictive stacking
-cand.mod <- candidateModels(list(phi = c(2, 3, 4), nu = c(1, 1.5, 1.75),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6), nu = c(1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.25)), "cartesian")
 mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
                   coords = as.matrix(dat_train[, c("s1", "s2")]),
@@ -106,24 +106,24 @@ mod1 <- spLMstack(y_gauss ~ x1 + x2, data = dat_train,
 #> 
 #>            | phi | nu   | noise_sp_ratio | weight |
 #> +----------+-----+------+----------------+--------+
-#> | Model 1  |    2|  1.00|            0.10| 0      |
-#> | Model 2  |    3|  1.00|            0.10| 0      |
-#> | Model 3  |    4|  1.00|            0.10| 0      |
-#> | Model 4  |    2|  1.50|            0.10| 0      |
-#> | Model 5  |    3|  1.50|            0.10| 0      |
-#> | Model 6  |    4|  1.50|            0.10| 0      |
-#> | Model 7  |    2|  1.75|            0.10| 0      |
-#> | Model 8  |    3|  1.75|            0.10| 0      |
-#> | Model 9  |    4|  1.75|            0.10| 1      |
-#> | Model 10 |    2|  1.00|            0.25| 0      |
-#> | Model 11 |    3|  1.00|            0.25| 0      |
-#> | Model 12 |    4|  1.00|            0.25| 0      |
-#> | Model 13 |    2|  1.50|            0.25| 0      |
-#> | Model 14 |    3|  1.50|            0.25| 0      |
-#> | Model 15 |    4|  1.50|            0.25| 0      |
-#> | Model 16 |    2|  1.75|            0.25| 0      |
-#> | Model 17 |    3|  1.75|            0.25| 0      |
-#> | Model 18 |    4|  1.75|            0.25| 0      |
+#> | Model 1  |    2|  1.00|            0.10| 0.000  |
+#> | Model 2  |    4|  1.00|            0.10| 0.000  |
+#> | Model 3  |    6|  1.00|            0.10| 0.000  |
+#> | Model 4  |    2|  1.50|            0.10| 0.000  |
+#> | Model 5  |    4|  1.50|            0.10| 0.000  |
+#> | Model 6  |    6|  1.50|            0.10| 0.000  |
+#> | Model 7  |    2|  1.75|            0.10| 0.000  |
+#> | Model 8  |    4|  1.75|            0.10| 0.189  |
+#> | Model 9  |    6|  1.75|            0.10| 0.000  |
+#> | Model 10 |    2|  1.00|            0.25| 0.000  |
+#> | Model 11 |    4|  1.00|            0.25| 0.000  |
+#> | Model 12 |    6|  1.00|            0.25| 0.000  |
+#> | Model 13 |    2|  1.50|            0.25| 0.000  |
+#> | Model 14 |    4|  1.50|            0.25| 0.000  |
+#> | Model 15 |    6|  1.50|            0.25| 0.000  |
+#> | Model 16 |    2|  1.75|            0.25| 0.000  |
+#> | Model 17 |    4|  1.75|            0.25| 0.000  |
+#> | Model 18 |    6|  1.75|            0.25| 0.811  |
 #> +----------+-----+------+----------------+--------+
 #> 
 
@@ -141,5 +141,5 @@ post_samps <- stackedSampler(mod.pred)
 # compare the predicted spatial effects with the truth
 z_pred <- apply(post_samps$z.pred, 1, median)
 cor(z_pred, dat_pred$z_true)
-#> [1] 0.9987494
+#> [1] 0.9977931
 ```
