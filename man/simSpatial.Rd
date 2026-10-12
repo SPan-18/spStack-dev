@@ -24,16 +24,16 @@ data(simSpatial)
 }
 \description{
 Dataset of size 500 with spatial coordinates sampled uniformly
-from the unit square, two covariates, a spatial effect with a ring pattern
+from the unit square, two covariates, a spatial effect with a checkerboard pattern
 and one response for each of the Gaussian, Poisson, binomial and binary
 families, plus a Gaussian response with a spatially varying slope. All the
 responses share the covariates and the spatial effect, so that every
 spatial model in the package can be fitted to the same data.
 }
 \details{
-The spatial effect is the ring
+The spatial effect is the checkerboard
 \deqn{
-z(s) = 1.5 \sin(2 \pi \lVert s - (0.5, 0.5) \rVert + \pi / 4),
+z(s) = 1.5 \sin(2 \pi s_1) \sin(2 \pi s_2),
 }
 a deterministic surface that is not a draw from a Gaussian process, and
 the responses are generated as
@@ -59,7 +59,7 @@ s1 <- runif(n)
 s2 <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z <- 1.5 * sin(2 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2) + pi / 4)
+z <- 1.5 * sin(2 * pi * s1) * sin(2 * pi * s2)
 n_trials <- sample(5:20, n, replace = TRUE)
 dat <- data.frame(
   s1 = s1, s2 = s2, x1 = x1, x2 = x2,
