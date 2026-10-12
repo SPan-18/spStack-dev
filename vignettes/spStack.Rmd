@@ -31,7 +31,7 @@ set.seed(1729)
 ```
 
 ## Bayesian Gaussian spatial regression models
-Here is a quick example using the Gaussian response `y_gauss` of the lazyloaded synthetic data `simSpatial`, observed at 500 locations in the unit square with two covariates `x1` and `x2` and a spatial effect `z_true` with a ring pattern (see `?simSpatial`).
+Here is a quick example using the Gaussian response `y_gauss` of the lazyloaded synthetic data `simSpatial`, observed at 500 locations in the unit square with two covariates `x1` and `x2` and a spatial effect `z_true` with a checkerboard pattern (see `?simSpatial`).
 
 **Step 1.** Load the library spStack and prepare the data. Here we split the data into `dat_train` and `dat_pred` - we train our model on `dat_train` and subsequently carry out posterior predictive inference at the locations in `dat_pred`.
 ```{r}
@@ -48,7 +48,7 @@ dat_pred <- simSpatial[n_train + 1:n_pred, ]
 
 **Step 2.** Run the function `spLMstack()` - define the model with a formula, input the spatial coordinates as a matrix, specify the correlation function, and accordingly provide candidate models through `candidate.models`. The argument `loopd.method` can be used to specify the method used for calculation of leave-one-out predictive densities, existing parallelization plan can be used if `parallel` is set `TRUE`, and `solver` argument specifies the solver used to carry out the optimization routine to get stacking weights.
 ```{r}
-cand.mod <- candidateModels(list(phi = c(1, 2, 3, 4),
+cand.mod <- candidateModels(list(phi = c(2, 4, 6, 8),
                                  nu = c(0.5, 1, 1.5, 1.75),
                                  noise_sp_ratio = c(0.1, 0.5)),
                             "cartesian")

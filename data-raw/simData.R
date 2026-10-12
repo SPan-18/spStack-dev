@@ -9,7 +9,7 @@ s1 <- runif(n)
 s2 <- runif(n)
 x1 <- rnorm(n)
 x2 <- rnorm(n)
-z <- 1.5 * sin(2 * pi * sqrt((s1 - 0.5)^2 + (s2 - 0.5)^2) + pi / 4)   # ring
+z <- 1.5 * sin(2 * pi * s1) * sin(2 * pi * s2)                        # checkerboard
 n_trials <- sample(5:20, n, replace = TRUE)
 simSpatial <- data.frame(
   s1 = s1, s2 = s2, x1 = x1, x2 = x2,
