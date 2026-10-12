@@ -290,12 +290,12 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
   IW.scale <- 0
   missing.flag <- 0
 
-  if(missing(priors)){
+  if(missing(priors) || is.null(priors)){
     V.beta <- diag(rep(100.0, p))
     nu.beta <- 2.1
     nu.z <- 2.1
     sigmaSq.xi <- 0.1
-    IW.scale <- diag(rep(1.0, r))
+    IW.scale <- NULL                     # default set below, once nu.z is known
   }else{
     names(priors) <- tolower(names(priors))
     if(!'v.beta' %in% names(priors)){
@@ -350,7 +350,7 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
     if(process.type == 'multivariate'){
       if(!'iw.scale' %in% names(priors)){
         missing.flag <- missing.flag + 1
-        IW.scale <- diag(rep(1.0, r))
+        IW.scale <- NULL
       }else{
         IW.scale <- priors[['iw.scale']]
         if(!is.numeric(IW.scale) || length(IW.scale) != r^2){
@@ -363,6 +363,12 @@ stvcGLMstack <- function(formula, data = parent.frame(), family,
     if(missing.flag > 0){
       message("Some priors were not supplied. Using defaults.")
     }
+  }
+
+  # default inverse-Wishart scale: the prior draw is Sigma ~ IW(nu.z + 2r, IW.scale)
+  # (see the C++), so IW.scale = (nu.z + r - 1) I gives E[Sigma] = I
+  if(is.null(IW.scale)){
+    IW.scale <- (nu.z + r - 1) * diag(rep(1.0, r))
   }
 
   ## storage mode

@@ -1122,7 +1122,7 @@ parse_vc_glm_priors <- function(priors, p, r, process.type){
   nu.beta <- 2.1
   nu.z <- 2.1
   sigmaSq.xi <- 0.1
-  IW.scale <- diag(rep(1.0, r))
+  IW.scale <- NULL                       # default set below, once nu.z is known
 
   if(!missing(priors) && !is.null(priors)){
     if(!is.list(priors) || is.null(names(priors))){
@@ -1163,12 +1163,7 @@ parse_vc_glm_priors <- function(priors, p, r, process.type){
       if(!is.numeric(nu.z) || length(nu.z) != 1){
         stop("priors[['nu.z']] must be a single numeric value.")
       }
-      if(process.type == "multivariate"){
-        if(nu.z < 1){
-          message("Supplied nu.z is less than 1. Setting it to 1.")
-          nu.z <- 1
-        }
-      }else if(nu.z < 2.1){
+      if(nu.z < 2.1){
         message("Supplied nu.z is less than 2.1. Setting it to defaults.")
         nu.z <- 2.1
       }
@@ -1195,6 +1190,12 @@ parse_vc_glm_priors <- function(priors, p, r, process.type){
     if(missing.flag > 0){
       message("Some priors were not supplied. Using defaults.")
     }
+  }
+
+  # default inverse-Wishart scale: the prior draw is Sigma ~ IW(nu.z + 2r, IW.scale)
+  # (see the C++), so IW.scale = (nu.z + r - 1) I gives E[Sigma] = I
+  if(is.null(IW.scale)){
+    IW.scale <- (nu.z + r - 1) * diag(rep(1.0, r))
   }
 
   storage.mode(V.beta) <- "double"
